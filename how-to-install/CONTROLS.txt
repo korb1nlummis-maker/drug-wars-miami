@@ -1,0 +1,204 @@
+========================================
+   DRUG WARS - Controls & UI Reference
+========================================
+
+
+GAME MODES
+----------
+- START NEW GAME: Standard 5000-day campaign
+- ENDLESS MODE: No day limit, play forever to build your empire
+- LOAD GAME: Resume from any of 5 save slots
+
+
+MAIN INTERFACE
+--------------
+The game has a sidebar + main content layout:
+
+STATUS BAR (top):
+  - Day counter (5000 max or endless)
+  - Cash on hand
+  - Bank balance / Debt
+  - HP, Heat meter, Inventory space, Reputation
+  - Investigation level (Clean to Arrest Warrant)
+  - Rank (click to view achievements)
+  - Territory count, Distribution income
+
+SIDEBAR (left):
+  ACTIONS:
+    - Travel - Move to a new city
+    - Wait - Wait a day (prices shift, events happen)
+  SERVICES (varies by city):
+    - Bank - Deposit/withdraw cash
+    - Loan Shark - Borrow/repay debt
+    - Hospital - Heal HP
+    - Black Market - Buy weapons, hire crew
+    - Stash - Store drugs (Miami only)
+  EMPIRE:
+    - Crew - Manage hired crew
+    - Take Over - Challenge local gang
+    - Fronts - Manage front businesses
+    - Distribution - Manage drug distribution network
+  CHARACTER:
+    - Skills - Fallout-style skill tree (4 tabs, 36 skills)
+    - Stats - Empire statistics and records
+    - Achievements - 240+ achievements across 16 categories
+  - Retire - End game early
+
+MAIN CONTENT (right):
+  - Current city info, events, drug prices
+  - Price sparkline charts
+  - Inventory and weapons
+
+
+TRADING
+-------
+- Click BUY on any drug row to purchase
+- Click SELL on owned drugs to sell
+- Prices change every travel/wait
+- Watch for EVENT messages - price spikes and crashes
+- Territory control: 15% buy discount, 10% sell bonus
+
+
+TRAVEL & TRANSPORT
+------------------
+- Click TRAVEL to see destinations grouped by region
+- Choose from 17 transport types across 4 tiers:
+  Budget: Bus, Car, Motorcycle
+  Standard: SUV, Commercial Flight, Speedboat
+  Premium: Armored Truck, Go-Fast Boat, Cargo Ship, Private Jet
+  Drug Lord: Semi Truck, Narco Sub, Military Convoy, Yacht, Cartel Plane
+- Each transport has different cost, speed, risk, and cargo capacity
+- Traveling may trigger random events or dialogue encounters
+
+
+WEAPONS (24 total)
+------------------
+Available at Black Market locations:
+  Melee: Fists, Switchblade, Machete
+  Pistols: Saturday Night Special, Beretta, .44 Magnum, Desert Eagle, Gold Deagle
+  SMGs: Uzi, MAC-10, MP5
+  Shotguns: Sawed-Off, SPAS-12
+  Rifles: AK-47, M16, SCAR-H, Galil ACE
+  Heavy: RPK, M60, RPG-7, M134 Minigun, M79 Grenade Launcher
+  Legendary: Gold-Plated AK-47, "My Little Friend" (M16A1 + M203)
+
+
+COMBAT
+------
+When you encounter enemies:
+  - FIGHT - Attack (damage based on crew + weapons)
+  - RUN - Attempt to flee (may fail, take damage)
+  - SURRENDER - Give up (lose drugs/money, may go to court)
+
+
+CREW MANAGEMENT
+---------------
+Hire from Black Market (max 4):
+  - Street Thug: Cheap fighter, +20 carry
+  - Bodyguard: Tank, takes hits for you
+  - Smuggler: +50 carry capacity
+  - Enforcer: Strong fighter, +15 carry
+  - Chemist: Better drug purity (sell prices)
+  - Lawyer: Reduces investigation, court bonuses
+  - Lookout: Reduces encounter chance
+  - Fall Guy: One-use, takes the rap if arrested
+
+
+SKILL TREE (Fallout-style)
+--------------------------
+4 categories, 9 skills each (36 total), 3 tiers:
+
+TRAVELLING (blue):
+  Tier 1: Road Warrior, Light Packer, Street Smarts
+  Tier 2: Smuggler Instinct, Speed Runner, Safe Houses
+  Tier 3: Ghost Routes, Logistics Master, Tunnel Network
+
+POWER (red):
+  Tier 1: Brawler, Thick Skin, Weapons Expert
+  Tier 2: Crew Commander, Body Armor, Headhunter
+  Tier 3: Warlord, Bulletproof, Army of One
+
+INFLUENCE (orange):
+  Tier 1: Silver Tongue, Master Haggler, Street Rep
+  Tier 2: Smooth Talker, The Fence, Informant Network
+  Tier 3: Diplomat, Media Mogul, Puppet Master
+
+CONTROL (purple):
+  Tier 1: Territory Boss, Supply Chain, Money Man
+  Tier 2: Iron Fist, Cartel Network, Laundry King
+  Tier 3: Empire Builder, Shadow Government, Kingmaker
+
+PROGRESSION:
+  - Earn 2 skill points per Kingpin level up
+  - Tier 1: 1 point per rank (no requirements)
+  - Tier 2: 2 points per rank (Level 5+, 5 tree ranks)
+  - Tier 3: 3 points per rank (Level 10+, 12 tree ranks)
+  - Each skill also has prerequisite skills to unlock
+
+
+DIALOGUE ENCOUNTERS
+-------------------
+- Random NPCs appear while waiting or travelling
+- 15 NPC types, 12 unique encounters
+- Multi-choice dialogue with speech skill checks
+- Choices affect: cash, drugs, weapons, reputation, heat,
+  investigation, buffs, crew, and more
+- Build Speech skill through the Influence skill tree
+
+
+INVESTIGATION & COURT
+---------------------
+Investigation rises from:
+  - Large drug transactions, killing police
+  - High heat, disloyal crew snitching
+
+Investigation drops from:
+  - Not dealing for a few days
+  - Having a Lawyer on crew
+  - Laundering money through fronts
+
+If arrested:
+  - Pay court contacts to improve odds:
+    Dirty Lawyer, Corrupt Judge, Jury Tampering,
+    Witness Intimidation, Evidence Tampering, FBI Deal
+  - Or use a Fall Guy to skip trial
+  - Guilty = prison time + asset forfeiture
+
+
+FRONT BUSINESSES
+----------------
+Available at bank locations:
+  - Buy businesses for daily income
+  - Launder cash (reduces investigation)
+  - Types: Taco Stand, Laundromat, Car Wash, Nightclub, etc.
+
+
+DISTRIBUTION SYSTEM
+-------------------
+Set up drug distribution in your territories:
+  - 6 dealer roles: Corner Dealer, Runner, Trap House Boss,
+    Club Connect, Wholesaler, Lieutenant
+  - 3 upgrade tiers per location
+  - Stock drugs, dealers sell automatically each day
+  - Revenue affected by location, drug type, and crew
+  - Risk of busts and rival attacks
+
+
+ACHIEVEMENTS & LEVELING
+-----------------------
+- 240+ achievements across 16 categories:
+  Money, Trading, Travel, Combat, Territory, Crew, Legal,
+  Rep, Levels, Skills, Dialogue, Weapons, Business, Buffs,
+  Secret (hidden), Endgame
+- 20 Kingpin levels from Street Punk to Legendary
+- Each level grants gameplay perks + 2 skill points
+- Secret achievements unlock by discovery
+
+
+KEYBOARD SHORTCUTS
+------------------
+- T: Quick travel (from main game screen)
+- All other interactions are mouse/touch.
+
+
+========================================
