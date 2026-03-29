@@ -561,7 +561,7 @@ function handlePrisonEvent(state, eventId) {
     }
     case 'visitor': {
       const visitDay = ps.tierData ? ps.tierData.crewVisitFrequency : 7;
-      if (ps.daysServed % visitDay <= 1) {
+      if (ps.daysServed > 0 && ps.daysServed % visitDay === 0) {
         const cashBrought = randInt(100, 1000);
         ps.prisonCash += cashBrought;
         result.message = `👤 Crew member visited. Brought $${cashBrought} and news from outside.`;
@@ -761,6 +761,7 @@ function processEmpireAutopilot(state) {
 
   // Territory loss risk (low leadership)
   if (ap.leadershipScore < 60 && territories.length > 0 && Math.random() < 0.05) {
+    if (territories.length === 0) return results;
     const lostIdx = randInt(0, territories.length - 1);
     const lost = territories.splice(lostIdx, 1)[0];
     ap.territoriesLost++;

@@ -2135,6 +2135,27 @@ function getNPCById(npcId) {
 }
 
 // ============================================================
+// UTILITY: Check if player has a specific permanent NPC benefit
+// ============================================================
+
+/**
+ * Check if the player has earned a specific permanent benefit from any NPC.
+ * @param {object} state - The game state
+ * @param {string} benefitId - The benefit identifier (e.g. 'full_medical', 'church_sanctuary', 'mama_blessing')
+ * @returns {boolean} True if the player has the specified benefit
+ */
+function hasNPCBenefit(state, benefitId) {
+  if (!state.namedNPCs || !state.namedNPCs.npcBenefits) return false;
+  var benefits = state.namedNPCs.npcBenefits;
+  for (var npcId in benefits) {
+    if (!benefits.hasOwnProperty(npcId)) continue;
+    var npcBenefits = benefits[npcId];
+    if (npcBenefits && npcBenefits[benefitId]) return true;
+  }
+  return false;
+}
+
+// ============================================================
 // UTILITY: Get active NPC event details for UI
 // ============================================================
 

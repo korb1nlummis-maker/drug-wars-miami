@@ -2017,8 +2017,10 @@ const RANDOM_ENCOUNTERS = [
       ];
     },
     outcomes: [
-      { label: 'Pull over', effects: { heat: 10 }, result: 'You stopped for the police.' },
-      { label: 'Run', effects: { heat: 15, health: -10 }, result: 'You tried to escape.' }
+      { label: 'Pull over immediately', effects: { heat: 5 }, result: 'You pull over and cooperate. They run your plates and pat you down. Clean today — they let you go with a warning.' },
+      { label: 'Try to outrun them', effects: { heat: 12, health: -10, stress: 8 }, result: 'You floor it and weave through traffic. A wild chase through the streets. You take a hard hit clipping a dumpster, but you lose them in the maze of side streets.' },
+      { label: 'Duck into an alley', effects: { heat: 8, stress: 5 }, result: 'You cut hard into a side street and kill the lights. They blow past. You sit in silence for 10 minutes before moving again.' },
+      { label: 'Ditch the product and stop', effects: { heat: 5 }, result: 'You toss whatever you are carrying out the window before pulling over. They search and find nothing. Product lost but freedom preserved.' }
     ]
   },
   {

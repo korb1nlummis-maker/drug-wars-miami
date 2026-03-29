@@ -246,7 +246,7 @@ function generateAvailableHeists(state) {
 }
 
 function getAvailableHeists(state) {
-  const currentAct = state.currentAct || 1;
+  const currentAct = (state.campaign && state.campaign.currentAct) || state.currentAct || 1;
   const isNGPlus = state.isNGPlus || false;
   const skills = state.skills || {};
 
@@ -316,6 +316,11 @@ function startHeistPlanning(state, heistId) {
   const heistType = HEIST_TYPES.find(h => h.id === heistId);
   if (!heistType) {
     return { success: false, message: 'Unknown heist type.' };
+  }
+
+  // Populate available heists if the list is empty or missing
+  if (!state.availableHeists || state.availableHeists.length === 0) {
+    state.availableHeists = generateAvailableHeists(state);
   }
 
   const available = state.availableHeists.find(a => a.heistTypeId === heistId);

@@ -117,7 +117,7 @@ function corruptOfficial(state, officialId, methodId) {
   const method = CORRUPTION_METHODS.find(m => m.id === methodId) || CORRUPTION_METHODS[0];
 
   // Check reputation requirement
-  if ((state.reputation || 0) < method.repReq) {
+  if ((typeof computeReputation === 'function' ? computeReputation(state) : (state.reputation || 0)) < method.repReq) {
     return { success: false, msg: `Need ${method.repReq} reputation for ${method.name}` };
   }
 
@@ -125,7 +125,7 @@ function corruptOfficial(state, officialId, methodId) {
   if (method.requiresIntel && (pol.intelGathered || []).length < 3) {
     return { success: false, msg: 'Need more intel to blackmail. Gather intelligence first.' };
   }
-  if (method.requiresFear && state.rep && (state.rep.fear || 0) < 50) {
+  if (method.requiresFear && ((state.rep && state.rep.fear) || 0) < 50) {
     return { success: false, msg: 'Need Fear reputation 50+ to intimidate' };
   }
 
@@ -134,7 +134,7 @@ function corruptOfficial(state, officialId, methodId) {
   if (state.cash < cost) return { success: false, msg: `Need $${cost.toLocaleString()}` };
 
   // Check if corruption attempt succeeds
-  const successChance = 0.6 + (state.reputation || 0) * 0.003;
+  const successChance = 0.6 + (typeof computeReputation === 'function' ? computeReputation(state) : (state.reputation || 0)) * 0.003;
   if (Math.random() > successChance) {
     state.cash -= Math.round(cost * 0.3); // Lost partial payment
     state.heat = Math.min(100, state.heat + 10);

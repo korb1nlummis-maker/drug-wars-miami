@@ -250,7 +250,7 @@ function processShippingDaily(state) {
     const tier = getShippingTier(shipment.tier);
     const interceptChance = tier ? tier.interceptionChance : 0.10;
     const heatMod = (state.heat || 0) / 100; // Higher heat = more interceptions
-    const finalChance = interceptChance * (1 + heatMod);
+    const finalChance = interceptChance * (1 + heatMod * 0.5);
 
     if (Math.random() < finalChance) {
       shipment.intercepted = true;
@@ -266,10 +266,10 @@ function processShippingDaily(state) {
       state.shipping.completedShipments++;
       state.shipping.totalCargoMoved += shipment.cargo.amount || 0;
 
-      // Add cargo to stash/inventory
+      // Add cargo to inventory
       if (shipment.cargo.drugId && shipment.cargo.amount) {
-        if (!state.stash) state.stash = {};
-        state.stash[shipment.cargo.drugId] = (state.stash[shipment.cargo.drugId] || 0) + shipment.cargo.amount;
+        if (!state.inventory) state.inventory = {};
+        state.inventory[shipment.cargo.drugId] = (state.inventory[shipment.cargo.drugId] || 0) + shipment.cargo.amount;
       }
 
       msgs.push(`📦 Shipment arrived! ${shipment.cargo.amount || 0} units delivered via ${tier.name}.`);

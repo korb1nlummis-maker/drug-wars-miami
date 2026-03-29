@@ -92,7 +92,7 @@ function processTerritoryDefenseDaily(state) {
         }
       } else if (siege.phase === 'mobilization') {
         siege.phase = 'battle';
-        resolveSiege(td, i);
+        resolveSiege(state, i);
       }
     }
   }
@@ -121,7 +121,7 @@ function processTerritoryDefenseDaily(state) {
         const targetDistrict = ownedDistricts[Math.floor(Math.random() * ownedDistricts.length)];
         const attackerType = selectAttackerType(state);
         const attackerData = generateAttackerData(attackerType);
-        initiateSiege(td, targetDistrict, attackerData);
+        initiateSiege(state, targetDistrict, attackerData);
       }
     }
   }
@@ -240,10 +240,11 @@ function removeStructure(state, districtId, structureId) {
 // ============================================================
 
 function getDefenseStrength(state, districtId) {
+  const td = state.territoryDefense || state;
   let strength = 0;
 
   // Fortification bonus
-  const fortLevel = state.fortifications[districtId] || 0;
+  const fortLevel = td.fortifications[districtId] || 0;
   const fortDef = FORTIFICATION_LEVELS[fortLevel];
   strength += fortDef.defenseBonus;
 
@@ -251,7 +252,7 @@ function getDefenseStrength(state, districtId) {
   strength += fortDef.crewRequired * 5;
 
   // Structure bonuses
-  const structures = state.structures[districtId] || [];
+  const structures = td.structures[districtId] || [];
   for (const sId of structures) {
     const def = DEFENSE_STRUCTURES.find(s => s.id === sId);
     if (!def) continue;
@@ -263,7 +264,7 @@ function getDefenseStrength(state, districtId) {
     }
 
     // Reduce strength if structure is damaged
-    const damage = (state.structureDamage[districtId] || {})[sId] || 0;
+    const damage = (td.structureDamage[districtId] || {})[sId] || 0;
     if (damage > 0) {
       const reduction = Math.floor(strength * (damage / 100) * 0.3);
       strength -= reduction;
@@ -278,7 +279,8 @@ function getDefenseStrength(state, districtId) {
 // ============================================================
 
 function initiateSiege(state, districtId, attackerData) {
-  const structures = state.structures[districtId] || [];
+  const td = state.territoryDefense || state;
+  const structures = td.structures[districtId] || [];
   const hasWatchtower = structures.includes('watchtower');
   const hasCCTV = structures.includes('cctv_network');
 
@@ -305,7 +307,7 @@ function initiateSiege(state, districtId, attackerData) {
     damageDealt: {}
   };
 
-  state.activeSieges.push(siege);
+  td.activeSieges.push(siege);
 
   return {
     success: true,
@@ -316,7 +318,8 @@ function initiateSiege(state, districtId, attackerData) {
 }
 
 function resolveSiege(state, siegeIndex) {
-  const siege = state.activeSieges[siegeIndex];
+  const td = state.territoryDefense || state;
+  const siege = td.activeSieges[siegeIndex];
   if (!siege) return { success: false, message: 'Invalid siege index.' };
 
   const districtId = siege.districtId;
@@ -329,7 +332,7 @@ function resolveSiege(state, siegeIndex) {
   }
 
   // Barricade first strike
-  const structures = state.structures[districtId] || [];
+  const structures = td.structures[districtId] || [];
   if (structures.includes('barricade') && !siege.isSurprise) {
     attackStrength = Math.floor(attackStrength * 0.85);
     siege.casualties.attacker += Math.ceil(siege.attackerData.crew * 0.1);
@@ -348,20 +351,20 @@ function resolveSiege(state, siegeIndex) {
     siege.result = 'defended';
     siege.casualties.attacker += Math.ceil(siege.attackerData.crew * 0.3);
     siege.casualties.defender += Math.floor(Math.random() * 2);
-    state.siegesRepelled++;
+    td.siegesRepelled++;
 
     // Structure damage from battle
     for (const sId of structures) {
       if (Math.random() < 0.3) {
-        if (!state.structureDamage[districtId]) state.structureDamage[districtId] = {};
-        state.structureDamage[districtId][sId] = Math.min(100,
-          (state.structureDamage[districtId][sId] || 0) + 10 + Math.floor(Math.random() * 20));
-        siege.damageDealt[sId] = state.structureDamage[districtId][sId];
+        if (!td.structureDamage[districtId]) td.structureDamage[districtId] = {};
+        td.structureDamage[districtId][sId] = Math.min(100,
+          (td.structureDamage[districtId][sId] || 0) + 10 + Math.floor(Math.random() * 20));
+        siege.damageDealt[sId] = td.structureDamage[districtId][sId];
       }
     }
 
     // Counter-attack opportunity
-    state.counterAttackAvailable = {
+    td.counterAttackAvailable = {
       districtId: districtId,
       attackerData: siege.attackerData,
       expires: 2
@@ -369,9 +372,9 @@ function resolveSiege(state, siegeIndex) {
   } else {
     // Territory lost
     siege.result = 'lost';
-    siege.casualties.defender += Math.ceil((FORTIFICATION_LEVELS[state.fortifications[districtId] || 0].crewRequired) * 0.5);
+    siege.casualties.defender += Math.ceil((FORTIFICATION_LEVELS[td.fortifications[districtId] || 0].crewRequired) * 0.5);
     siege.casualties.attacker += Math.ceil(siege.attackerData.crew * 0.15);
-    state.territoriesLost++;
+    td.territoriesLost++;
 
     // Safe room protects crew
     if (structures.includes('safe_room')) {
@@ -383,19 +386,19 @@ function resolveSiege(state, siegeIndex) {
     siege.lootLost = Math.floor(Math.random() * 20000) + 5000;
 
     // Downgrade fortification
-    const currentLevel = state.fortifications[districtId] || 0;
-    state.fortifications[districtId] = Math.max(0, currentLevel - 1);
+    const currentLevel = td.fortifications[districtId] || 0;
+    td.fortifications[districtId] = Math.max(0, currentLevel - 1);
 
     // Damage all structures
     for (const sId of structures) {
-      if (!state.structureDamage[districtId]) state.structureDamage[districtId] = {};
-      state.structureDamage[districtId][sId] = Math.min(100,
-        (state.structureDamage[districtId][sId] || 0) + 30 + Math.floor(Math.random() * 30));
+      if (!td.structureDamage[districtId]) td.structureDamage[districtId] = {};
+      td.structureDamage[districtId][sId] = Math.min(100,
+        (td.structureDamage[districtId][sId] || 0) + 30 + Math.floor(Math.random() * 30));
     }
   }
 
   // Record in history
-  state.defenseHistory.push({
+  td.defenseHistory.push({
     districtId: districtId,
     attacker: siege.attackerData.name,
     result: siege.result,
@@ -403,11 +406,11 @@ function resolveSiege(state, siegeIndex) {
     attackStrength: attackStrength,
     casualties: { ...siege.casualties },
     lootLost: siege.lootLost,
-    day: state.currentDay || 0
+    day: state.day || state.currentDay || 0
   });
 
   // Remove from active sieges
-  state.activeSieges.splice(siegeIndex, 1);
+  td.activeSieges.splice(siegeIndex, 1);
 
   return {
     success: true,

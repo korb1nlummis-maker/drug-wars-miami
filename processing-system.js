@@ -300,8 +300,8 @@ function buySupply(state, supplyId, amount) {
   state.cash -= cost;
   state.processing.supplies[supplyId] = (state.processing.supplies[supplyId] || 0) + amount;
 
-  // Buying chemicals generates minor heat
-  state.heat = Math.min(100, state.heat + amount);
+  // Buying chemicals generates minor heat (scaled down to prevent instant max heat)
+  state.heat = Math.min(100, (state.heat || 0) + Math.ceil(amount * 0.1));
 
   return { success: true, msg: `Bought ${amount}× ${supply.name} for $${cost.toLocaleString()}` };
 }

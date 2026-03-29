@@ -478,7 +478,7 @@ function checkMissionObjective(state, objective) {
       return nw >= objective.target;
     }
     case 'heat_below': return (state.heat || 0) < objective.target;
-    case 'buy_amount': return (state.stats && state.stats.totalBuys || 0) >= objective.target;
+    case 'buy_amount': return (state.stats && state.stats.largestBuyQty || 0) >= objective.target;
     case 'fronts_owned': return (state.frontBusinesses || []).length >= objective.target;
     case 'districts_controlled': {
       const terrs = typeof getControlledTerritories === 'function' ? getControlledTerritories(state) : [];
@@ -486,12 +486,72 @@ function checkMissionObjective(state, objective) {
       return uniqueDistricts.size >= objective.target;
     }
     case 'daily_income': {
-      // Estimate daily income
+      // Estimate daily income from all sources
       let income = 0;
-      if (state.frontBusinesses) income += state.frontBusinesses.reduce((s, f) => s + (f.dailyIncome || 0), 0);
+      // Front businesses: look up dailyIncome from FRONT_BUSINESSES definitions
+      if (state.frontBusinesses && typeof FRONT_BUSINESSES !== 'undefined') {
+        income += state.frontBusinesses.reduce((s, f) => {
+          const bizDef = FRONT_BUSINESSES.find(b => b.id === f.id);
+          return s + (bizDef ? bizDef.dailyIncome : 0);
+        }, 0);
+      }
+      // Territory income
+      if (typeof getControlledTerritories === 'function') {
+        const territories = getControlledTerritories(state);
+        const perTerritory = (typeof TERRITORY_BENEFITS !== 'undefined' && TERRITORY_BENEFITS.dailyIncome) || 500;
+        income += territories.length * perTerritory;
+      }
+      // Distribution income estimate
+      if (state.distribution) {
+        for (const locId in state.distribution) {
+          if (!state.distribution.hasOwnProperty(locId)) continue;
+          const dist = state.distribution[locId];
+          if (dist && dist.active && dist.dealers && dist.dealers.length > 0) {
+            income += dist.dealers.length * 500; // conservative per-dealer estimate
+          }
+        }
+      }
       return income >= objective.target;
     }
-    default: return false; // Special objectives checked via events
+    case 'crew_rank': {
+      // Check if player has crew members of specified rank
+      const targetRank = typeof objective.target === 'string'
+        ? (typeof _resolveRankIndex === 'function' ? _resolveRankIndex(objective.target) : { 'street_worker': 0, 'soldier': 1, 'lieutenant': 2, 'underboss': 3, 'right_hand': 4, 'righthand': 4 }[objective.target.toLowerCase().replace(/[-\s]/g, '_')] || 0)
+        : objective.target;
+      return (state.henchmen || []).some(h => (typeof _resolveRankIndex === 'function' ? _resolveRankIndex(h.rank) : (h.rank || 0)) >= targetRank);
+    }
+    case 'faction_discovered': {
+      // Check if player has discovered a faction (has a non-zero standing)
+      if (!state.factions || !state.factions.standings) return false;
+      if (objective.target) {
+        // Check for a specific faction
+        return state.factions.standings[objective.target] !== undefined && state.factions.standings[objective.target] !== 0;
+      }
+      // Check for any faction discovered
+      return Object.values(state.factions.standings).some(s => s !== 0);
+    }
+    case 'faction_event': {
+      // Check if a faction event has occurred
+      if (!state.factions) return false;
+      const eventCount = (state.factions.factionEvents || []).length;
+      return eventCount >= (objective.target || 1);
+    }
+    case 'police_encounter': {
+      // Check if player has had police encounters using encounter stats or investigation data
+      const encounterCount = (state.encounters && state.encounters.stats && state.encounters.stats.totalEncounters) || 0;
+      const timesArrested = (state.investigation && state.investigation.timesArrested) || 0;
+      return (encounterCount + timesArrested) >= (objective.target || 1);
+    }
+    case 'special_mission': {
+      // Check if a special mission flag is set in campaign flags
+      if (!state.campaign || !state.campaign.flags) return false;
+      if (typeof objective.target === 'string') {
+        return !!state.campaign.flags[objective.target];
+      }
+      // Generic check: any special mission flag set counts
+      return !!state.campaign.flags.specialMissionComplete || !!state.campaign.flags.big_score;
+    }
+    default: return false; // Unhandled objectives checked via events
   }
 }
 

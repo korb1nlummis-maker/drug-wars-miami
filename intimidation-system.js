@@ -76,7 +76,7 @@ function calculateIntimidation(state) {
       else if (h.type === 'bodyguard') score += 2;
       else if (h.type === 'thug') score += 1;
     }
-    score = Math.min(score, score > 15 ? 15 + (score - 15) * 0.5 : score); // Diminishing returns past 15
+    if (score > 15) score = 15 + (score - 15) * 0.5; // Diminishing returns past 15
   }
 
   // 5. Clothing (0-18 points)
@@ -86,8 +86,9 @@ function calculateIntimidation(state) {
   }
 
   // 6. Vehicle bonus (0-10 points)
-  if (state.vehicles && state.vehicles.activeVehicle) {
-    const v = state.vehicles.activeVehicle;
+  const vehicleState = state.vehicleState || state.vehicles || {};
+  if (vehicleState.activeVehicle) {
+    const v = vehicleState.activeVehicle;
     if (typeof VEHICLES !== 'undefined') {
       const vehicle = VEHICLES.find(vh => vh.id === v);
       if (vehicle) {

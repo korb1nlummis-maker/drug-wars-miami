@@ -73,7 +73,7 @@ const CAMPAIGN_ACTS = [
     desc: 'This is it. Everything has led to this moment. Choose your path.',
     dayRange: [2500, 5000],
     milestones: [
-      { id: 'endgame_choice', name: 'Choose Your Fate', desc: 'Your ending will be determined by your empire\'s state', check: () => false, reward: 'The ending you deserve' },
+      { id: 'endgame_choice', name: 'Choose Your Fate', desc: 'Your ending will be determined by your empire\'s state', check: s => (s.campaign && s.campaign.currentAct >= 5), reward: 'The ending you deserve' },
     ],
     requiredMilestones: 0,
     modifiers: { encounterDifficulty: 2.0, heatGainMod: 1.8, priceVolatility: 2.0 },

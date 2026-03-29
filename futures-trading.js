@@ -110,10 +110,10 @@ function settleFuturesContract(state, contractIndex, early = false) {
   const priceDiff = (currentPrice - contract.strikePrice) * contract.direction;
   let pnl = Math.round(priceDiff * contract.quantity);
 
-  // Early exit penalty (30% of potential profit, or extra 20% loss)
+  // Early exit penalty: standardized 15% on both profit and loss
   if (early) {
-    if (pnl > 0) pnl = Math.round(pnl * 0.7); // 30% penalty on profit
-    else pnl = Math.round(pnl * 1.2); // 20% worse on loss
+    if (pnl > 0) pnl = Math.round(pnl * 0.85);
+    else pnl = Math.round(pnl * 1.15);
   }
 
   // Cap at max payout

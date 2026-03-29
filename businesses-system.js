@@ -432,11 +432,13 @@ function getBusinessIncome(state, owned) {
     }
   }
 
-  // Crew bonus: +10% if fully staffed
-  if (def.crewRequired > 0 && typeof getAssignedCrew === 'function') {
-    const assigned = getAssignedCrew(state, owned.businessId);
+  // Crew staffing: bonus if fully staffed, penalty if understaffed
+  if (def.crewRequired > 0) {
+    const assigned = typeof getAssignedCrew === 'function' ? getAssignedCrew(state, owned.businessId) : 0;
     if (typeof assigned === 'number' && assigned >= def.crewRequired) {
-      income *= 1.1;
+      income *= 1.1; // Fully staffed bonus
+    } else {
+      income *= 0.5; // Understaffed penalty
     }
   }
 
@@ -608,6 +610,13 @@ function applyBusinessEvent(state, owned, def, evt, day) {
     case 'blackmail_asset':
       if (!state.businesses._blackmailAssets) state.businesses._blackmailAssets = 0;
       state.businesses._blackmailAssets++;
+      // Blackmail benefit: reduce heat by 5 (capped at 3 uses) or add political influence
+      if (state.businesses._blackmailAssets <= 3) {
+        state.heat = Math.max(0, (state.heat || 0) - 5);
+      } else {
+        if (!state.politicalInfluence) state.politicalInfluence = 0;
+        state.politicalInfluence += 1;
+      }
       break;
     case 'found_goods_random':
       if (typeof addRandomLoot === 'function') addRandomLoot(state);

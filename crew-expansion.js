@@ -217,7 +217,7 @@ function processCrewExpansionDaily(state) {
     member.betrayalRisk = Math.max(0, Math.min(100, member.betrayalRisk + betrayalDrift));
 
     // Check for betrayal events
-    if (member.betrayalRisk > 60 && Math.random() < (member.betrayalRisk / 1000)) {
+    if (member.betrayalRisk > 60 && Math.random() < (member.betrayalRisk / 100)) {
       const betrayal = resolveBetrayal(state, i);
       if (betrayal) messages.push(betrayal);
     }

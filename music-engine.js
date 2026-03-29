@@ -40,6 +40,12 @@ const MusicEngine = (() => {
       if (ctx.state === 'suspended') {
         ctx.resume();
       }
+      // Ensure sfxGain exists even if context was created externally
+      if (!sfxGain) {
+        sfxGain = ctx.createGain();
+        sfxGain.gain.value = sfxMuted ? 0 : sfxVolume;
+        sfxGain.connect(ctx.destination);
+      }
       return;
     }
     try {
@@ -74,9 +80,21 @@ const MusicEngine = (() => {
     }
   }
 
+  // Voice polyphony limiter — free oldest voices when over 128
+  function enforcePolyphonyLimit() {
+    if (scheduledNodes.length > 128) {
+      const excess = scheduledNodes.length - 96; // Free down to 96
+      for (let i = 0; i < excess; i++) {
+        try { scheduledNodes[i].stop(ctx.currentTime); scheduledNodes[i].disconnect(); } catch(e) {}
+      }
+      scheduledNodes.splice(0, excess);
+    }
+  }
+
   // Create a synth voice with envelope
   function createSynth(type, freq, startTime, duration, gainVal = 0.15, detune = 0) {
     if (!ctx) return null;
+    enforcePolyphonyLimit();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
@@ -108,6 +126,7 @@ const MusicEngine = (() => {
   // Pad synth - lush chords with slow attack
   function createPad(freq, startTime, duration, gainVal = 0.08) {
     if (!ctx) return;
+    enforcePolyphonyLimit();
     for (let d = -8; d <= 8; d += 8) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -139,6 +158,7 @@ const MusicEngine = (() => {
   // Bass synth with sub
   function createBass(freq, startTime, duration, gainVal = 0.2) {
     if (!ctx) return;
+    enforcePolyphonyLimit();
     const osc = ctx.createOscillator();
     const sub = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -173,6 +193,7 @@ const MusicEngine = (() => {
   // Drum sounds
   function createKick(startTime) {
     if (!ctx) return;
+    enforcePolyphonyLimit();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -189,6 +210,7 @@ const MusicEngine = (() => {
 
   function createSnare(startTime) {
     if (!ctx) return;
+    enforcePolyphonyLimit();
     // Noise burst
     const bufferSize = ctx.sampleRate * 0.1;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -225,6 +247,7 @@ const MusicEngine = (() => {
 
   function createHihat(startTime, open = false) {
     if (!ctx) return;
+    enforcePolyphonyLimit();
     const bufferSize = ctx.sampleRate * (open ? 0.15 : 0.05);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -1126,10 +1149,13 @@ const MusicEngine = (() => {
 
         // --- LEAD MELODY ---
         if (energy > 0.55 && b % 2 === 0 && !isBreakdown) {
+          // cascade: descending arpeggio pattern
           const melodyNotes = config.melodyStyle === 'soaring'
             ? [chord[2], chord[1], chord[0], chord[1], chord[2], chord[2], chord[1], chord[0]]
             : config.melodyStyle === 'pulse'
             ? [chord[0], chord[2], chord[0], chord[1], chord[0], chord[2], chord[1], chord[0]]
+            : config.melodyStyle === 'cascade'
+            ? [chord[2], chord[1], chord[0], chord[2], chord[1], chord[0], chord[1], chord[0]]
             : [chord[2], chord[1], chord[2], chord[0], chord[1], chord[2], chord[1], chord[0]];
           const melType = config.leadType || 'sine';
           const melGain = 0.02 + (energy - 0.55) * 0.08;
@@ -1276,19 +1302,26 @@ const MusicEngine = (() => {
     chunkTimers = [];
     // Kill all scheduled oscillator nodes
     scheduledNodes.forEach(n => {
-      try { n.stop(0); } catch (e) {}
+      try { n.stop(ctx.currentTime); } catch (e) {}
       try { n.disconnect(); } catch (e) {}
     });
     scheduledNodes = [];
     currentTrackName = '';
     playlistMode = false;
     isPlaying = false;
-    // Hard-kill master gain to silence everything, then restore
+    // Ramp gain to 0 quickly to avoid audio pop, then restore after brief timeout
     if (masterGain && ctx && ctx.state === 'running') {
-      masterGain.disconnect();
-      masterGain.connect(ctx.destination);
       masterGain.gain.cancelScheduledValues(ctx.currentTime);
-      masterGain.gain.setValueAtTime(mutedFlag ? 0 : volume, ctx.currentTime);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+      setTimeout(() => {
+        if (masterGain && ctx) {
+          masterGain.disconnect();
+          masterGain.connect(ctx.destination);
+          masterGain.gain.cancelScheduledValues(ctx.currentTime);
+          masterGain.gain.setValueAtTime(mutedFlag ? 0 : volume, ctx.currentTime);
+        }
+      }, 80);
     }
   }
 
@@ -1337,7 +1370,7 @@ const MusicEngine = (() => {
         chunkTimers = [];
         // Clean up old nodes before scheduling next loop
         scheduledNodes.forEach(n => {
-          try { n.stop(0); } catch (e) {}
+          try { n.stop(ctx.currentTime); } catch (e) {}
           try { n.disconnect(); } catch (e) {}
         });
         scheduledNodes = [];
@@ -1373,7 +1406,7 @@ const MusicEngine = (() => {
         chunkTimers = [];
         // Clear finished nodes
         scheduledNodes.forEach(n => {
-          try { n.stop(0); } catch (e) {}
+          try { n.stop(ctx.currentTime); } catch (e) {}
           try { n.disconnect(); } catch (e) {}
         });
         scheduledNodes = [];

@@ -1,6 +1,6 @@
 // ============================================================
 // Drug Wars: Miami Vice Edition — World Factions
-// 25 factions across 9 global regions
+// 26 factions across 10 global regions (including Miami)
 // ============================================================
 
 // WORLD_REGIONS is defined in world-regions.js (loaded before this file)
@@ -571,6 +571,47 @@ const WORLD_FACTIONS = [
     warTriggers: ["attack_clubhouse", "steal_shipment", "disrespect_patch", "rat"],
     uniqueMechanic: "highway_transport",
     desc: "Outlaw Motorcycle Club. Their highway transport network moves meth and weapons across state lines using chapter-to-chapter relay runs."
+  },
+
+  // ========== MIAMI (1) ==========
+
+  {
+    id: "los_cubanos",
+    name: "Los Cubanos",
+    emoji: "🇨🇺",
+    territory: ["little_havana", "hialeah"],
+    specialty: "cocaine",
+    leader: {
+      name: "Reynaldo 'El Viejo' Castillo",
+      title: "El Viejo",
+      age: 70,
+      style: "Old-guard exile patriarch. Patient as stone, ruthless when crossed. Runs Little Havana like a second homeland. Loyalty is earned, betrayal is buried."
+    },
+    strength: 6,
+    soldiers: [12, 25],
+    dmg: [12, 22],
+    strengths: "Best cocaine pipeline in Miami — direct from Colombia through old exile networks. Deep political connections in Dade County. Generational loyalty. Established infrastructure.",
+    weaknesses: "Aging leadership facing succession crisis. Slow to adapt to new markets. Two sons vying for control creates internal instability. Limited reach outside South Florida.",
+    operatingStyle: "Old school. Handshake deals, face-to-face. Honor-based code — a man's word is everything. Betrayal means death, loyalty means family. Operates through legitimate Cuban businesses as fronts.",
+    color: "#D4A017",
+    region: "miami",
+    characterRelations: {},
+    factionRelations: {
+      medellin_cartel: 30,
+      cali_organization: 20,
+      five_families: 10,
+      yardie_massive: -10,
+      dominican_don: -30,
+      bahamian_syndicate: 20,
+      bloods_crips: -20,
+      sinaloa_cartel: 10,
+      los_chapitos: -10
+    },
+    trades: { sells: ["cocaine"], buys: ["weed", "heroin", "firearms"] },
+    missionTypes: ["supply_run", "territory_defense", "diplomatic_meet", "honor_kill"],
+    warTriggers: ["betray_trust", "attack_territory", "disrespect_elder", "snitch"],
+    uniqueMechanic: "succession_crisis",
+    desc: "The oldest cocaine pipeline in Miami. Cuban exile network with a direct line from Colombia through Havana. Tradition is law in Little Havana — El Viejo's word moves mountains, but his two sons circle each other like sharks."
   },
 
   // ========== WESTERN EUROPE (3) ==========

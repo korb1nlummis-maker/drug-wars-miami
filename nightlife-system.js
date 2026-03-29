@@ -76,7 +76,7 @@ const SOCIAL_EVENTS = [
 
 const VIP_THRESHOLD = 20000;
 
-const NIGHTLIFE_NIGHTLIFE_CONTACT_TYPES = ['buyer', 'seller', 'informant', 'enforcer'];
+const NIGHTLIFE_CONTACT_TYPES = ['buyer', 'seller', 'informant', 'enforcer'];
 
 const CONTACT_FIRST_NAMES = [
   'Marco', 'Diego', 'Luis', 'Rico', 'Tony', 'Hector',

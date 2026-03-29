@@ -151,11 +151,14 @@ function canLaunchHit(state, hitType, targetId, playerSkills, playerContacts) {
   const hit = REP_HIT_TYPES.find(h => h.id === hitType);
   if (!hit) return { allowed: false, reason: 'Unknown hit type.' };
 
-  if (state.cooldowns[hitType] > 0) {
-    return { allowed: false, reason: `On cooldown for ${state.cooldowns[hitType]} more days.` };
+  const rh = state.repHits;
+  if (!rh) return { allowed: false, reason: 'Rep hits system not initialized.' };
+
+  if (rh.cooldowns[hitType] > 0) {
+    return { allowed: false, reason: `On cooldown for ${rh.cooldowns[hitType]} more days.` };
   }
 
-  const activeOnTarget = state.activeHits.find(h => h.targetId === targetId && h.hitType === hitType);
+  const activeOnTarget = rh.activeHits.find(h => h.targetId === targetId && h.hitType === hitType);
   if (activeOnTarget) {
     return { allowed: false, reason: 'Already running this hit on that target.' };
   }
@@ -207,9 +210,12 @@ function launchRepHit(state, hitType, targetId, playerSkills, playerContacts) {
     cost: hitDef.cost
   };
 
-  state.activeHits.push(activeHit);
-  state.totalHitsLaunched++;
-  state.cooldowns[hitType] = hitDef.cooldown;
+  const rh = state.repHits;
+  if (!rh) return { success: false, message: 'Rep hits system not initialized.' };
+
+  rh.activeHits.push(activeHit);
+  rh.totalHitsLaunched++;
+  rh.cooldowns[hitType] = hitDef.cooldown;
 
   return {
     success: true,
@@ -234,18 +240,20 @@ function getAvailableHitTypes(state, playerSkills, playerContacts) {
     heatIncrease: hit.heatIncrease,
     duration: hit.duration,
     blowbackChance: hit.blowbackChance,
-    cooldownRemaining: state.cooldowns[hit.id] || 0
+    cooldownRemaining: (state.repHits && state.repHits.cooldowns && state.repHits.cooldowns[hit.id]) || 0
   }));
 }
 
 // ---- Blowback ----
 
-function resolveBlowback(state, hitIndex) {
-  const hit = state.activeHits[hitIndex];
+function resolveBlowback(stateOrRh, hitIndex) {
+  // Accept either full game state or repHits sub-object
+  const rh = stateOrRh.repHits || stateOrRh;
+  const hit = rh.activeHits[hitIndex];
   if (!hit) return { success: false, message: 'Invalid hit index.' };
 
   hit.detected = true;
-  state.blowbacks++;
+  rh.blowbacks++;
 
   return {
     type: 'blowback',
@@ -256,7 +264,7 @@ function resolveBlowback(state, hitIndex) {
       heatIncrease: BLOWBACK_PENALTIES.heatIncrease,
       targetHostile: BLOWBACK_PENALTIES.targetHostile
     },
-    blowbackCount: state.blowbacks,
+    blowbackCount: rh.blowbacks,
     message: `BLOWBACK! Your ${hit.hitType.replace('_', ' ')} against ${hit.targetId} was traced back to you. -${BLOWBACK_PENALTIES.repDamage} rep, +${BLOWBACK_PENALTIES.heatIncrease} heat, and they are now hostile.`
   };
 }

@@ -541,7 +541,7 @@ function upgradeDistribution(state, locationId) {
   const dist = state.distribution[locationId];
   if (!dist) return { success: false, msg: 'No distribution here.' };
   if (dist.tier >= 3) return { success: false, msg: 'Already at maximum tier.' };
-  const nextTier = DISTRIBUTION_TIERS[dist.tier]; // tiers are 0-indexed in array but 1-indexed in data
+  const nextTier = DISTRIBUTION_TIERS[(dist.tier + 1) - 1]; // dist.tier is 1-based; next tier's 0-based index
   if (!nextTier) return { success: false, msg: 'Cannot upgrade further.' };
   if (state.cash < nextTier.upgradeCost) return { success: false, msg: `Need $${nextTier.upgradeCost.toLocaleString()} to upgrade.` };
   state.cash -= nextTier.upgradeCost;
@@ -1063,6 +1063,7 @@ function createGameState() {
     sideMissionsV2: typeof initSideMissionsV2State === 'function' ? initSideMissionsV2State() : { activeChains: {}, completedChains: [], failedChains: [], availableChains: [], chainLog: [], stats: { totalStarted: 0, totalCompleted: 0, totalFailed: 0 } },
     proceduralMissions: typeof initProceduralState === 'function' ? initProceduralState() : { availableMissions: [], activeMissions: [], completedCount: 0, failedCount: 0, missionLog: [], lastGenDay: 0, difficultyModifier: 0 },
     phone: typeof initPhoneState === 'function' ? initPhoneState() : { inbox: [], contacts: [], burnerAge: 0, burnerType: 'basic', wiretapped: false, unreadCount: 0 },
+    bodies_state: typeof initBodyState === 'function' ? initBodyState() : { bodies: 0, totalKills: 0, disposedBodies: 0, discoveredBodies: 0, pendingDisposal: [], bodyLocations: [] },
     tutorial: { active: true, step: 0, completed: false, tabsSeen: {}, screensSeen: {}, pendingHint: null },
     version: 6,
   };
@@ -1367,6 +1368,9 @@ function waitDay(state) {
   if (typeof processBusinessesDaily === 'function') {
     const bizV2Msgs = processBusinessesDaily(state);
     if (bizV2Msgs && bizV2Msgs.length) msgs.push(...bizV2Msgs);
+  }
+  if (typeof expireBusinessModifiers === 'function') {
+    expireBusinessModifiers(state);
   }
   if (typeof processSideMissionsV2Daily === 'function') {
     const smV2Msgs = processSideMissionsV2Daily(state);
@@ -4129,4 +4133,103 @@ function getEffectiveSpeech(state) {
   let speech = state.speechSkill || 0;
   speech += getSkillEffect(state, 'speechBonus');
   return Math.min(100, speech);
+}
+
+// ============================================================
+// MISSING UTILITY FUNCTIONS (cross-system integration)
+// ============================================================
+
+// Calculate total net worth: cash + inventory value + property value + vehicle value
+function calculateNetWorth(state) {
+  let total = state.cash || 0;
+
+  // Inventory value at average market price
+  if (state.inventory) {
+    for (const [drugId, qty] of Object.entries(state.inventory)) {
+      if (qty <= 0) continue;
+      const drug = DRUGS.find(d => d.id === drugId);
+      if (drug) {
+        const avgPrice = (drug.minPrice + drug.maxPrice) / 2;
+        total += avgPrice * qty;
+      }
+    }
+  }
+
+  // Stash value
+  if (state.stashes) {
+    for (const locId of Object.keys(state.stashes)) {
+      const stash = state.stashes[locId];
+      if (!stash) continue;
+      for (const [drugId, qty] of Object.entries(stash)) {
+        if (qty <= 0) continue;
+        const drug = DRUGS.find(d => d.id === drugId);
+        if (drug) {
+          total += ((drug.minPrice + drug.maxPrice) / 2) * qty;
+        }
+      }
+    }
+  }
+
+  // Property value
+  if (typeof getTotalPropertyValue === 'function') {
+    total += getTotalPropertyValue(state);
+  }
+
+  // Business value (60% of setup cost like sell price)
+  if (state.businesses && state.businesses.owned) {
+    for (const owned of state.businesses.owned) {
+      if (owned.setupCost) total += Math.floor(owned.setupCost * 0.6);
+    }
+  }
+
+  // Vehicle value
+  if (state.vehicleState && state.vehicleState.garage) {
+    for (const vehicle of state.vehicleState.garage) {
+      if (typeof getVehicleValue === 'function') {
+        total += getVehicleValue(state, vehicle.id);
+      } else {
+        total += (vehicle.purchasePrice || 0) * 0.5;
+      }
+    }
+  }
+
+  return Math.floor(total);
+}
+
+// Get wealth level of a district (0-1 scale based on district income level)
+function getDistrictWealth(state, districtId) {
+  // Check Miami districts first
+  if (typeof MIAMI_DISTRICTS !== 'undefined') {
+    const dist = MIAMI_DISTRICTS.find(d => d.id === districtId);
+    if (dist) {
+      // Map income level descriptions to numeric wealth
+      const wealthMap = { 'very_low': 0.2, 'low': 0.35, 'medium': 0.5, 'high': 0.7, 'very_high': 0.9 };
+      return wealthMap[dist.incomeLevel] || 0.5;
+    }
+  }
+
+  // Check world districts
+  if (typeof WORLD_DISTRICTS !== 'undefined') {
+    for (const regionId of Object.keys(WORLD_DISTRICTS)) {
+      const dist = WORLD_DISTRICTS[regionId].find(d => d.id === districtId);
+      if (dist) {
+        return dist.wealthLevel || dist.propertyMod || 0.5;
+      }
+    }
+  }
+
+  // Check LOCATIONS array
+  const loc = LOCATIONS.find(l => l.id === districtId);
+  if (loc) {
+    // Derive wealth from average drug prices or police intensity
+    return Math.min(1, Math.max(0.1, (loc.policeIntensity || 0.5)));
+  }
+
+  return 0.5; // Default mid-level
+}
+
+// Get number of crew assigned to a specific business
+function getAssignedCrew(state, businessId) {
+  if (!state.henchmen || !Array.isArray(state.henchmen)) return 0;
+  return state.henchmen.filter(h => h.assignedTo === businessId && !h.injured).length;
 }

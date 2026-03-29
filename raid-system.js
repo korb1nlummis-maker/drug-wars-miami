@@ -354,6 +354,11 @@ function processRaidCheck(state) {
 
 // Execute a raid response
 function executeRaidResponse(state, raid, responseId) {
+  // Recursion guard: prevent re-entry (e.g. failed bribe falling through to surrender)
+  if (raid._recursionGuard) {
+    return { success: false, msg: '🏳️ You surrendered peacefully.', consequences: {} };
+  }
+
   const raidType = raid.type;
   const result = { success: false, msg: '', consequences: {} };
 
@@ -363,6 +368,7 @@ function executeRaidResponse(state, raid, responseId) {
       if (state.cash < cost) {
         result.msg = `💰 You can't afford the $${cost.toLocaleString()} bribe!`;
         // Fall through to surrender
+        raid._recursionGuard = true;
         return executeRaidResponse(state, raid, 'surrender');
       }
       state.cash -= cost;
@@ -387,9 +393,10 @@ function executeRaidResponse(state, raid, responseId) {
         // Drop some drugs during escape
         const drugsDrop = Math.random() * 0.2; // 0-20% of inventory
         for (const [drugId, amt] of Object.entries(state.inventory || {})) {
+          if (!amt || amt <= 0) continue;
           const loss = Math.floor(amt * drugsDrop);
           if (loss > 0) {
-            state.inventory[drugId] -= loss;
+            state.inventory[drugId] = Math.max(0, (state.inventory[drugId] || 0) - loss);
             result.msg += ` Dropped ${loss} ${drugId} while running.`;
           }
         }
@@ -417,7 +424,13 @@ function executeRaidResponse(state, raid, responseId) {
         result.msg += ` You took ${damage} damage.`;
         // Generate bodies
         const bodies = 1 + Math.floor(Math.random() * 3);
-        if (state.bodies_state) state.bodies_state.bodies = (state.bodies_state.bodies || 0) + bodies;
+        if (typeof addBodies === 'function') {
+          addBodies(state, bodies, state.currentLocation);
+        } else {
+          if (!state.bodies_state) state.bodies_state = initBodyState();
+          state.bodies_state.bodies = (state.bodies_state.bodies || 0) + bodies;
+          state.bodies_state.totalKills = (state.bodies_state.totalKills || 0) + bodies;
+        }
         result.msg += ` ${bodies} officer(s) down — bodies to dispose of.`;
         // XP for combat
         if (typeof awardXP === 'function') awardXP(state, 50);

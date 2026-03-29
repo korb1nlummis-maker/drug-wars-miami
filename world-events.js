@@ -212,6 +212,216 @@ function applyWorldEventEffects(state, regionId, evt) {
     });
   }
 
+  // Supply drop — reduce supply by lowering prices toward minPrice (scarcity = higher street price later,
+  // but immediate effect is less product available, modeled as a supply modifier on worldState)
+  if (effects.supplyDrop) {
+    if (!state.worldState.supplyModifiers) state.worldState.supplyModifiers = {};
+    const dropPct = effects.supplyDrop / 100; // e.g. 30 → 0.30
+    state.worldState.supplyModifiers[regionId] = Math.max(0.1,
+      (state.worldState.supplyModifiers[regionId] || 1.0) - dropPct);
+  }
+
+  // Supply boost — increase supply availability in the region
+  if (effects.supplyBoost) {
+    if (!state.worldState.supplyModifiers) state.worldState.supplyModifiers = {};
+    const boostPct = effects.supplyBoost / 100; // e.g. 20 → 0.20
+    state.worldState.supplyModifiers[regionId] = Math.min(2.0,
+      (state.worldState.supplyModifiers[regionId] || 1.0) + boostPct);
+  }
+
+  // Price spike — multiply current drug prices upward for drugs in the region
+  if (effects.priceSpike && state.prices && typeof DRUGS !== 'undefined') {
+    const multiplier = effects.priceSpike; // e.g. 1.5
+    DRUGS.forEach(drug => {
+      if (state.prices[drug.id] != null) {
+        state.prices[drug.id] = Math.min(drug.maxPrice * 2,
+          Math.round(state.prices[drug.id] * multiplier));
+      }
+    });
+  }
+
+  // Price drop — reduce drug prices by a factor
+  if (effects.priceDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const factor = effects.priceDrop; // e.g. 0.6 means prices drop to 60%
+    DRUGS.forEach(drug => {
+      if (state.prices[drug.id] != null) {
+        state.prices[drug.id] = Math.max(drug.minPrice,
+          Math.round(state.prices[drug.id] * factor));
+      }
+    });
+  }
+
+  // Import risk — increase shipment interception chance for the region
+  if (effects.importRisk) {
+    if (!state.worldState.importRiskModifiers) state.worldState.importRiskModifiers = {};
+    state.worldState.importRiskModifiers[regionId] = Math.min(1.0,
+      (state.worldState.importRiskModifiers[regionId] || 0) + effects.importRisk);
+  }
+
+  // Cocaine-specific supply drop — reduce cocaine supply and spike cocaine price
+  if (effects.cocaineSupplyDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const cocaineDrug = DRUGS.find(d => d.id === 'cocaine');
+    if (cocaineDrug && state.prices.cocaine != null) {
+      const dropPct = effects.cocaineSupplyDrop / 100; // e.g. 40 → 0.40
+      state.prices.cocaine = Math.min(cocaineDrug.maxPrice * 2,
+        Math.round(state.prices.cocaine * (1 + dropPct)));
+    }
+  }
+
+  // Cocaine price spike — explicit multiplier for cocaine
+  if (effects.cocainePriceSpike && state.prices && typeof DRUGS !== 'undefined') {
+    const cocaineDrug = DRUGS.find(d => d.id === 'cocaine');
+    if (cocaineDrug && state.prices.cocaine != null) {
+      state.prices.cocaine = Math.min(cocaineDrug.maxPrice * 2,
+        Math.round(state.prices.cocaine * effects.cocainePriceSpike));
+    }
+  }
+
+  // Cocaine supply boost — increase cocaine availability, lower price
+  if (effects.cocaineSupplyBoost && state.prices && typeof DRUGS !== 'undefined') {
+    const cocaineDrug = DRUGS.find(d => d.id === 'cocaine');
+    if (cocaineDrug && state.prices.cocaine != null) {
+      const boostPct = effects.cocaineSupplyBoost / 100;
+      state.prices.cocaine = Math.max(cocaineDrug.minPrice,
+        Math.round(state.prices.cocaine * (1 - boostPct)));
+    }
+  }
+
+  // Cocaine price drop — explicit factor for cocaine
+  if (effects.cocainePriceDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const cocaineDrug = DRUGS.find(d => d.id === 'cocaine');
+    if (cocaineDrug && state.prices.cocaine != null) {
+      state.prices.cocaine = Math.max(cocaineDrug.minPrice,
+        Math.round(state.prices.cocaine * effects.cocainePriceDrop));
+    }
+  }
+
+  // Meth supply drop — reduce meth availability, raise meth price
+  if (effects.methSupplyDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const methDrug = DRUGS.find(d => d.id === 'methamphetamine');
+    if (methDrug && state.prices.methamphetamine != null) {
+      const dropPct = effects.methSupplyDrop / 100;
+      state.prices.methamphetamine = Math.min(methDrug.maxPrice * 2,
+        Math.round(state.prices.methamphetamine * (1 + dropPct)));
+    }
+  }
+
+  // Meth supply boost — increase meth availability, lower meth price
+  if (effects.methSupplyBoost && state.prices && typeof DRUGS !== 'undefined') {
+    const methDrug = DRUGS.find(d => d.id === 'methamphetamine');
+    if (methDrug && state.prices.methamphetamine != null) {
+      const boostPct = effects.methSupplyBoost / 100;
+      state.prices.methamphetamine = Math.max(methDrug.minPrice,
+        Math.round(state.prices.methamphetamine * (1 - boostPct)));
+    }
+  }
+
+  // Meth price drop — explicit factor for meth
+  if (effects.methPriceDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const methDrug = DRUGS.find(d => d.id === 'methamphetamine');
+    if (methDrug && state.prices.methamphetamine != null) {
+      state.prices.methamphetamine = Math.max(methDrug.minPrice,
+        Math.round(state.prices.methamphetamine * effects.methPriceDrop));
+    }
+  }
+
+  // Fentanyl supply drop — reduce fentanyl availability, raise fentanyl price
+  if (effects.fentanylSupplyDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const fentDrug = DRUGS.find(d => d.id === 'fentanyl');
+    if (fentDrug && state.prices.fentanyl != null) {
+      const dropPct = effects.fentanylSupplyDrop / 100;
+      state.prices.fentanyl = Math.min(fentDrug.maxPrice * 2,
+        Math.round(state.prices.fentanyl * (1 + dropPct)));
+    }
+  }
+
+  // Price surge — general multiplier (used by fentanyl bust etc.)
+  if (effects.priceSurge && state.prices && typeof DRUGS !== 'undefined') {
+    const multiplier = effects.priceSurge;
+    DRUGS.forEach(drug => {
+      if (state.prices[drug.id] != null) {
+        state.prices[drug.id] = Math.min(drug.maxPrice * 2,
+          Math.round(state.prices[drug.id] * multiplier));
+      }
+    });
+  }
+
+  // Heroin supply boost — increase heroin availability, lower price
+  if (effects.heroinSupplyBoost && state.prices && typeof DRUGS !== 'undefined') {
+    const heroinDrug = DRUGS.find(d => d.id === 'heroin');
+    if (heroinDrug && state.prices.heroin != null) {
+      const boostPct = effects.heroinSupplyBoost / 100;
+      state.prices.heroin = Math.max(heroinDrug.minPrice,
+        Math.round(state.prices.heroin * (1 - boostPct)));
+    }
+  }
+
+  // Heroin price drop — explicit factor for heroin
+  if (effects.heroinPriceDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const heroinDrug = DRUGS.find(d => d.id === 'heroin');
+    if (heroinDrug && state.prices.heroin != null) {
+      state.prices.heroin = Math.max(heroinDrug.minPrice,
+        Math.round(state.prices.heroin * effects.heroinPriceDrop));
+    }
+  }
+
+  // Opium supply boost — increase opium availability, lower price
+  if (effects.opiumSupplyBoost && state.prices && typeof DRUGS !== 'undefined') {
+    const opiumDrug = DRUGS.find(d => d.id === 'opium');
+    if (opiumDrug && state.prices.opium != null) {
+      const boostPct = effects.opiumSupplyBoost / 100;
+      state.prices.opium = Math.max(opiumDrug.minPrice,
+        Math.round(state.prices.opium * (1 - boostPct)));
+    }
+  }
+
+  // Ecstasy supply boost — increase ecstasy availability
+  if (effects.ecstasySupplyBoost && state.prices && typeof DRUGS !== 'undefined') {
+    const ecstasyDrug = DRUGS.find(d => d.id === 'ecstasy');
+    if (ecstasyDrug && state.prices.ecstasy != null) {
+      const boostPct = effects.ecstasySupplyBoost / 100;
+      state.prices.ecstasy = Math.max(ecstasyDrug.minPrice,
+        Math.round(state.prices.ecstasy * (1 - boostPct)));
+    }
+  }
+
+  // Weed price drop — explicit factor for weed
+  if (effects.weedPriceDrop && state.prices && typeof DRUGS !== 'undefined') {
+    const weedDrug = DRUGS.find(d => d.id === 'weed');
+    if (weedDrug && state.prices.weed != null) {
+      state.prices.weed = Math.max(weedDrug.minPrice,
+        Math.round(state.prices.weed * effects.weedPriceDrop));
+    }
+  }
+
+  // Import cost reduction — lower import costs for the region
+  if (effects.importCostDown) {
+    if (!state.worldState.importCostModifiers) state.worldState.importCostModifiers = {};
+    state.worldState.importCostModifiers[regionId] = Math.max(0.5,
+      (state.worldState.importCostModifiers[regionId] || 1.0) - effects.importCostDown);
+  }
+
+  // Shipping cost increase
+  if (effects.shippingCostUp) {
+    if (!state.worldState.shippingCostModifiers) state.worldState.shippingCostModifiers = {};
+    state.worldState.shippingCostModifiers[regionId] = Math.min(2.0,
+      (state.worldState.shippingCostModifiers[regionId] || 1.0) + effects.shippingCostUp);
+  }
+
+  // Raid chance increase
+  if (effects.raidChanceUp) {
+    if (!state.worldState.raidChanceModifiers) state.worldState.raidChanceModifiers = {};
+    state.worldState.raidChanceModifiers[regionId] = Math.min(1.0,
+      (state.worldState.raidChanceModifiers[regionId] || 0) + effects.raidChanceUp);
+  }
+
+  // Processing risk — increase risk for lab/processing operations
+  if (effects.processingRisk) {
+    if (!state.worldState.processingRiskModifiers) state.worldState.processingRiskModifiers = {};
+    state.worldState.processingRiskModifiers[regionId] = Math.min(1.0,
+      (state.worldState.processingRiskModifiers[regionId] || 0) + effects.processingRisk);
+  }
+
   // Store active events for UI display
   if (!state.worldState.activeEvents) state.worldState.activeEvents = {};
   state.worldState.activeEvents[regionId] = {

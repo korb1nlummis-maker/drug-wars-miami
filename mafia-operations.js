@@ -231,7 +231,7 @@ function _checkSkillRequirements(state, requirements) {
 
 function _checkCrewRequirements(state, requirements) {
   if (!requirements) return true;
-  var crew = state.crew || [];
+  var crew = state.henchmen || [];
   for (var type in requirements) {
     if (!requirements.hasOwnProperty(type)) continue;
     var needed = requirements[type];
@@ -317,7 +317,7 @@ function canSetupOperation(state, operationId, districtId) {
   }
 
   // Check available crew for operation
-  var crew = state.crew || [];
+  var crew = state.henchmen || [];
   for (var i = 0; i < def.crewRequired.length; i++) {
     var req = def.crewRequired[i];
     var available = crew.filter(function(c) {
@@ -350,7 +350,7 @@ function setupOperation(state, operationId, districtId) {
 
   // Assign crew
   var assignedCrew = [];
-  var crew = state.crew || [];
+  var crew = state.henchmen || [];
   for (var i = 0; i < def.crewRequired.length; i++) {
     var req = def.crewRequired[i];
     var assigned = 0;
@@ -388,7 +388,7 @@ function shutdownOperation(state, opIndex) {
   }
 
   var op = mafiaState.activeOperations[opIndex];
-  var crew = state.crew || [];
+  var crew = state.henchmen || [];
 
   // Free assigned crew
   for (var i = 0; i < op.assignedCrew.length; i++) {
@@ -709,7 +709,7 @@ function _applyOperationEvent(state, operation, event) {
 
     case 'crew_damage':
       if (Math.random() < event.crewDamageChance && operation.assignedCrew.length > 0) {
-        var crew = state.crew || [];
+        var crew = state.henchmen || [];
         var injuredId = operation.assignedCrew[Math.floor(Math.random() * operation.assignedCrew.length)];
         for (var k = 0; k < crew.length; k++) {
           if (crew[k].id === injuredId) {

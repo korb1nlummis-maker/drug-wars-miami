@@ -34,10 +34,8 @@ function getSupplyDemandPriceMod(state, drugId, locationId) {
   const supply = getSupplyLevel(state, locationId, drugId);
   const demand = getDemandLevel(state, locationId, drugId);
 
-  if (supply <= 0) return 3.0; // No supply = max price
-
   // Ratio: high demand + low supply = expensive, low demand + high supply = cheap
-  let ratio = demand / supply;
+  let ratio = supply <= 0 ? 3.0 : demand / supply;
 
   // Normalize: at 100/100 = 1.0
   // Clamp to prevent extreme swings

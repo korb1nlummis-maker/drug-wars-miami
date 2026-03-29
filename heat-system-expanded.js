@@ -4,7 +4,7 @@
 // Investigation, Wiretaps, Informants
 // ============================================================
 
-const HEAT_TIERS = [
+const HEAT_TIERS_EXPANDED = [
   {
     id: 'local', name: 'Local Police', emoji: '🚔',
     range: [0, 40],
@@ -137,10 +137,10 @@ function initHeatStateExpanded() {
 // Get current heat tier
 function getCurrentHeatTier(state) {
   const heat = state.heat || 0;
-  for (let i = HEAT_TIERS.length - 1; i >= 0; i--) {
-    if (heat >= HEAT_TIERS[i].range[0]) return HEAT_TIERS[i];
+  for (let i = HEAT_TIERS_EXPANDED.length - 1; i >= 0; i--) {
+    if (heat >= HEAT_TIERS_EXPANDED[i].range[0]) return HEAT_TIERS_EXPANDED[i];
   }
-  return HEAT_TIERS[0];
+  return HEAT_TIERS_EXPANDED[0];
 }
 
 // Add heat from a source
