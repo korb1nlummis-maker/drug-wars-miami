@@ -249,7 +249,7 @@ function meetRomanceNPC(state, npcId) {
 
 // ---- Date ----
 
-function goOnDate(state, npcId, tierIndex) {
+function goOnDate(state, npcId, tierIndex, playerCash) {
   const npc = ROMANCE_NPCS.find(n => n.id === npcId);
   if (!npc) return { success: false, message: 'Unknown person.' };
 
@@ -258,6 +258,16 @@ function goOnDate(state, npcId, tierIndex) {
   if (RELATIONSHIP_STAGES.indexOf(rel.stage) < 1) return { success: false, message: 'You need to know them better first.' };
 
   const tier = DATE_TIERS[tierIndex] || DATE_TIERS[0];
+
+  // Cash validation - prevent going negative
+  const cash = typeof playerCash === 'number' ? playerCash : 0;
+  if (cash < tier.cost) return { success: false, message: `Not enough cash. Need $${tier.cost.toLocaleString()}.` };
+
+  // Cooldown - one date per person per day
+  if (rel.lastDateDay !== undefined && rel.lastDateDay === (state._currentDay || 0)) {
+    return { success: false, message: `You already went on a date with ${npc.name} today.` };
+  }
+  rel.lastDateDay = state._currentDay || 0;
 
   rel.points += tier.relationshipGain;
   state.daysSinceContact[npcId] = 0;

@@ -1398,7 +1398,8 @@ function renderGame() {
     }
     const actionCell = showActions ?
       (drugLocked ? `<span style="color:#666;font-size:0.7rem">🔒 Lvl ${drug.minLevel}</span>` :
-        price !== null ? `<button class="btn btn-sm btn-buy" onclick="openTrade('${drug.id}', 'buy')">BUY</button>${owned > 0 ? ` <button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : ''}` : '') +
+        (price !== null ? `<button class="btn btn-sm btn-buy" onclick="openTrade('${drug.id}', 'buy')">BUY</button>` : '') +
+        (owned > 0 ? ` <button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : '')) +
       (drugLocked && owned > 0 ? `<button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : '') : '';
     // Up/down arrow from previous price and P&L indicator
     let trendArrow = '';
@@ -1739,7 +1740,7 @@ function renderTradeModal() {
   const price = gameState.prices[selectedDrug] || 0;
   const owned = gameState.inventory[selectedDrug] || 0;
 
-  if (!drug || price <= 0) {
+  if (!drug || (price <= 0 && tradeMode === 'buy')) {
     closeTrade();
     return '';
   }
@@ -6407,9 +6408,10 @@ function doAdvanceRelationship(npcId, action) {
   } else if (action === 'date') {
     if (typeof goOnDate === 'function') {
       var tier = 1;
-      var dateResult = goOnDate(romState, npcId, tier);
+      romState._currentDay = gameState.day || 0;
+      var dateResult = goOnDate(romState, npcId, tier, gameState.cash || 0);
       if (dateResult.success) {
-        gameState.cash = (gameState.cash || 0) - dateResult.cost;
+        gameState.cash = Math.max(0, (gameState.cash || 0) - dateResult.cost);
         playSound('click');
         showNotification(dateResult.message + (dateResult.stageUp ? ' 💕 Stage Up: ' + dateResult.newStage + '!' : ''), 'success');
         if (gameState.lifestyle && typeof gameState.lifestyle.stress === 'number') {

@@ -1192,6 +1192,30 @@ function waitDay(state) {
   state.debt = Math.round(state.debt * (1 + debtRate));
   state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
   const msgs = [];
+
+  // Loan shark enforcement - consequences for unpaid debt
+  if (state.debt > 0) {
+    if (!state.debtDaysUnpaid) state.debtDaysUnpaid = 0;
+    state.debtDaysUnpaid++;
+    if (state.debt > 30000 && state.debtDaysUnpaid > 7) {
+      // Loan shark sends thugs - take a cut of your cash
+      const shakedown = Math.min(state.cash, Math.floor(state.debt * 0.05));
+      if (shakedown > 0) {
+        state.cash -= shakedown;
+        state.debt -= shakedown;
+        msgs.push(`🦈 Loan shark's enforcers shook you down for $${shakedown.toLocaleString()}!`);
+      }
+      state.heat = Math.min(100, (state.heat || 0) + 2);
+    }
+    if (state.debt > 40000 && state.debtDaysUnpaid > 14) {
+      // Serious consequences - health damage
+      state.health = Math.max(10, (state.health || 100) - 10);
+      msgs.push(`🦈 Loan shark's men beat you up! Pay your debts or things get worse.`);
+    }
+  } else {
+    state.debtDaysUnpaid = 0;
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
@@ -1471,6 +1495,18 @@ function waitDay(state) {
   recordPriceHistory(state);
   snapshotNetWorth(state);
 
+  // Safety: prevent negative cash from any source
+  if (state.cash < 0) state.cash = 0;
+
+  // Safety: clean corrupted inventory entries
+  if (state.inventory) {
+    for (const id of Object.keys(state.inventory)) {
+      if (typeof state.inventory[id] !== 'number' || isNaN(state.inventory[id]) || state.inventory[id] <= 0) {
+        delete state.inventory[id];
+      }
+    }
+  }
+
   // Check game over
   if (!GAME_CONFIG.endlessMode && state.day > GAME_CONFIG.totalDays) {
     endGame(state);
@@ -1552,9 +1588,15 @@ function processWaitEvent(state) {
 // INVENTORY HELPERS
 // ============================================================
 function getInventoryCount(state) {
+  if (!state.inventory) state.inventory = {};
   let count = 0;
   for (const id in state.inventory) {
-    count += state.inventory[id];
+    const qty = state.inventory[id];
+    if (typeof qty !== 'number' || isNaN(qty) || qty <= 0) {
+      delete state.inventory[id]; // Clean corrupted entries
+      continue;
+    }
+    count += qty;
   }
   // Weapons take space
   for (const wId of state.weapons) {
@@ -1671,8 +1713,17 @@ function buyDrug(state, drugId, amount) {
 }
 
 function sellDrug(state, drugId, amount) {
+  if (!state.inventory) state.inventory = {};
   let price = state.prices[drugId];
-  if (price === null || price === undefined) return { success: false, msg: 'No buyers here.' };
+  // If drug unavailable at location, sell at 50% average price (emergency sale)
+  if (price === null || price === undefined) {
+    const drug = DRUGS.find(d => d.id === drugId);
+    if (drug) {
+      price = Math.round((drug.minPrice + drug.maxPrice) / 2 * 0.5);
+    } else {
+      return { success: false, msg: 'Unknown drug.' };
+    }
+  }
   if (!state.inventory[drugId] || state.inventory[drugId] < amount) return { success: false, msg: 'You don\'t have that much.' };
   price = applyTerritoryPriceMod(state, state.currentLocation, price, false);
   // Reputation penalty — low-level dealers get worse prices
@@ -1765,9 +1816,22 @@ function payDebt(state, amount) {
 function borrowMoney(state, amount) {
   const maxBorrow = 50000;
   if (state.debt + amount > maxBorrow) return { success: false, msg: `Loan shark won't lend more than $${maxBorrow.toLocaleString()} total.` };
+
+  // Cooldown: can only borrow once per day
+  if (state.lastBorrowDay === state.day) {
+    return { success: false, msg: 'The loan shark says come back tomorrow. One loan per day.' };
+  }
+
+  // Escalating risk: higher debt = loan shark sends enforcers
+  if (state.debt > 30000) {
+    state.heat = Math.min(100, (state.heat || 0) + 3);
+  }
+
   state.debt += amount;
   state.cash += amount;
-  return { success: true, msg: `Borrowed $${amount.toLocaleString()}. Total debt: $${state.debt.toLocaleString()}` };
+  state.lastBorrowDay = state.day;
+  state.totalBorrowed = (state.totalBorrowed || 0) + amount;
+  return { success: true, msg: `Borrowed $${amount.toLocaleString()}. Total debt: $${state.debt.toLocaleString()}. Interest: ${(GAME_CONFIG.debtInterestRate * 100).toFixed(1)}% daily.` };
 }
 
 // ============================================================

@@ -147,16 +147,18 @@ function resolveEncounterOutcome(state, outcomeIndex) {
     }
   }
   // Handle dynamic drug selling/giving from events
-  if (fx._sellDrug && fx._sellQty) {
-    const curQty = (state.inventory && state.inventory[fx._sellDrug]) || 0;
+  if (fx._sellDrug && typeof fx._sellDrug === 'string' && fx._sellQty && fx._sellQty > 0) {
+    if (!state.inventory) state.inventory = {};
+    const curQty = state.inventory[fx._sellDrug] || 0;
     const sellQty = Math.min(fx._sellQty, curQty);
     if (sellQty > 0 && state.inventory) {
       state.inventory[fx._sellDrug] = curQty - sellQty;
       if (state.inventory[fx._sellDrug] <= 0) delete state.inventory[fx._sellDrug];
     }
   }
-  if (fx._giveDrug && fx._giveQty) {
-    const curQty = (state.inventory && state.inventory[fx._giveDrug]) || 0;
+  if (fx._giveDrug && typeof fx._giveDrug === 'string' && fx._giveQty && fx._giveQty > 0) {
+    if (!state.inventory) state.inventory = {};
+    const curQty = state.inventory[fx._giveDrug] || 0;
     const giveQty = Math.min(fx._giveQty, curQty);
     if (giveQty > 0 && state.inventory) {
       state.inventory[fx._giveDrug] = curQty - giveQty;
