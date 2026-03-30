@@ -944,7 +944,7 @@ function getNgPlusMod(state, key, defaultVal) {
 // GAME STATE
 // ============================================================
 function createGameState() {
-  return {
+  const state = {
     day: 1,
     cash: GAME_CONFIG.startingCash,
     bank: 0,
@@ -1067,6 +1067,13 @@ function createGameState() {
     tutorial: { active: true, step: 0, completed: false, tabsSeen: {}, screensSeen: {}, pendingHint: null },
     version: 6,
   };
+
+  // Initialize consequence engine state (traits, abilities, delayed effects)
+  if (typeof initConsequenceState === 'function') {
+    initConsequenceState(state);
+  }
+
+  return state;
 }
 
 // ============================================================
@@ -1409,6 +1416,12 @@ function waitDay(state) {
     if (phoneMsgs && phoneMsgs.length) msgs.push(...phoneMsgs);
   }
 
+  // Consequence engine daily processing (delayed effects, timed consequences)
+  if (typeof processConsequencesDaily === 'function') {
+    const cMsgs = processConsequencesDaily(state);
+    if (cMsgs && cMsgs.length) msgs.push(...cMsgs);
+  }
+
   // Campaign milestone check
   if (typeof checkActMilestones === 'function' && !GAME_CONFIG.endlessMode) {
     const actEvent = checkActMilestones(state);
@@ -1654,6 +1667,9 @@ function buyDrug(state, drugId, amount) {
   // Skill tree: kingmaker global cost reduction
   const globalCostMod = getSkillEffect(state, 'globalCostMod');
   if (globalCostMod < 0) price = Math.round(price * (1 + globalCostMod));
+  // Consequence engine: ability buy discount (e.g. Haggle Master)
+  const abilityBuyDiscount = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'buy_discount') : 0;
+  if (abilityBuyDiscount > 0) price = Math.round(price * (1 - abilityBuyDiscount / 100));
   const totalCost = price * amount;
   if (totalCost > state.cash) return { success: false, msg: 'Not enough cash.' };
 
@@ -1745,6 +1761,9 @@ function sellDrug(state, drugId, amount) {
   // Skill: kingmaker global income
   const globalIncomeMod = getSkillEffect(state, 'globalIncomeMod');
   if (globalIncomeMod > 0) price = Math.round(price * (1 + globalIncomeMod));
+  // Consequence engine: ability sell bonus (e.g. Haggle Master, Purity Expert)
+  const abilitySellBonus = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'sell_bonus') : 0;
+  if (abilitySellBonus > 0) price = Math.round(price * (1 + abilitySellBonus / 100));
   const totalRevenue = price * amount;
   state.cash += totalRevenue;
   state.inventory[drugId] -= amount;
@@ -2432,7 +2451,10 @@ function resolveCombatRound(state, action, event) {
     }
 
   } else if (action === 'run') {
-    const escapeChance = 0.4 + (state.henchmen.filter(h => !h.injured).length * 0.1) - (event.enemyCount * 0.05);
+    let escapeChance = 0.4 + (state.henchmen.filter(h => !h.injured).length * 0.1) - (event.enemyCount * 0.05);
+    // Consequence engine: ability escape bonus (e.g. Escape Artist)
+    const abilityEscapeBonus = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'chase_escape') : 0;
+    if (abilityEscapeBonus > 0) escapeChance += abilityEscapeBonus / 100;
     if (Math.random() < escapeChance) {
       results.msg = 'You escaped!';
       results.resolved = true;

@@ -166,6 +166,11 @@ function resolveEncounterOutcome(state, outcomeIndex) {
     }
   }
 
+  // Apply consequence engine effects (traits, abilities, delayed effects)
+  if (fx.consequences && typeof applyConsequences === 'function') {
+    applyConsequences(state, fx.consequences, enc.id, outcomeIndex);
+  }
+
   enc.resolved = true;
   enc.resolvedText = outcome.result;
 

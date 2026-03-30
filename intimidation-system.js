@@ -106,6 +106,12 @@ function calculateIntimidation(state) {
     score += Math.min(10, level);
   }
 
+  // 8. Consequence engine: ability intimidation bonus (e.g. Iron Stare, Fear Aura)
+  if (typeof getAbilityBonus === 'function') {
+    const abilityIntimBonus = getAbilityBonus(state, 'intimidation');
+    if (abilityIntimBonus > 0) score += abilityIntimBonus;
+  }
+
   return Math.min(100, Math.max(0, Math.floor(score)));
 }
 
