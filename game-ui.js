@@ -897,24 +897,58 @@ function renderCampaignScreen() {
   if (availableMissions.length > 0) {
     missionsHtml = availableMissions.map(m => {
       const variant = m.characterVariants && m.characterVariants[gameState.character] ? m.characterVariants[gameState.character] : (m.characterVariants && m.characterVariants.default ? m.characterVariants.default : m.desc);
+      const isActive = campaign.activeMission === m.id;
+      const allDone = m.objectives ? m.objectives.every(obj => typeof checkMissionObjective === 'function' ? checkMissionObjective(gameState, obj) : false) : false;
+      const completedCount = m.objectives ? m.objectives.filter(obj => typeof checkMissionObjective === 'function' ? checkMissionObjective(gameState, obj) : false).length : 0;
+      const totalCount = m.objectives ? m.objectives.length : 0;
+
       const objectivesHtml = m.objectives ? m.objectives.map(obj => {
         const complete = typeof checkMissionObjective === 'function' ? checkMissionObjective(gameState, obj) : false;
-        return `<div style="padding:0.2rem 0;${complete ? 'text-decoration:line-through;opacity:0.6' : ''}">
-          ${complete ? '✅' : '⬜'} ${obj.desc}
+        const prog = typeof getObjectiveProgress === 'function' ? getObjectiveProgress(gameState, obj) : { current: complete ? 1 : 0, target: 1, done: complete };
+        const howTo = typeof getObjectiveHowTo === 'function' ? getObjectiveHowTo(obj) : '';
+        const pctRaw = prog.inverted
+          ? (prog.current < prog.target ? 100 : Math.max(0, 100 - ((prog.current - prog.target) / prog.target * 100)))
+          : (prog.target > 0 ? Math.min(100, (prog.current / prog.target) * 100) : 0);
+        const pct = Math.round(pctRaw);
+        const progressLabel = prog.inverted
+          ? (complete ? 'Done' : `Current: ${typeof prog.current === 'number' && prog.current > 999 ? prog.current.toLocaleString() : prog.current} (need below ${typeof prog.target === 'number' && prog.target > 999 ? prog.target.toLocaleString() : prog.target})`)
+          : `${typeof prog.current === 'number' && prog.current > 999 ? prog.current.toLocaleString() : prog.current} / ${typeof prog.target === 'number' && prog.target > 999 ? prog.target.toLocaleString() : prog.target}`;
+        return `<div style="padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div style="display:flex;align-items:center;gap:0.4rem;${complete ? 'opacity:0.6' : ''}">
+            <span style="font-size:1.1rem;line-height:1">${complete ? '<span style="color:#00ff88">&#10003;</span>' : '<span style="color:#666">&#9675;</span>'}</span>
+            <div style="flex:1">
+              <div style="font-weight:bold;${complete ? 'text-decoration:line-through;color:#888' : 'color:var(--neon-yellow)'}">${obj.desc}</div>
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-top:2px">
+                <div style="flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+                  <div style="width:${pct}%;height:100%;background:${complete ? '#00ff88' : pct > 50 ? '#ffcc00' : '#ff6644'};border-radius:2px;transition:width 0.3s"></div>
+                </div>
+                <span style="font-size:0.75rem;color:${complete ? '#00ff88' : '#aaa'};white-space:nowrap">${progressLabel}</span>
+              </div>
+              ${!complete && howTo ? `<div style="font-size:0.75rem;color:#88aaff;margin-top:2px;font-style:italic">HOW TO: ${howTo}</div>` : ''}
+            </div>
+          </div>
         </div>`;
       }).join('') : '';
+
       return `
-        <div class="card" style="border-color:var(--neon-yellow)">
+        <div class="card" style="border-color:${allDone ? 'var(--neon-green)' : isActive ? 'var(--neon-cyan)' : 'var(--neon-yellow)'};${allDone ? 'box-shadow:0 0 10px rgba(0,255,136,0.15)' : ''}">
           <div class="card-header">
             <span>${m.emoji || '📋'} ${m.name}</span>
-            ${campaign.activeMission === m.id ? '<span class="neon-cyan">ACTIVE</span>' : ''}
+            <span>${allDone ? '<span style="color:#00ff88;font-weight:bold">READY TO COMPLETE</span>' : isActive ? '<span class="neon-cyan">TRACKING</span>' : `<span class="text-dim">${completedCount}/${totalCount} done</span>`}</span>
           </div>
-          <p class="text-dim" style="font-size:0.85rem">${variant}</p>
-          ${objectivesHtml ? `<div style="margin-top:0.5rem;font-size:0.85rem">${objectivesHtml}</div>` : ''}
-          <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--neon-green)">
+          <p class="text-dim" style="font-size:0.85rem;margin-bottom:0.3rem">${variant}</p>
+          ${m.isActClimax ? '<div style="font-size:0.75rem;color:#ff8844;margin-bottom:0.3rem;font-weight:bold">ACT CLIMAX - Major story mission</div>' : ''}
+          ${m.choiceConsequences ? '<div style="font-size:0.75rem;color:#cc88ff;margin-bottom:0.3rem">Your choices in this mission will affect the story</div>' : ''}
+          ${m.approaches ? `<div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Approaches: ${m.approaches.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}</div>` : ''}
+          ${objectivesHtml ? `<div style="margin-top:0.5rem;font-size:0.85rem;background:rgba(0,0,0,0.2);border-radius:6px;padding:0.4rem 0.6rem">
+            <div style="font-size:0.7rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem">Objectives (${completedCount}/${totalCount})</div>
+            ${objectivesHtml}
+          </div>` : ''}
+          <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--neon-green);background:rgba(0,255,136,0.05);padding:0.3rem 0.5rem;border-radius:4px">
             Reward: ${m.reward ? `$${(m.reward.cash||0).toLocaleString()} | +${m.reward.rep||0} Rep | +${m.reward.xp||0} XP` : 'See description'}
           </div>
-          ${campaign.activeMission !== m.id ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
+          ${m.unlocks && m.unlocks.length > 0 ? `<div style="font-size:0.7rem;color:#888;margin-top:0.3rem">Unlocks: ${m.unlocks.filter(u => !u.startsWith('act')).join(', ') || 'Next act'}</div>` : ''}
+          ${!isActive ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
         </div>
       `;
     }).join('');
@@ -923,13 +957,17 @@ function renderCampaignScreen() {
   // Side missions from current act
   let sideMissionsHtml = '';
   if (currentAct && currentAct.sideMissions && currentAct.sideMissions.length > 0) {
-    sideMissionsHtml = currentAct.sideMissions.slice(0, 5).map(sm => `
-      <div class="card" style="border-color:var(--text-dim);opacity:0.8">
+    sideMissionsHtml = currentAct.sideMissions.slice(0, 5).map(sm => {
+      const smUnlocks = sm.unlocks && sm.unlocks.length > 0 ? sm.unlocks.join(', ') : '';
+      return `
+      <div class="card" style="border-color:var(--text-dim);opacity:0.9">
         <div class="card-header"><span>${sm.name}</span></div>
         <p class="text-dim" style="font-size:0.8rem">${sm.desc}</p>
-        <span class="text-dim" style="font-size:0.75rem">Reward: $${(sm.reward.cash||0).toLocaleString()} | +${sm.reward.rep||0} Rep</span>
+        <div style="font-size:0.75rem;color:var(--neon-green)">Reward: $${(sm.reward.cash||0).toLocaleString()} | +${sm.reward.rep||0} Rep${sm.reward.xp ? ' | +' + sm.reward.xp + ' XP' : ''}</div>
+        ${smUnlocks ? `<div style="font-size:0.7rem;color:#888;margin-top:0.2rem">Unlocks: ${smUnlocks}</div>` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   return `
@@ -3223,7 +3261,16 @@ function renderFronts() {
     launderHtml = `
       <div style="margin:1rem 0;padding:1rem;border:1px solid var(--neon-cyan);border-radius:8px;background:rgba(0,255,255,0.03)">
         <h3 class="section-title neon-cyan">💰 LAUNDER MONEY</h3>
-        <p class="text-dim" style="font-size:0.75rem">Move dirty cash to your bank account through your businesses. Reduces investigation.</p>
+        <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:0.5rem;padding:0.5rem;background:rgba(0,255,255,0.05);border-radius:6px">
+          <b style="color:var(--neon-cyan)">How laundering works:</b><br>
+          Drug money is "dirty" — spending large amounts draws police attention and investigation.<br>
+          <b>Laundering</b> moves cash through your legitimate businesses, making it "clean."<br>
+          ✅ Clean money doesn't increase heat when spent<br>
+          ✅ Reduces your investigation level by 1-3 points per wash<br>
+          ✅ Each business has a daily laundering capacity<br>
+          ✅ Better businesses = more capacity (upgrade to launder more)<br>
+          💡 <b>Tip:</b> Hire an <b>accountant</b> crew member to boost laundering by 25%
+        </div>
         <div style="margin:0.5rem 0;font-size:0.8rem">
           Daily capacity: <span class="neon-green">$${totalLaunderCap.toLocaleString()}</span> ·
           Cash available: <span class="neon-green">$${gameState.cash.toLocaleString()}</span>
@@ -3999,27 +4046,36 @@ function renderFactions() {
       statusBadge += ` <span class="neon-green">${aType ? aType.emoji : '🤝'} ${aType ? aType.name : alliance}</span>`;
     }
 
-    // Actions
+    // Actions with consequence hints
     let actions = '';
     if (war) {
-      actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="doNegotiatePeace('${faction.id}')">☮️ Peace</button>`;
+      actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="doNegotiatePeace('${faction.id}')">☮️ Peace</button>
+        <div style="font-size:0.65rem;color:#ff9500;margin-top:2px">Ends conflict - costs standing but stops losses</div>`;
     } else if (!alliance) {
       actions = ALLIANCE_TYPES.map(at => {
         const check = canFormAlliance(gameState, faction.id, at.id);
         return check.ok
-          ? `<button class="btn btn-sm btn-secondary" style="border-color:${standing.color};color:${standing.color};font-size:0.65rem" onclick="doFormAlliance('${faction.id}', '${at.id}')">${at.emoji} ${at.name} ($${at.cost.toLocaleString()})</button>`
+          ? `<button class="btn btn-sm btn-secondary" style="border-color:${standing.color};color:${standing.color};font-size:0.65rem" onclick="doFormAlliance('${faction.id}', '${at.id}')" title="Form ${at.name} alliance - builds cooperation">${at.emoji} ${at.name} ($${at.cost.toLocaleString()})</button>`
           : '';
       }).join(' ');
       if (standingVal <= -15 && !war) {
-        actions += ` <button class="btn btn-sm btn-secondary" style="border-color:#ff0000;color:#ff0000" onclick="doDeclareWar('${faction.id}')">⚔️ War</button>`;
+        actions += ` <button class="btn btn-sm btn-secondary" style="border-color:#ff0000;color:#ff0000" onclick="doDeclareWar('${faction.id}')" title="Start a war - high risk, can weaken or destroy them">⚔️ War</button>`;
+      }
+      if (actions.trim()) {
+        const hintParts = [];
+        if (actions.includes('War')) hintParts.push('<span style="color:#ff4444">War: High risk, may gain territory if you win</span>');
+        if (actions.includes('Alliance') || actions.includes('Pact') || actions.includes('Trade')) hintParts.push('<span style="color:#44ff88">Alliances: Build cooperation, share benefits</span>');
+        if (hintParts.length > 0) actions += `<div style="font-size:0.6rem;margin-top:3px">${hintParts.join(' | ')}</div>`;
       }
     } else {
-      actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff4444;color:#ff4444" onclick="doBreakAlliance('${faction.id}')">💔 Break</button>`;
+      actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff4444;color:#ff4444" onclick="doBreakAlliance('${faction.id}')">💔 Break</button>
+        <div style="font-size:0.65rem;color:#ff4444;margin-top:2px">Breaking alliance damages trust and standing</div>`;
     }
 
     // Absorb if weak enough after war
     if (power <= 20 && !war && !f.absorptions.includes(faction.id)) {
-      actions += ` <button class="btn btn-sm btn-buy" onclick="doAbsorbFaction('${faction.id}')">👑 Absorb</button>`;
+      actions += ` <button class="btn btn-sm btn-buy" onclick="doAbsorbFaction('${faction.id}')" title="Take over this faction permanently">👑 Absorb</button>
+        <div style="font-size:0.65rem;color:#00ff88;margin-top:2px">Absorb: Gain their territory and resources permanently</div>`;
     }
 
     return `<div class="prop-card" style="border-color:${faction.color}">
@@ -4413,14 +4469,52 @@ function renderMissions() {
     const d = MORAL_DILEMMAS.find(dd => dd.id === dilemma.id);
     if (d) {
       const choicesHtml = d.choices.map(c => {
-        return `<button class="btn btn-sm btn-primary" style="border-color:#ff8844;margin:0.3rem" onclick="doResolveDilemma('${c.id}')">
-          ${c.label}<br><span style="font-size:0.7rem;color:#aaa">${c.desc}</span>
+        // Generate consequence hint from the choice effects function if it exists
+        const hintParts = [];
+        // Parse the effect function source or desc to generate hints
+        const descLower = (c.desc || '').toLowerCase();
+        const labelLower = (c.label || '').toLowerCase();
+        if (descLower.includes('kill') || descLower.includes('eliminat') || labelLower.includes('kill') || labelLower.includes('eliminat') || labelLower.includes('no mercy')) {
+          hintParts.push('<span style="color:#ff4444">Aggressive</span>');
+          hintParts.push('<span style="color:#cc44ff">+Fear</span>');
+        }
+        if (descLower.includes('forgiv') || descLower.includes('mercy') || descLower.includes('spare') || descLower.includes('let them') || descLower.includes('second chance')) {
+          hintParts.push('<span style="color:#44ff88">Peaceful</span>');
+          hintParts.push('<span style="color:#44ff88">+Trust</span>');
+        }
+        if (descLower.includes('pay') || descLower.includes('money') || descLower.includes('brib') || descLower.includes('cash') || descLower.includes('school') || descLower.includes('relocat')) {
+          hintParts.push('<span style="color:#ffcc00">Costs $$$</span>');
+        }
+        if (descLower.includes('misinform') || descLower.includes('clever') || descLower.includes('false') || descLower.includes('use them') || descLower.includes('exploit')) {
+          hintParts.push('<span style="color:#88aaff">Cunning</span>');
+          hintParts.push('<span style="color:#ffcc00">+Street Cred</span>');
+        }
+        if (descLower.includes('expos') || descLower.includes('press') || descLower.includes('report') || descLower.includes('tip off')) {
+          hintParts.push('<span style="color:#88aaff">Public</span>');
+          hintParts.push('<span style="color:#44aaff">-Heat</span>');
+        }
+        if (descLower.includes('cop') || descLower.includes('invaluable') || descLower.includes('look the other way')) {
+          hintParts.push('<span style="color:#44aaff">-Heat</span>');
+        }
+        if (descLower.includes('risk') || descLower.includes('expos') || descLower.includes('attention')) {
+          hintParts.push('<span style="color:#ff6644">Risky</span>');
+        }
+        if (descLower.includes('children') || descLower.includes('not a life for') || descLower.includes('safe')) {
+          hintParts.push('<span style="color:#88aaff">+Public Image</span>');
+        }
+        if (descLower.includes('useful') || descLower.includes('less suspicious')) {
+          hintParts.push('<span style="color:#ff8844">-Public Image</span>');
+        }
+        const hintStr = hintParts.length > 0 ? `<div style="font-size:0.65rem;margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid rgba(255,255,255,0.1)">${hintParts.join(' | ')}</div>` : '';
+        return `<button class="btn btn-sm btn-primary" style="border-color:#ff8844;margin:0.3rem;min-width:150px;text-align:center;padding:0.4rem 0.6rem" onclick="doResolveDilemma('${c.id}')">
+          ${c.label}<br><span style="font-size:0.7rem;color:#ccc">${c.desc}</span>${hintStr}
         </button>`;
       }).join('');
       dilemmaHtml = `
         <div style="background:rgba(255,136,68,0.1);border:2px solid #ff8844;border-radius:8px;padding:1rem;margin-bottom:1rem">
-          <h3 style="color:#ff8844;margin:0 0 0.5rem 0">⚖️ MORAL DILEMMA: ${d.emoji} ${d.name}</h3>
+          <h3 style="color:#ff8844;margin:0 0 0.3rem 0">⚖️ MORAL DILEMMA: ${d.emoji} ${d.name}</h3>
           <p style="margin:0.5rem 0">${d.desc}</p>
+          <div style="font-size:0.75rem;color:#ff8844;margin-bottom:0.5rem;text-align:center;font-style:italic">Each choice has lasting consequences. Consider carefully.</div>
           <div style="display:flex;flex-wrap:wrap;justify-content:center">${choicesHtml}</div>
         </div>`;
     }
@@ -4432,27 +4526,58 @@ function renderMissions() {
     if (!template) return '';
     const daysLeft = m.daysLimit - (gameState.day - m.dayAccepted);
     const canComplete = template.check(gameState, m.data);
-    return `<div class="prop-card" style="border-color:${daysLeft <= 1 ? '#ff0000' : '#ff8844'}">
-      <div class="prop-header">${template.emoji} ${template.name} <span style="color:${daysLeft <= 1 ? '#ff0000' : '#ffcc00'}">(${daysLeft}d left)</span></div>
-      <div class="prop-details">${template.getText(m.data)}</div>
+    const urgency = daysLeft <= 1 ? '#ff0000' : daysLeft <= 3 ? '#ff6600' : '#ffcc00';
+    // Generate guidance hint based on mission category
+    const categoryHints = {
+      delivery: 'Buy the required product from any market, then come back here to deliver.',
+      combat: 'Make sure you have a weapon equipped and good health before attempting.',
+      smuggling: 'Higher driving skill improves your success chance. Consider your heat level.',
+      social: 'Speech skill and reputation affect your chances. Check your stats.',
+      heist: 'You need enough crew members. Crew combat stats determine success.',
+    };
+    const hint = categoryHints[template.category] || 'Check the mission requirements and complete the objective.';
+    return `<div class="prop-card" style="border-color:${canComplete ? '#00ff88' : daysLeft <= 1 ? '#ff0000' : '#ff8844'}">
+      <div class="prop-header">${template.emoji} ${template.name} <span style="color:${urgency};font-weight:bold">${daysLeft <= 1 ? 'URGENT! ' : ''}${daysLeft}d left</span></div>
+      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#888;margin:0.2rem 0">OBJECTIVE</div>
+      <div class="prop-details" style="font-weight:bold;color:${canComplete ? '#00ff88' : '#fff'}">${template.getText(m.data)}</div>
+      <div style="font-size:0.75rem;color:#88aaff;margin:0.3rem 0;font-style:italic">HOW TO: ${hint}</div>
+      <div style="margin:0.3rem 0;padding:0.3rem;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.8rem">
+        <span style="color:${canComplete ? '#00ff88' : '#ff8844'};font-weight:bold">${canComplete ? 'READY - All requirements met!' : 'IN PROGRESS - Requirements not yet met'}</span>
+      </div>
       <div style="display:flex;gap:0.3rem;margin-top:0.3rem">
         ${template.dialogue ? `<button class="btn btn-sm btn-buy" onclick="startMissionDialogue(${i})">🗣️ Begin</button>` :
-          `<button class="btn btn-sm ${canComplete ? 'btn-buy' : 'btn-secondary'}" ${!canComplete ? 'disabled' : ''} onclick="doCompleteMission(${i})">✅ Complete</button>`}
+          `<button class="btn btn-sm ${canComplete ? 'btn-buy' : 'btn-secondary'}" ${!canComplete ? 'disabled' : ''} onclick="doCompleteMission(${i})">${canComplete ? '✅ Complete & Claim Reward' : '⏳ Not Ready'}</button>`}
         <button class="btn btn-sm btn-danger" onclick="doAbandonMission(${i})">❌ Abandon</button>
       </div>
     </div>`;
-  }).join('') : '<div class="text-dim" style="padding:0.5rem">No active missions.</div>';
+  }).join('') : '<div class="text-dim" style="padding:0.5rem">No active missions. Accept available missions below to earn cash, reputation, and unlock new opportunities.</div>';
 
   // Available missions
   const availableHtml = available.length > 0 ? available.map((m, i) => {
     const template = SIDE_MISSIONS.find(t => t.id === m.missionId);
     if (!template) return '';
+    const tierLabels = { 1: 'Easy', 2: 'Medium', 3: 'Hard', 4: 'Very Hard', 5: 'Extreme' };
+    const tierColors = { 1: '#00ff88', 2: '#ffcc00', 3: '#ff8844', 4: '#ff4444', 5: '#cc00ff' };
+    const tierLabel = tierLabels[m.tier] || ('Tier ' + m.tier);
+    const tierColor = tierColors[m.tier] || '#aaa';
+    // Provide direction on what the mission involves
+    const categoryDescs = {
+      delivery: 'Acquire and deliver product',
+      combat: 'Combat encounter - bring weapons',
+      smuggling: 'Risky transport mission',
+      social: 'Social skill check - speech matters',
+      heist: 'Crew operation - need backup',
+    };
+    const catDesc = categoryDescs[template.category] || '';
     return `<div class="prop-card" style="border-color:#4488ff">
-      <div class="prop-header">${template.emoji} ${template.name} <span class="text-dim">Tier ${m.tier}</span></div>
-      <div class="prop-details">${template.desc}<br>${template.getText(m.data)}</div>
-      <button class="btn btn-sm btn-buy" ${active.length >= 3 ? 'disabled' : ''} onclick="doAcceptMission(${i})">📋 Accept</button>
+      <div class="prop-header">${template.emoji} ${template.name} <span style="color:${tierColor};font-weight:bold;font-size:0.8rem">[${tierLabel}]</span></div>
+      <div style="font-size:0.75rem;color:#aaa;margin:0.2rem 0">${catDesc ? catDesc + ' | ' : ''}${m.daysLimit || '?'}d time limit</div>
+      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#888;margin:0.2rem 0">OBJECTIVE</div>
+      <div class="prop-details" style="font-weight:bold">${template.getText(m.data)}</div>
+      <div class="prop-details" style="color:#aaa;font-size:0.8rem;margin-top:0.2rem">${template.desc}</div>
+      <button class="btn btn-sm btn-buy" ${active.length >= 3 ? 'disabled title="Max 3 active missions"' : ''} onclick="doAcceptMission(${i})">${active.length >= 3 ? '🔒 Max Active (3/3)' : '📋 Accept Mission'}</button>
     </div>`;
-  }).join('') : '<div class="text-dim" style="padding:0.5rem">No missions available. Check back later.</div>';
+  }).join('') : '<div class="text-dim" style="padding:0.5rem">No missions available. New missions appear as you progress. Check back after advancing a day.</div>';
 
   return `
     <div class="screen-container">
@@ -4469,34 +4594,102 @@ function renderMissions() {
       <h3 style="color:#ffcc00;margin:0.5rem 0;font-size:1.1rem">🌟 MAIN MISSION${ms.activeMainMission ? ' (1/1)' : ''}</h3>
       ${(function() {
         if (typeof getCurrentAct !== 'function' || typeof getActMilestoneProgress !== 'function') return '<div class="text-dim" style="padding:0.5rem">Campaign not loaded.</div>';
-        const act = getCurrentAct(gameState);
-        const progress = getActMilestoneProgress(gameState);
-        const activeMain = ms.activeMainMission;
+        var act = getCurrentAct(gameState);
+        var progress = getActMilestoneProgress(gameState);
+        var activeMain = ms.activeMainMission;
+
+        // Helper: generate milestone guidance HTML
+        function milestoneGuidance(milestone, isDone) {
+          // Try to find matching campaign mission objectives for richer info
+          var campaignMission = null;
+          if (typeof CAMPAIGN_ACTS !== 'undefined') {
+            for (var ai = 0; ai < CAMPAIGN_ACTS.length; ai++) {
+              if (CAMPAIGN_ACTS[ai].mainMissions) {
+                for (var mi = 0; mi < CAMPAIGN_ACTS[ai].mainMissions.length; mi++) {
+                  var cm = CAMPAIGN_ACTS[ai].mainMissions[mi];
+                  if (cm.objectives) {
+                    for (var oi = 0; oi < cm.objectives.length; oi++) {
+                      if (cm.objectives[oi].id === milestone.id) { campaignMission = cm; break; }
+                    }
+                  }
+                  if (campaignMission) break;
+                }
+              }
+              if (campaignMission) break;
+            }
+          }
+
+          var guidanceHtml = '';
+          // Add how-to hint based on milestone id
+          var howTo = '';
+          var milestoneId = milestone.id || '';
+          if (milestoneId.includes('10k') || milestoneId.includes('cash') || milestoneId.includes('net_worth') || milestoneId.includes('100k') || milestoneId.includes('500k') || milestoneId.includes('million')) {
+            howTo = 'Earn money through drug trades, missions, heists, and business income. Check Market and Missions tabs.';
+          } else if (milestoneId.includes('territory') || milestoneId.includes('Territory')) {
+            howTo = 'Go to the Territory tab to claim or take over locations from rivals.';
+          } else if (milestoneId.includes('crew') || milestoneId.includes('Crew')) {
+            howTo = 'Visit Crew Management to recruit new members from available prospects.';
+          } else if (milestoneId.includes('visit') || milestoneId.includes('cities') || milestoneId.includes('Horizons')) {
+            howTo = 'Travel to different cities using the Travel tab. Explore new markets and opportunities.';
+          } else if (milestoneId.includes('front') || milestoneId.includes('clean') || milestoneId.includes('launder')) {
+            howTo = 'Purchase a front business from the Businesses tab to start laundering cash.';
+          } else if (milestoneId.includes('property') || milestoneId.includes('estate') || milestoneId.includes('Real')) {
+            howTo = 'Buy properties from the Real Estate section. Look for investment opportunities.';
+          } else if (milestoneId.includes('distribution') || milestoneId.includes('Distribution')) {
+            howTo = 'Set up distribution networks by assigning dealers to your controlled territories.';
+          } else if (milestoneId.includes('debt') || milestoneId.includes('Debt')) {
+            howTo = 'Pay off your debt using the Banking tab. Prioritize repayment to reduce interest costs.';
+          } else if (milestoneId.includes('investigation') || milestoneId.includes('survive')) {
+            howTo = 'Manage heat, use lawyers, and destroy evidence to survive federal attention.';
+          } else if (milestoneId.includes('lieutenant') || milestoneId.includes('promoted')) {
+            howTo = 'Promote experienced crew members in Crew Management. They need sufficient loyalty.';
+          } else if (milestoneId.includes('endgame')) {
+            howTo = 'Your ending will be determined by the state of your empire. Build it wisely.';
+          }
+
+          guidanceHtml += howTo ? '<div style="font-size:0.75rem;color:#88aaff;margin:0.3rem 0;font-style:italic">HOW TO: ' + howTo + '</div>' : '';
+
+          // Status indicator
+          if (isDone) {
+            guidanceHtml += '<div style="padding:0.3rem;background:rgba(0,255,136,0.1);border-radius:4px;margin-top:0.3rem"><span style="color:#00ff88;font-weight:bold">&#10003; OBJECTIVE COMPLETE - Ready to claim!</span></div>';
+          } else {
+            guidanceHtml += '<div style="padding:0.3rem;background:rgba(255,136,68,0.1);border-radius:4px;margin-top:0.3rem"><span style="color:#ff8844">&#9675; IN PROGRESS - Keep working toward the objective</span></div>';
+          }
+
+          return guidanceHtml;
+        }
+
         if (activeMain) {
-          const milestone = act.milestones.find(m => m.id === activeMain.milestoneId);
+          var milestone = act.milestones.find(function(m) { return m.id === activeMain.milestoneId; });
           if (milestone) {
-            const isDone = progress.milestones.find(m => m.id === milestone.id && m.isCompleted);
-            return '<div style="background:rgba(255,200,0,0.08);border:2px solid #ffcc00;border-radius:8px;padding:1rem;margin-bottom:1rem">' +
+            var isDone = progress.milestones.find(function(m) { return m.id === milestone.id && m.isCompleted; });
+            var guidance = milestoneGuidance(milestone, isDone);
+            return '<div style="background:rgba(255,200,0,0.08);border:2px solid ' + (isDone ? '#00ff88' : '#ffcc00') + ';border-radius:8px;padding:1rem;margin-bottom:1rem">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">' +
               '<h3 style="color:#ffcc00;margin:0">🌟 ' + milestone.name + '</h3>' +
               '<span style="color:var(--text-dim);font-size:0.75rem">Act ' + act.act + ': ' + act.name + '</span></div>' +
-              '<p style="margin:0.3rem 0;color:var(--text-main)">' + milestone.desc + '</p>' +
-              '<p style="margin:0.2rem 0;font-size:0.8rem;color:#00ff88">Reward: ' + milestone.reward + '</p>' +
-              (isDone ? '<button class="btn btn-sm btn-buy btn-glow" style="margin-top:0.3rem" onclick="doCompleteMainMission()">🏆 Claim Reward</button>' :
-                '<div style="margin-top:0.3rem;font-size:0.8rem;color:#ff8844">⏳ In progress...</div>') +
+              '<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#888;margin:0.3rem 0">OBJECTIVE</div>' +
+              '<p style="margin:0.2rem 0;color:var(--text-main);font-weight:bold">' + milestone.desc + '</p>' +
+              guidance +
+              '<p style="margin:0.3rem 0;font-size:0.8rem;color:#00ff88;background:rgba(0,255,136,0.05);padding:0.2rem 0.5rem;border-radius:4px">Reward: ' + milestone.reward + '</p>' +
+              (isDone ? '<button class="btn btn-sm btn-buy btn-glow" style="margin-top:0.5rem" onclick="doCompleteMainMission()">🏆 Claim Reward</button>' :
+                '<div style="margin-top:0.3rem;font-size:0.8rem;color:#ff8844">⏳ Working toward objective...</div>') +
               '</div>';
           }
         }
-        const incomplete = progress.milestones.filter(m => !m.isCompleted && (!activeMain || activeMain.milestoneId !== m.id));
+        var incomplete = progress.milestones.filter(function(m) { return !m.isCompleted && (!activeMain || activeMain.milestoneId !== m.id); });
         if (!activeMain && incomplete.length > 0) {
-          const next = incomplete[0];
+          var next = incomplete[0];
+          var nextGuidance = milestoneGuidance(next, false);
           return '<div style="background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.3);border-radius:8px;padding:1rem;margin-bottom:1rem">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">' +
             '<h3 style="color:#ffcc00;margin:0">🌟 ' + next.name + '</h3>' +
             '<span style="color:var(--text-dim);font-size:0.75rem">Act ' + act.act + ': ' + act.name + '</span></div>' +
-            '<p style="margin:0.3rem 0;color:var(--text-main)">' + next.desc + '</p>' +
-            '<p style="margin:0.2rem 0;font-size:0.8rem;color:#00ff88">Reward: ' + next.reward + '</p>' +
-            '<button class="btn btn-sm btn-primary" style="margin-top:0.3rem;border-color:#ffcc00;color:#ffcc00" onclick="doAcceptMainMission(&quot;' + next.id + '&quot;)">🎯 Accept Main Mission</button></div>';
+            '<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#888;margin:0.3rem 0">OBJECTIVE</div>' +
+            '<p style="margin:0.2rem 0;color:var(--text-main);font-weight:bold">' + next.desc + '</p>' +
+            nextGuidance +
+            '<p style="margin:0.3rem 0;font-size:0.8rem;color:#00ff88;background:rgba(0,255,136,0.05);padding:0.2rem 0.5rem;border-radius:4px">Reward: ' + next.reward + '</p>' +
+            '<button class="btn btn-sm btn-primary" style="margin-top:0.5rem;border-color:#ffcc00;color:#ffcc00" onclick="doAcceptMainMission(&quot;' + next.id + '&quot;)">🎯 Accept Main Mission</button></div>';
         }
         if (!activeMain) return '<div style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:0.8rem;margin-bottom:1rem;text-align:center"><span style="color:#00ff88">✅ All milestones for Act ' + act.act + ' complete!</span> <span style="color:var(--text-dim);font-size:0.8rem">' + progress.completed + '/' + progress.total + '</span></div>';
         return '';
@@ -4629,9 +4822,35 @@ function renderMissionDialogue() {
       if (c.reqFear && (gameState.rep ? (gameState.rep.fear || 0) : 0) < c.reqFear) { locked = true; lockReason = `Fear ${c.reqFear}+`; }
       if (c.reqRep && (gameState.rep ? (gameState.rep.streetCred || 0) : 0) < c.reqRep) { locked = true; lockReason = `Rep ${c.reqRep}+`; }
 
-      return `<button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" style="margin:0.3rem;text-align:left;max-width:500px;width:100%;${locked ? 'opacity:0.5' : ''}"
+      // Generate dialogue choice hints based on label keywords
+      const dHints = [];
+      const cLabel = (c.label || '').toLowerCase();
+      if (cLabel.includes('threaten') || cLabel.includes('intimidat') || cLabel.includes('force') || cLabel.includes('attack')) {
+        dHints.push('<span style="color:#ff4444">Aggressive</span>');
+      }
+      if (cLabel.includes('negotiate') || cLabel.includes('talk') || cLabel.includes('reason') || cLabel.includes('persuad') || cLabel.includes('charm')) {
+        dHints.push('<span style="color:#88aaff">Diplomatic</span>');
+      }
+      if (cLabel.includes('lie') || cLabel.includes('bluff') || cLabel.includes('trick') || cLabel.includes('deceiv')) {
+        dHints.push('<span style="color:#ffcc00">Deceptive</span>');
+      }
+      if (cLabel.includes('pay') || cLabel.includes('brib') || cLabel.includes('offer money') || cLabel.includes('buy')) {
+        dHints.push('<span style="color:#ffcc00">Costs money</span>');
+      }
+      if (cLabel.includes('walk away') || cLabel.includes('leave') || cLabel.includes('refuse') || cLabel.includes('back off')) {
+        dHints.push('<span style="color:#888">Safe exit</span>');
+      }
+      if (cLabel.includes('agree') || cLabel.includes('accept') || cLabel.includes('help') || cLabel.includes('cooperat')) {
+        dHints.push('<span style="color:#44ff88">Cooperative</span>');
+      }
+      if (c.reqSpeech) dHints.push('<span style="color:#88aaff">Needs Speech ' + c.reqSpeech + '</span>');
+      if (c.reqFear) dHints.push('<span style="color:#cc44ff">Needs Fear ' + c.reqFear + '</span>');
+      if (c.reqRep) dHints.push('<span style="color:#ffcc00">Needs Rep ' + c.reqRep + '</span>');
+      const dHintLine = dHints.length > 0 ? `<div style="font-size:0.65rem;margin-top:2px;opacity:0.8">${dHints.join(' | ')}</div>` : '';
+
+      return `<button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" style="margin:0.3rem;text-align:left;max-width:500px;width:100%;padding:0.5rem 0.8rem;${locked ? 'opacity:0.5' : ''}"
         ${locked ? 'disabled' : `onclick="advanceMissionDialogue('${c.next}', ${i})"`}>
-        ${c.label}${locked ? ` <span style="font-size:0.7rem;color:#ff4444">[${lockReason}]</span>` : ''}
+        ${c.label}${locked ? ` <span style="font-size:0.7rem;color:#ff4444">[${lockReason}]</span>` : ''}${dHintLine}
       </button>`;
     }).join('');
   } else {
@@ -5730,7 +5949,32 @@ function renderDialogue() {
     const locked = c.locked;
     const style = locked ? 'opacity:0.4;cursor:not-allowed' : '';
     const speechReq = c.speechCheck > 0 ? `<span style="color:${speech >= c.speechCheck ? '#0f0' : '#f00'}">[Speech ${c.speechCheck}]</span> ` : '';
-    return `<button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" style="text-align:left;margin:0.3rem 0;width:100%;${style}" ${locked ? 'disabled' : ''} onclick="doDialogueChoice(${i})">${speechReq}${c.text.replace(/\[Speech \d+\] ?/, '')}</button>`;
+    // Generate hint about dialogue choice direction
+    const cText = (c.text || '').toLowerCase();
+    const dHints = [];
+    if (cText.includes('threaten') || cText.includes('intimidat') || cText.includes('force') || cText.includes('demand') || cText.includes('attack')) {
+      dHints.push('<span style="color:#ff4444">Aggressive - may escalate</span>');
+    }
+    if (cText.includes('negotiate') || cText.includes('talk') || cText.includes('reason') || cText.includes('persuad') || cText.includes('deal') || cText.includes('charm') || cText.includes('flatter')) {
+      dHints.push('<span style="color:#88aaff">Diplomatic - builds rapport</span>');
+    }
+    if (cText.includes('lie') || cText.includes('bluff') || cText.includes('trick') || cText.includes('deceiv') || cText.includes('hustle')) {
+      dHints.push('<span style="color:#ffcc00">Deceptive - risky if caught</span>');
+    }
+    if (cText.includes('pay') || cText.includes('brib') || cText.includes('offer money') || cText.includes('buy') || cText.includes('$')) {
+      dHints.push('<span style="color:#ffcc00">Costs money</span>');
+    }
+    if (cText.includes('walk away') || cText.includes('leave') || cText.includes('refuse') || cText.includes('back off') || cText.includes('no thanks') || cText.includes('nah')) {
+      dHints.push('<span style="color:#888">Safe - no commitment</span>');
+    }
+    if (cText.includes('agree') || cText.includes('accept') || cText.includes('help') || cText.includes('sure') || cText.includes('cooperat')) {
+      dHints.push('<span style="color:#44ff88">Cooperative - builds trust</span>');
+    }
+    if (c.speechCheck > 0) {
+      dHints.push(speech >= c.speechCheck ? '<span style="color:#00ff88">Speech check: can pass</span>' : '<span style="color:#ff4444">Speech check: likely fail</span>');
+    }
+    const hintLine = dHints.length > 0 ? `<div style="font-size:0.65rem;margin-top:2px;opacity:0.7">${dHints.join(' | ')}</div>` : '';
+    return `<button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" style="text-align:left;margin:0.3rem 0;width:100%;padding:0.5rem 0.8rem;${style}" ${locked ? 'disabled' : ''} onclick="doDialogueChoice(${i})">${speechReq}${c.text.replace(/\[Speech \d+\] ?/, '')}${hintLine}</button>`;
   }).join('');
 
   return `
@@ -6139,10 +6383,36 @@ function renderPrison() {
 // HEIST PLANNING SCREEN
 // ============================================================
 
+function _bridgeHeistState() {
+  // Heist functions expect flat state with activeHeist, availableHeists etc at top level
+  // But game stores them under gameState.heists. Bridge them.
+  if (!gameState.heists) gameState.heists = typeof initHeistState === 'function' ? initHeistState() : { activeHeist: null, availableHeists: [], heistCooldown: 0, completedHeists: [], failedHeists: [], totalHeistProfit: 0, heistHistory: [] };
+  var hs = gameState.heists;
+  gameState.activeHeist = hs.activeHeist;
+  gameState.availableHeists = hs.availableHeists;
+  gameState.heistCooldown = hs.heistCooldown;
+  gameState.completedHeists = hs.completedHeists;
+  gameState.failedHeists = hs.failedHeists;
+  gameState.totalHeistProfit = hs.totalHeistProfit;
+  gameState.heistHistory = hs.heistHistory;
+}
+function _syncHeistState() {
+  // Sync changes back to gameState.heists
+  if (!gameState.heists) return;
+  gameState.heists.activeHeist = gameState.activeHeist;
+  gameState.heists.availableHeists = gameState.availableHeists;
+  gameState.heists.heistCooldown = gameState.heistCooldown;
+  gameState.heists.completedHeists = gameState.completedHeists;
+  gameState.heists.failedHeists = gameState.failedHeists;
+  gameState.heists.totalHeistProfit = gameState.totalHeistProfit;
+  gameState.heists.heistHistory = gameState.heistHistory;
+}
+
 function doStartHeist(heistId) {
   if (typeof startHeistPlanning !== 'function') return;
-  var heistState = gameState.heists || gameState;
-  var result = startHeistPlanning(heistState, heistId);
+  _bridgeHeistState();
+  var result = startHeistPlanning(gameState, heistId);
+  _syncHeistState();
   if (result.success) {
     playSound('click');
     showNotification(result.message, 'success');
@@ -6154,8 +6424,9 @@ function doStartHeist(heistId) {
 
 function doAssignHeistCrew(crewIndices) {
   if (typeof assignHeistCrew !== 'function') return;
-  var heistState = gameState.heists || gameState;
-  var result = assignHeistCrew(heistState, crewIndices);
+  _bridgeHeistState();
+  var result = assignHeistCrew(gameState, crewIndices);
+  _syncHeistState();
   if (result.success) {
     playSound('click');
     showNotification(result.message, 'success');
@@ -6168,8 +6439,9 @@ function doAssignHeistCrew(crewIndices) {
 function doExecuteHeist() {
   if (!confirm('Execute the heist? No turning back!')) return;
   if (typeof executeHeist !== 'function') return;
-  var heistState = gameState.heists || gameState;
-  var result = executeHeist(heistState);
+  _bridgeHeistState();
+  var result = executeHeist(gameState);
+  _syncHeistState();
   if (result) {
     playSound('click');
     var msg = result.success ? 'Heist successful! Loot: $' + (result.loot || 0).toLocaleString() : 'Heist failed! Heat +' + (result.heatGained || 0);
@@ -6226,7 +6498,7 @@ function renderHeist() {
       var equipRows = HEIST_EQUIPMENT.map(function(eq) {
         var owned = ownedEquip.indexOf(eq.id) !== -1;
         return '<tr><td>' + eq.emoji + ' ' + eq.name + '</td><td style="font-size:0.7rem;color:var(--text-dim)">' + eq.desc + '</td><td>$' + eq.cost.toLocaleString() + '</td><td>' +
-          (owned ? '<span class="neon-green">OWNED</span>' : '<button class="btn btn-sm btn-buy" onclick="if(typeof buyHeistEquipment===\'function\'){var r=buyHeistEquipment(' + (gameState.heists ? 'gameState.heists' : 'gameState') + ',\'' + eq.id + '\');showNotification(r.message,r.success?\'success\':\'error\');render();}">BUY</button>') +
+          (owned ? '<span class="neon-green">OWNED</span>' : '<button class="btn btn-sm btn-buy" onclick="if(typeof buyHeistEquipment===\'function\'){_bridgeHeistState();var r=buyHeistEquipment(gameState,\'' + eq.id + '\');_syncHeistState();showNotification(r.message,r.success?\'success\':\'error\');render();}">BUY $' + eq.cost.toLocaleString() + '</button>') +
         '</td></tr>';
       }).join('');
       activeSection += '<h4 class="neon-cyan">Equipment</h4><table class="data-table"><thead><tr><th>Item</th><th>Effect</th><th>Cost</th><th></th></tr></thead><tbody>' + equipRows + '</tbody></table>';
@@ -6720,22 +6992,67 @@ function renderEncounterModal() {
       '</div>' +
       '<button class="btn btn-secondary" onclick="if(typeof dismissEncounter===\'function\') dismissEncounter(gameState); render();">Dismiss</button>';
   } else {
-    // Show choices
+    // Show choices with consequence hints
     var outcomes = enc.outcomes || enc.choices || [];
     choicesHtml = outcomes.map(function(choice, idx) {
-      return '<button class="btn btn-buy" style="margin:4px;min-width:180px;" ' +
+      // Generate consequence hints from effects
+      var hints = [];
+      var fx = choice.effects || {};
+      // Categorize the choice
+      if (fx.cash && fx.cash > 0) hints.push('<span style="color:#39ff14">+$$$</span>');
+      if (fx.cash && fx.cash < 0) hints.push('<span style="color:#ff4444">Costs $</span>');
+      if (fx.heat && fx.heat > 0) hints.push('<span style="color:#ff6644">+Heat</span>');
+      if (fx.heat && fx.heat < 0) hints.push('<span style="color:#44aaff">-Heat</span>');
+      if (fx.health && fx.health < 0) hints.push('<span style="color:#ff4444">Risk: Damage</span>');
+      if (fx.health && fx.health > 0) hints.push('<span style="color:#39ff14">+Health</span>');
+      if (fx.fear && fx.fear > 0) hints.push('<span style="color:#cc44ff">+Fear</span>');
+      if (fx.fear && fx.fear < 0) hints.push('<span style="color:#cc44ff">-Fear</span>');
+      if (fx.trust && fx.trust > 0) hints.push('<span style="color:#44ff88">+Trust</span>');
+      if (fx.trust && fx.trust < 0) hints.push('<span style="color:#ff8844">-Trust</span>');
+      if (fx.streetCred && fx.streetCred > 0) hints.push('<span style="color:#ffcc00">+Cred</span>');
+      if (fx.publicImage && fx.publicImage > 0) hints.push('<span style="color:#88aaff">+Image</span>');
+      if (fx.publicImage && fx.publicImage < 0) hints.push('<span style="color:#ff8844">-Image</span>');
+      if (fx.stress && fx.stress > 0) hints.push('<span style="color:#ff8844">+Stress</span>');
+      if (fx.stress && fx.stress < 0) hints.push('<span style="color:#44ccff">-Stress</span>');
+      if (fx.communityRep && fx.communityRep > 0) hints.push('<span style="color:#ff88cc">+Community</span>');
+      if (fx.communityRep && fx.communityRep < 0) hints.push('<span style="color:#ff8844">-Community</span>');
+      if (fx.pet) hints.push('<span style="color:#ffaa00">Companion!</span>');
+      if (fx.lookout) hints.push('<span style="color:#ffaa00">Lookout!</span>');
+      if (fx.product) hints.push('<span style="color:#00ffcc">+Product</span>');
+      // Determine overall tone
+      var tone = '';
+      var labelLower = (choice.label || '').toLowerCase();
+      if (labelLower.includes('help') || labelLower.includes('save') || labelLower.includes('protect') || labelLower.includes('pay for') || labelLower.includes('spare')) {
+        tone = '<span style="color:#44ff88;font-size:0.65rem">Compassionate</span>';
+      } else if (labelLower.includes('attack') || labelLower.includes('rob') || labelLower.includes('kill') || labelLower.includes('fight') || labelLower.includes('join the')) {
+        tone = '<span style="color:#ff4444;font-size:0.65rem">Aggressive</span>';
+      } else if (labelLower.includes('ignore') || labelLower.includes('walk away') || labelLower.includes('nothing') || labelLower.includes('decline')) {
+        tone = '<span style="color:#888;font-size:0.65rem">Passive</span>';
+      } else if (labelLower.includes('scam') || labelLower.includes('sell') || labelLower.includes('follow') || labelLower.includes('bribe')) {
+        tone = '<span style="color:#ffcc00;font-size:0.65rem">Opportunistic</span>';
+      } else if (labelLower.includes('confront') || labelLower.includes('negotiate') || labelLower.includes('talk')) {
+        tone = '<span style="color:#88aaff;font-size:0.65rem">Diplomatic</span>';
+      }
+      var hintLine = (hints.length > 0 || tone) ?
+        '<div style="font-size:0.65rem;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">' +
+          (tone ? tone + (hints.length > 0 ? ' | ' : '') : '') +
+          hints.join(' ') +
+        '</div>' : '';
+      return '<button class="btn btn-buy" style="margin:4px;min-width:200px;text-align:center;padding:8px 12px;" ' +
         'onclick="if(typeof resolveEncounterOutcome===\'function\') resolveEncounterOutcome(gameState,' + idx + '); render();">' +
-        (choice.label || choice.text || ('Choice ' + (idx + 1))) +
+        '<div style="font-weight:bold;">' + (choice.label || choice.text || ('Choice ' + (idx + 1))) + '</div>' +
+        hintLine +
       '</button>';
     }).join('');
     choicesHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px;">' + choicesHtml + '</div>';
   }
 
   return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
-    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid var(--neon-cyan,#0ff);border-radius:12px;padding:24px;max-width:500px;width:90%;text-align:center;box-shadow:0 0 30px rgba(0,255,255,0.2);">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid var(--neon-cyan,#0ff);border-radius:12px;padding:24px;max-width:550px;width:90%;text-align:center;box-shadow:0 0 30px rgba(0,255,255,0.2);">' +
       '<div style="font-size:3em;margin-bottom:8px;">' + (enc.emoji || '⚡') + '</div>' +
       '<h2 class="neon-cyan" style="margin:0 0 8px 0;">' + (enc.name || 'Encounter') + '</h2>' +
-      '<p style="color:#ccc;margin-bottom:12px;">' + (enc.description || '') + '</p>' +
+      '<p style="color:#ccc;margin-bottom:4px;">' + (enc.description || '') + '</p>' +
+      '<div style="font-size:0.7rem;color:#888;margin-bottom:8px;font-style:italic;">Choose wisely. Each option has different consequences.</div>' +
       choicesHtml +
     '</div>' +
   '</div>';

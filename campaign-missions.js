@@ -608,3 +608,184 @@ function getCampaignProgress(state) {
   const totalMain = CAMPAIGN_ACTS.reduce((s, a) => s + (a.mainMissions ? a.mainMissions.length : 0), 0);
   return Math.round((state.campaign.completedMissions.length / Math.max(1, totalMain)) * 100);
 }
+
+// Get numeric progress for a mission objective (current value / target)
+function getObjectiveProgress(state, objective) {
+  const target = typeof objective.target === 'number' ? objective.target : 1;
+  let current = 0;
+  switch (objective.type) {
+    case 'buy_drug':
+      current = (state.stats && state.stats.totalBuys) || 0;
+      break;
+    case 'sell_drug':
+      current = (state.stats && state.stats.totalSells) || 0;
+      break;
+    case 'own_territory': {
+      const territories = typeof getControlledTerritories === 'function' ? getControlledTerritories(state) : [];
+      current = territories.length;
+      break;
+    }
+    case 'crew_count':
+      current = (state.henchmen || []).length;
+      break;
+    case 'reputation':
+      current = state.reputation || 0;
+      break;
+    case 'cash':
+      current = state.cash || 0;
+      break;
+    case 'net_worth': {
+      current = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : (state.cash || 0);
+      break;
+    }
+    case 'heat_below':
+      current = state.heat || 0;
+      // For heat_below, progress is inverted: lower is better
+      return { current: current, target: target, inverted: true, done: current < target };
+    case 'buy_amount':
+      current = (state.stats && state.stats.largestBuyQty) || 0;
+      break;
+    case 'fronts_owned':
+      current = (state.frontBusinesses || []).length;
+      break;
+    case 'districts_controlled': {
+      const terrs = typeof getControlledTerritories === 'function' ? getControlledTerritories(state) : [];
+      current = new Set(terrs).size;
+      break;
+    }
+    case 'daily_income': {
+      let income = 0;
+      if (state.frontBusinesses && typeof FRONT_BUSINESSES !== 'undefined') {
+        income += state.frontBusinesses.reduce((s, f) => {
+          const bizDef = FRONT_BUSINESSES.find(b => b.id === f.id);
+          return s + (bizDef ? bizDef.dailyIncome : 0);
+        }, 0);
+      }
+      if (typeof getControlledTerritories === 'function') {
+        const territories = getControlledTerritories(state);
+        const perTerritory = (typeof TERRITORY_BENEFITS !== 'undefined' && TERRITORY_BENEFITS.dailyIncome) || 500;
+        income += territories.length * perTerritory;
+      }
+      if (state.distribution) {
+        for (const locId in state.distribution) {
+          if (!state.distribution.hasOwnProperty(locId)) continue;
+          const dist = state.distribution[locId];
+          if (dist && dist.active && dist.dealers && dist.dealers.length > 0) {
+            income += dist.dealers.length * 500;
+          }
+        }
+      }
+      current = income;
+      break;
+    }
+    case 'crew_rank': {
+      const targetRank = typeof objective.target === 'string'
+        ? ({ 'street_worker': 0, 'soldier': 1, 'lieutenant': 2, 'underboss': 3, 'right_hand': 4, 'righthand': 4 }[objective.target.toLowerCase().replace(/[-\s]/g, '_')] || 0)
+        : objective.target;
+      const hasRank = (state.henchmen || []).some(h => (typeof _resolveRankIndex === 'function' ? _resolveRankIndex(h.rank) : (h.rank || 0)) >= targetRank);
+      return { current: hasRank ? 1 : 0, target: 1, done: hasRank };
+    }
+    case 'faction_discovered': {
+      if (!state.factions || !state.factions.standings) return { current: 0, target: 1, done: false };
+      if (objective.target && typeof objective.target === 'string') {
+        const found = state.factions.standings[objective.target] !== undefined && state.factions.standings[objective.target] !== 0;
+        return { current: found ? 1 : 0, target: 1, done: found };
+      }
+      const found = Object.values(state.factions.standings).some(s => s !== 0);
+      return { current: found ? 1 : 0, target: 1, done: found };
+    }
+    case 'faction_event': {
+      current = (state.factions && state.factions.factionEvents) ? state.factions.factionEvents.length : 0;
+      break;
+    }
+    case 'police_encounter': {
+      const encounterCount = (state.encounters && state.encounters.stats && state.encounters.stats.totalEncounters) || 0;
+      const timesArrested = (state.investigation && state.investigation.timesArrested) || 0;
+      current = encounterCount + timesArrested;
+      break;
+    }
+    case 'suppliers': {
+      // Count unique supplier connections
+      current = (state.suppliers && state.suppliers.length) || (state.supplierContacts || 0);
+      break;
+    }
+    case 'political_contacts': {
+      current = (state.politics && state.politics.contacts) ? state.politics.contacts.length : 0;
+      break;
+    }
+    case 'territory_percent': {
+      const terrs = typeof getControlledTerritories === 'function' ? getControlledTerritories(state) : [];
+      const total = typeof TERRITORIES !== 'undefined' ? TERRITORIES.length : 10;
+      current = total > 0 ? Math.round((terrs.length / total) * 100) : 0;
+      break;
+    }
+    case 'crew_loyalty_min': {
+      if (!state.henchmen || state.henchmen.length === 0) return { current: 0, target: target, done: false };
+      const minLoyalty = Math.min(...state.henchmen.map(h => h.loyalty || 0));
+      current = minLoyalty;
+      break;
+    }
+    case 'cash_laundered': {
+      current = (state.stats && state.stats.totalLaundered) || 0;
+      break;
+    }
+    case 'sales_volume': {
+      current = (state.stats && state.stats.totalSalesValue) || 0;
+      break;
+    }
+    default:
+      // For event-based objectives, use a binary check
+      const done = typeof checkMissionObjective === 'function' ? checkMissionObjective(state, objective) : false;
+      return { current: done ? 1 : 0, target: 1, done: done };
+  }
+  return { current: Math.min(current, target), target: target, done: current >= target };
+}
+
+// Get a human-readable "how to" hint for a mission objective type
+function getObjectiveHowTo(objective) {
+  switch (objective.type) {
+    case 'buy_drug': return 'Go to a location and buy product from the Market tab.';
+    case 'sell_drug': return 'Sell product from your inventory at any market location.';
+    case 'own_territory': return 'Visit the Territory tab and claim unclaimed blocks, or take them from rivals.';
+    case 'crew_count': return 'Go to Crew Management and recruit new members from available prospects.';
+    case 'reputation': return 'Earn reputation by completing deals, winning fights, and doing missions.';
+    case 'cash': return 'Accumulate cash through drug sales, missions, heists, and business income.';
+    case 'net_worth': return 'Grow total net worth via cash, property, inventory, and business assets.';
+    case 'heat_below': return 'Lower heat by laying low, bribing cops, using a lawyer, or laundering money.';
+    case 'buy_amount': return 'Make a single large purchase from a supplier. Unlock bulk buying first.';
+    case 'fronts_owned': return 'Buy a front business from the Businesses tab to launder money.';
+    case 'districts_controlled': return 'Expand into new districts via the Territory tab. Each district has different blocks.';
+    case 'daily_income': return 'Increase passive income with territories, front businesses, and distribution networks.';
+    case 'crew_rank': return 'Go to Crew Management and promote a member who has enough loyalty and experience.';
+    case 'faction_discovered': return 'Encounter factions by expanding territory or through random events and story missions.';
+    case 'faction_event': return 'Faction events trigger as you interact with or encroach on faction territory.';
+    case 'police_encounter': return 'Police encounters happen when your heat is high. Keep operating to attract attention.';
+    case 'suppliers': return 'Find new suppliers through story progression, contacts, or international trade.';
+    case 'import_routes': return 'Set up import routes via the Shipping tab once Caribbean access is unlocked.';
+    case 'political_contacts': return 'Build political connections through missions, bribery, and high-profile dealings.';
+    case 'territory_held_days': return 'Hold your territories by defending them from attacks. Keep crew stationed there.';
+    case 'cash_laundered': return 'Launder money through your front businesses. Buy fronts from the Businesses tab.';
+    case 'sales_volume': return 'Sell large volumes of product through your distribution network and direct sales.';
+    case 'investigation_level': return 'Reduce investigation by destroying evidence, bribing officials, or using lawyers.';
+    case 'conflict_resolved': return 'Resolve the conflict through negotiation, force, or retreat when confronted.';
+    case 'special_mission': return 'This triggers through story events. Keep progressing the main campaign.';
+    case 'special_event': return 'This event will trigger automatically when conditions are met.';
+    case 'choice_made': return 'Make your choice when prompted. Each option has lasting consequences.';
+    case 'pipeline_complete': return 'Set up all stages: import product, process it, distribute via dealers, and launder profits.';
+    case 'territory_percent': return 'Control enough territory to meet the percentage. Defend what you have and take more.';
+    case 'crew_loyalty_min': return 'Boost loyalty by paying crew well, completing missions together, and not getting them hurt.';
+    case 'threats_handled': return 'Deal with threats as they arise through combat, negotiation, or strategic decisions.';
+    case 'ending_path_chosen': return 'This is a pivotal choice. Consider your alliances, assets, and goals carefully.';
+    case 'bribes': return 'Approach officials through your political contacts. Offer cash to gain protection.';
+    case 'days_free': return 'Survive without getting arrested. Keep heat low and use your lawyer.';
+    case 'investigation_survive': return 'Weather the federal probe by keeping heat low and destroying evidence.';
+    case 'heat_control': return 'Manage your heat actively each day. Use lawyers, lay low, and avoid risky actions.';
+    case 'international_deals': return 'Complete a deal via Shipping once you have Caribbean or international access.';
+    case 'import_profit': return 'Import goods via Shipping and sell them locally for profit.';
+    case 'turf_wars_won': return 'Win turf wars by having strong crew stationed in your territories when attacked.';
+    case 'war_mission': return 'Accept and complete war missions that appear during active faction conflicts.';
+    case 'faction_choice': return 'Choose a side when prompted during the faction war event.';
+    case 'legal_survival': return 'Survive the legal battle using lawyers, evidence destruction, and political connections.';
+    default: return 'Progress through gameplay. Check the relevant game tabs for opportunities.';
+  }
+}
