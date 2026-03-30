@@ -414,6 +414,31 @@ const NG_PLUS_ENDINGS = [
       return 'B';
     },
   },
+  // === LEGENDARY ENDING (Tier 5 only) ===
+  {
+    id: 'ng_legendary',
+    name: 'The Legend',
+    emoji: '🏆',
+    subtitle: 'Ascension',
+    narrative: 'Five empires. Five lifetimes. Five legends. You have done what no one believed possible — you completed the game on Legendary difficulty. Every enemy doubled in strength, every cop doubled in determination, every betrayal twice as sharp. And you conquered them all. Your name is no longer spoken on the streets. It is carved into them. You are not a kingpin. You are not a boss. You are THE Legend. The one they will measure all others against, forever. The game is over. You won. Permanently.',
+    check: s => {
+      if (!s.newGamePlus || !s.newGamePlus.active) return false;
+      if ((s.newGamePlus.tier || 1) < 5) return false;
+      const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
+      const territories = Object.keys(s.territory || {}).length;
+      const crew = (s.henchmen || []).length;
+      const completedEndings = (s.newGamePlus.completedEndings || []).length;
+      return nw >= 5000000 && territories >= 8 && crew >= 10 && completedEndings >= 8;
+    },
+    priority: 20, // Highest priority of all endings
+    gradeCheck: s => {
+      const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
+      const completedEndings = (s.newGamePlus.completedEndings || []).length;
+      if (nw >= 10000000 && completedEndings >= 15) return 'S';
+      if (nw >= 7000000 && completedEndings >= 12) return 'A';
+      return 'B';
+    },
+  },
 ];
 
 function initCampaign() {
@@ -494,9 +519,22 @@ function transitionAct(state, newActNum) {
 // Determine which ending the player has earned
 function determineEnding(state) {
   const eligible = [];
+  const isNgPlus = state.newGamePlus && state.newGamePlus.active;
+  const ngTier = isNgPlus ? (state.newGamePlus.tier || 1) : 0;
 
-  // Check NG+ endings first if in NG+ mode
-  if (state.newGamePlus && typeof NG_PLUS_ENDINGS !== 'undefined') {
+  // Check NG+ endings if in NG+ mode (including tier-gated Legendary ending)
+  if (isNgPlus && typeof NG_PLUS_ENDINGS !== 'undefined') {
+    for (const ending of NG_PLUS_ENDINGS) {
+      try {
+        if (ending.check(state)) {
+          const grade = ending.gradeCheck ? ending.gradeCheck(state) : 'C';
+          eligible.push({ ...ending, grade, isNgPlus: true, ngTier: ngTier });
+        }
+      } catch (e) { /* skip failed checks */ }
+    }
+  }
+  // Also check legacy newGamePlus boolean for backward compat
+  if (!isNgPlus && state.newGamePlus === true && typeof NG_PLUS_ENDINGS !== 'undefined') {
     for (const ending of NG_PLUS_ENDINGS) {
       try {
         if (ending.check(state)) {

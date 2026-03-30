@@ -98,7 +98,7 @@ const DRUG_BUNDLES = [
 function sellBundle(state, bundleId, locationId) {
   const bundle = DRUG_BUNDLES.find(b => b.id === bundleId);
   if (!bundle) return { success: false, msg: 'Bundle not found.' };
-  if (bundle.ngPlus && !(state.newGamePlus && state.newGamePlus.active)) return { success: false, msg: 'NG+ only bundle.' };
+  if (bundle.ngPlus && !(state.newGamePlus && state.newGamePlus.active && (state.newGamePlus.tier || 1) >= 2)) return { success: false, msg: 'NG+ Tier 2+ only bundle.' };
   // Check player has all drugs
   for (const drugId of bundle.drugs) {
     if (!state.inventory[drugId] || state.inventory[drugId] <= 0) {
@@ -126,8 +126,9 @@ function sellBundle(state, bundleId, locationId) {
 
 function getAvailableBundles(state) {
   const ngPlus = state.newGamePlus && state.newGamePlus.active;
+  const ngTier = ngPlus ? (state.newGamePlus.tier || 1) : 0;
   return DRUG_BUNDLES.filter(b => {
-    if (b.ngPlus && !ngPlus) return false;
+    if (b.ngPlus && (!ngPlus || ngTier < 2)) return false;
     // Check player has at least 1 of each drug
     return b.drugs.every(drugId => state.inventory[drugId] && state.inventory[drugId] > 0);
   });
@@ -933,11 +934,798 @@ const TRAVEL_EVENTS = [
 ];
 
 // ============================================================
-// NEW GAME+ HELPERS
+// NEW GAME+ SYSTEM - Full tier-based progression (Tiers 1-5)
 // ============================================================
+
+// --- NG+ Tier Definitions ---
+const NG_PLUS_TIERS = {
+  1: {
+    name: 'New Game+',
+    subtitle: 'The Second Time Around',
+    enemyStrengthMod: 1.20,      // +20% enemy strength
+    priceVolatility: 1.10,        // +10% price volatility
+    xpMultiplier: 1.5,            // 1.5x XP
+    cashCarryOver: 0.50,          // keep 50% cash
+    crewCarryOver: 0,             // no crew carried
+    propertyCarryOver: 0,         // no properties carried
+    keepFactionStandings: false,
+    heatDecayMod: 1.0,            // normal heat decay
+    loanSharkInterest: 1.0,       // normal interest
+    enemyDamageMultiplier: 1.20,
+    unlocks: {
+      characters: true,           // 4 NG+ exclusive characters
+      endings: true,              // 8 new endings
+      description: 'Unlocked: 4 NG+ exclusive characters, 8 new endings',
+    },
+    introNarrative: [
+      'You\'ve done this before. The streets, the deals, the danger.',
+      'But this time, they know your name. Enemies are stronger. Stakes are higher.',
+      'Your reputation precedes you. Some fear you. Others want to prove themselves.',
+      '+20% enemy strength | +10% price volatility | 1.5x XP | 50% cash carried over',
+    ],
+  },
+  2: {
+    name: 'New Game++',
+    subtitle: 'Veteran of the Trade',
+    enemyStrengthMod: 1.40,      // +40% enemy strength
+    priceVolatility: 1.15,        // +15% price volatility
+    xpMultiplier: 2.0,            // 2x XP
+    cashCarryOver: 0.75,          // keep 75% cash
+    crewCarryOver: 1,             // keep 1 crew member
+    propertyCarryOver: 0,
+    keepFactionStandings: false,
+    heatDecayMod: 0.75,           // heat decays 25% slower
+    loanSharkInterest: 1.15,      // 15% more interest
+    enemyDamageMultiplier: 1.40,
+    unlocks: {
+      fentanyl: true,             // Fentanyl drug unlocked from Tier 2+
+      fisherIsland: true,         // Fisher Island accessible earlier
+      description: 'Unlocked: Fentanyl available from start, Fisher Island district (luxury market)',
+    },
+    introNarrative: [
+      'Twice you\'ve conquered these streets. The game hasn\'t forgotten.',
+      'A new synthetic is flooding the market: Fentanyl. The margins are insane. The danger, worse.',
+      'Fisher Island\'s elite are looking for a new supplier. Premium prices, premium risk.',
+      '+40% enemy strength | Heat decays 25% slower | 2x XP | 75% cash + 1 crew member',
+    ],
+  },
+  3: {
+    name: 'New Game+++',
+    subtitle: 'The Kingpin Returns',
+    enemyStrengthMod: 1.60,      // +60% enemy strength
+    priceVolatility: 1.20,        // +20% price volatility
+    xpMultiplier: 3.0,            // 3x XP
+    cashCarryOver: 1.0,           // keep ALL cash
+    crewCarryOver: 3,             // keep 3 crew members
+    propertyCarryOver: 1,         // keep 1 property
+    keepFactionStandings: false,
+    heatDecayMod: 0.60,           // heat decays 40% slower
+    loanSharkInterest: 1.30,      // 30% more interest
+    enemyDamageMultiplier: 1.60,
+    unlocks: {
+      kingpinMode: true,          // Can own multiple districts simultaneously
+      newDrugTypes: true,         // Expanded drug synthesis
+      description: 'Unlocked: Kingpin Mode - own multiple districts simultaneously, expanded drug synthesis',
+    },
+    introNarrative: [
+      'Three times. You\'ve built and torn down empires three times.',
+      'This time, the districts tremble. Kingpin Mode is active.',
+      'You can hold multiple districts at once. Total domination is within reach.',
+      '+60% enemy strength | Heat decays 40% slower | 3x XP | All cash + 3 crew + 1 property',
+    ],
+  },
+  4: {
+    name: 'New Game++++',
+    subtitle: 'Legend of the Streets',
+    enemyStrengthMod: 1.80,      // +80% enemy strength
+    priceVolatility: 1.30,        // +30% price volatility
+    xpMultiplier: 4.0,            // 4x XP
+    cashCarryOver: 1.0,           // keep ALL cash
+    crewCarryOver: 99,            // keep ALL crew
+    propertyCarryOver: 99,        // keep ALL properties
+    keepFactionStandings: true,   // keep faction standings
+    heatDecayMod: 0.50,           // heat decays 50% slower
+    loanSharkInterest: 1.50,
+    enemyDamageMultiplier: 1.80,
+    unlocks: {
+      internationalDay1: true,    // International expansion from day 1
+      rivalStalker: true,         // Permanent rival dealer stalks you
+      description: 'Unlocked: International expansion from day 1, permanent rival dealer hunts you',
+    },
+    introNarrative: [
+      'Four empires. Four lifetimes of blood, money, and power.',
+      'The international cartels have taken notice. All routes are open from day one.',
+      'But so has someone else. A rival from your past. They\'re coming for you.',
+      '+80% enemy strength | Rival stalker | 4x XP | Keep everything + faction standings',
+    ],
+  },
+  5: {
+    name: 'New Game+++++',
+    subtitle: 'Legendary',
+    enemyStrengthMod: 2.00,      // +100% (double) enemy strength
+    priceVolatility: 1.50,        // +50% price volatility
+    xpMultiplier: 5.0,            // 5x XP
+    cashCarryOver: 1.0,           // keep ALL
+    crewCarryOver: 99,
+    propertyCarryOver: 99,
+    keepFactionStandings: true,
+    heatDecayMod: 0.40,           // heat decays 60% slower
+    loanSharkInterest: 2.0,       // double interest
+    enemyDamageMultiplier: 2.00,
+    unlocks: {
+      godModeStart: true,         // Begin with $100K, full crew, skills at 3
+      secretEnding: true,         // Secret "Legendary" ending available
+      legendaryTitle: true,       // "Legendary" title
+      description: 'Unlocked: God Mode start ($100K, full crew, all skills Lv3), secret Legendary ending',
+    },
+    introNarrative: [
+      'Five. Five times you\'ve risen to the top of the criminal world.',
+      'They call you Legendary now. Not a nickname. A title. A warning.',
+      'Every enemy is twice as dangerous. Every cop is twice as determined.',
+      'But you start as a god. $100K. Full crew. All skills at level 3.',
+      'One ending remains hidden. The Legendary ending. Can you find it?',
+      '+100% enemy strength | Legendary difficulty | 5x XP | God Mode start + secret ending',
+    ],
+  },
+};
+
+// --- NG+ Exclusive Random Events ---
+const NG_PLUS_EVENTS = [
+  // Tier 1+ events
+  { id: 'ngp_old_enemy', tierMin: 1, chance: 0.04, type: 'combat',
+    msg: '💀 An old enemy from your previous life has tracked you down! They brought friends.',
+    enemyCount: 4, enemyDamage: 30, enemyHealth: 200, reward: 5000 },
+  { id: 'ngp_dea_taskforce', tierMin: 1, chance: 0.03, type: 'combat',
+    msg: '🚨 DEA Task Force! They\'ve been building a case on you from your last run!',
+    enemyCount: 6, enemyDamage: 25, enemyHealth: 250, heatGain: 20 },
+  { id: 'ngp_reputation_precedes', tierMin: 1, chance: 0.05, type: 'buff',
+    msg: '📰 "You\'re THE one, aren\'t you?" Your reputation from past lives grants you street respect.',
+    effect: { repGain: 15, fearGain: 10 } },
+  { id: 'ngp_ghost_of_past', tierMin: 1, chance: 0.03, type: 'offer',
+    msg: '👤 A stranger approaches. "I worked for you... before. I have information." $2,000 for intel.',
+    price: 2000, reward: 'tip' },
+  // Tier 2+ events
+  { id: 'ngp_fentanyl_crisis', tierMin: 2, chance: 0.03, type: 'global',
+    msg: '☠️ Fentanyl crisis hits the city! Law enforcement cracking down hard. All heat +15.',
+    effect: { heatGain: 15, fentanylPriceSpike: true } },
+  { id: 'ngp_luxury_buyer', tierMin: 2, chance: 0.04, type: 'offer',
+    msg: '💎 A Fisher Island billionaire wants a private deal. Premium prices for premium product.',
+    effect: { saleBonusMult: 2.0, drugId: 'cocaine' } },
+  // Tier 3+ events
+  { id: 'ngp_cartel_war', tierMin: 3, chance: 0.03, type: 'global',
+    msg: '⚔️ Cartel turf war erupts! Multiple factions fighting. Opportunity in the chaos.',
+    effect: { allPricesVolatile: true, territoryVulnerable: true } },
+  { id: 'ngp_kingpin_challenge', tierMin: 3, chance: 0.02, type: 'combat',
+    msg: '👑 A rival kingpin challenges your dominance! Winner takes all.',
+    enemyCount: 8, enemyDamage: 40, enemyHealth: 400, reward: 25000, territoryReward: true },
+  { id: 'ngp_multi_district', tierMin: 3, chance: 0.04, type: 'buff',
+    msg: '🏴 Your multi-district empire generates a synergy bonus. +$10,000 territory income.',
+    effect: { cashGain: 10000 } },
+  // Tier 4+ events
+  { id: 'ngp_rival_ambush', tierMin: 4, chance: 0.05, type: 'combat',
+    msg: '🎯 Your permanent rival has set a trap! Elite mercenaries surround you!',
+    enemyCount: 10, enemyDamage: 45, enemyHealth: 500, reward: 50000 },
+  { id: 'ngp_international_crisis', tierMin: 4, chance: 0.03, type: 'global',
+    msg: '🌍 International border crackdown! All import/export costs doubled for 10 days.',
+    effect: { importCostMult: 2.0, duration: 10 } },
+  { id: 'ngp_faction_summit', tierMin: 4, chance: 0.02, type: 'offer',
+    msg: '🤝 A secret summit of crime bosses invites you. Attend for $50K to gain massive faction rep.',
+    price: 50000, effect: { allFactionRep: 20 } },
+  // Tier 5 events
+  { id: 'ngp_legendary_bounty', tierMin: 5, chance: 0.04, type: 'combat',
+    msg: '⭐ LEGENDARY: Every gang, cartel, and law enforcement agency has put a bounty on your head!',
+    enemyCount: 15, enemyDamage: 50, enemyHealth: 800, reward: 100000, heatGain: 30 },
+  { id: 'ngp_legendary_opportunity', tierMin: 5, chance: 0.02, type: 'offer',
+    msg: '⭐ LEGENDARY: A once-in-a-lifetime deal. An entire shipment of product, abandoned. Risk everything?',
+    effect: { massInventoryGain: true, heatGain: 40 } },
+  { id: 'ngp_legendary_respect', tierMin: 5, chance: 0.03, type: 'buff',
+    msg: '⭐ LEGENDARY: Even your enemies bow. Your legend status reduces all purchase prices by 20% today.',
+    effect: { purchaseDiscount: 0.80, duration: 1 } },
+];
+
+// --- NG+ Rival Dealer (Tier 4+) ---
+const NG_PLUS_RIVAL = {
+  name: 'The Shadow',
+  emoji: '🎭',
+  desc: 'A figure from your past. They know your methods, your routes, your weaknesses.',
+  basePower: 150,
+  powerPerDay: 2,
+  maxPower: 500,
+  ambushChance: 0.06,  // 6% daily chance of ambush
+  sabotagePriceChance: 0.04,  // 4% chance to sabotage your prices
+  stealTerritoryChance: 0.02, // 2% chance to steal a territory
+  events: [
+    { id: 'rival_ambush', msg: '🎭 The Shadow strikes! Your rival dealer ambushes your supply run!', type: 'combat' },
+    { id: 'rival_undercut', msg: '🎭 The Shadow is undercutting your prices in {location}! Revenue down 30%.', type: 'economic' },
+    { id: 'rival_snitch', msg: '🎭 The Shadow tipped off the cops about your operations! Heat +25.', type: 'heat' },
+    { id: 'rival_recruit', msg: '🎭 The Shadow is trying to poach your crew! {crewName} is being tempted.', type: 'crew' },
+    { id: 'rival_territory', msg: '🎭 The Shadow has seized control of {territory}!', type: 'territory' },
+  ],
+};
+
+// --- Core NG+ Helper ---
 function getNgPlusMod(state, key, defaultVal) {
   if (!state.newGamePlus || !state.ngPlusModifiers) return defaultVal !== undefined ? defaultVal : 1;
   return state.ngPlusModifiers[key] || (defaultVal !== undefined ? defaultVal : 1);
+}
+
+// --- Get current NG+ tier data ---
+function getNgPlusTier(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return null;
+  const tier = state.newGamePlus.tier || 1;
+  return NG_PLUS_TIERS[Math.min(tier, 5)] || NG_PLUS_TIERS[1];
+}
+
+// --- Check if an NG+ feature is unlocked for the current state ---
+function isNGPlusFeatureUnlocked(state, featureId) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return false;
+  const tier = state.newGamePlus.tier || 1;
+  // Check all tiers up to current
+  for (let t = 1; t <= Math.min(tier, 5); t++) {
+    const tierData = NG_PLUS_TIERS[t];
+    if (tierData && tierData.unlocks && tierData.unlocks[featureId]) return true;
+  }
+  // Also check the persistent unlocks tracker
+  if (state.newGamePlus.unlocks && state.newGamePlus.unlocks[featureId]) return true;
+  return false;
+}
+
+// --- Get all NG+ exclusive content available for current tier ---
+function getNGPlusExclusiveContent(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return { available: false };
+  const tier = state.newGamePlus.tier || 1;
+  const content = {
+    available: true,
+    tier: tier,
+    tierName: NG_PLUS_TIERS[Math.min(tier, 5)].name,
+    tierSubtitle: NG_PLUS_TIERS[Math.min(tier, 5)].subtitle,
+    features: [],
+    unlockedDrugs: [],
+    unlockedLocations: [],
+    unlockedModes: [],
+    activeModifiers: [],
+  };
+
+  // Accumulate all unlocks up to current tier
+  for (let t = 1; t <= Math.min(tier, 5); t++) {
+    const td = NG_PLUS_TIERS[t];
+    content.features.push({ tier: t, description: td.unlocks.description });
+
+    if (t === 1) {
+      content.features.push({ tier: t, detail: '4 NG+ exclusive characters (Undercover, Cartel Exile, Hacker, Legacy)' });
+      content.features.push({ tier: t, detail: '8 NG+ exclusive endings' });
+    }
+    if (t >= 2 && td.unlocks.fentanyl) {
+      content.unlockedDrugs.push({ id: 'fentanyl', name: 'Fentanyl', tier: t });
+    }
+    if (t >= 2 && td.unlocks.fisherIsland) {
+      content.unlockedLocations.push({ id: 'fisher_island', name: 'Fisher Island', tier: t });
+    }
+    if (t >= 3 && td.unlocks.kingpinMode) {
+      content.unlockedModes.push({ id: 'kingpin_mode', name: 'Kingpin Mode', desc: 'Own multiple districts simultaneously', tier: t });
+    }
+    if (t >= 4 && td.unlocks.internationalDay1) {
+      content.unlockedModes.push({ id: 'international_day1', name: 'International Expansion', desc: 'All international routes open from day 1', tier: t });
+    }
+    if (t >= 4 && td.unlocks.rivalStalker) {
+      content.unlockedModes.push({ id: 'rival_stalker', name: 'The Shadow', desc: 'A permanent rival dealer stalks you', tier: t });
+    }
+    if (t >= 5 && td.unlocks.godModeStart) {
+      content.unlockedModes.push({ id: 'god_mode', name: 'God Mode Start', desc: '$100K, full crew, all skills Lv3', tier: t });
+    }
+    if (t >= 5 && td.unlocks.secretEnding) {
+      content.unlockedModes.push({ id: 'secret_ending', name: 'Legendary Ending', desc: 'A hidden ending for Legendary players', tier: t });
+    }
+  }
+
+  // Active modifiers for UI display
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  content.activeModifiers = [
+    { label: 'Enemy Strength', value: `+${Math.round((td.enemyStrengthMod - 1) * 100)}%` },
+    { label: 'Price Volatility', value: `+${Math.round((td.priceVolatility - 1) * 100)}%` },
+    { label: 'XP Multiplier', value: `${td.xpMultiplier}x` },
+    { label: 'Heat Decay', value: td.heatDecayMod < 1 ? `${Math.round((1 - td.heatDecayMod) * 100)}% slower` : 'Normal' },
+    { label: 'Loan Interest', value: td.loanSharkInterest > 1 ? `+${Math.round((td.loanSharkInterest - 1) * 100)}%` : 'Normal' },
+  ];
+
+  return content;
+}
+
+// --- Apply NG+ starting bonuses based on tier ---
+function applyNGPlusStartBonus(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return [];
+  const tier = state.newGamePlus.tier || 1;
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  const msgs = [];
+
+  // Apply carried-over cash
+  if (state.newGamePlus.carriedCash && state.newGamePlus.carriedCash > 0) {
+    state.cash += state.newGamePlus.carriedCash;
+    msgs.push(`💰 Carried over $${state.newGamePlus.carriedCash.toLocaleString()} from your previous empire.`);
+  }
+
+  // Apply carried-over crew
+  if (state.newGamePlus.carriedCrew && state.newGamePlus.carriedCrew.length > 0) {
+    for (const crew of state.newGamePlus.carriedCrew) {
+      state.henchmen.push({ ...crew, loyalty: Math.max(50, (crew.loyalty || 70) - 10) }); // Slight loyalty penalty for new run
+    }
+    msgs.push(`👥 ${state.newGamePlus.carriedCrew.length} loyal crew member(s) followed you into the new run.`);
+  }
+
+  // Apply carried-over properties (Tier 3+)
+  if (state.newGamePlus.carriedProperties && state.newGamePlus.carriedProperties.length > 0) {
+    for (const prop of state.newGamePlus.carriedProperties) {
+      if (!state.properties) state.properties = {};
+      if (!state.properties[prop.location]) state.properties[prop.location] = [];
+      state.properties[prop.location].push(prop);
+    }
+    msgs.push(`🏠 ${state.newGamePlus.carriedProperties.length} propert(ies) carried over from your empire.`);
+  }
+
+  // Apply carried-over faction standings (Tier 4+)
+  if (state.newGamePlus.carriedFactions && td.keepFactionStandings) {
+    if (typeof initFactionState === 'function') {
+      state.factions = state.newGamePlus.carriedFactions;
+      // Decay standings slightly
+      if (state.factions.standings) {
+        for (const fId of Object.keys(state.factions.standings)) {
+          state.factions.standings[fId] = Math.round(state.factions.standings[fId] * 0.8);
+        }
+      }
+      msgs.push(`🤝 Faction relationships partially preserved from your previous empire.`);
+    }
+  }
+
+  // Tier 4+: International expansion from day 1
+  if (isNGPlusFeatureUnlocked(state, 'internationalDay1')) {
+    if (state.worldState) {
+      state.worldState.unlockedRegions = ['miami', 'Americas', 'Europe', 'Asia', 'Africa', 'Oceania'];
+      msgs.push(`🌍 International routes open from day 1. The world is your market.`);
+    }
+  }
+
+  // Tier 5: God Mode Start
+  if (isNGPlusFeatureUnlocked(state, 'godModeStart')) {
+    state.cash = Math.max(state.cash, 100000);
+    msgs.push(`⭐ GOD MODE: Starting with $100,000.`);
+
+    // Full starting crew
+    const godCrew = [
+      { name: 'Veteran Enforcer', type: 'enforcer', loyalty: 90, skill: 'high', trait: 'ng_plus_veteran' },
+      { name: 'Veteran Chemist', type: 'cooker', loyalty: 85, skill: 'high', trait: 'ng_plus_veteran' },
+      { name: 'Veteran Smuggler', type: 'transporter', loyalty: 85, skill: 'high', trait: 'ng_plus_veteran' },
+      { name: 'Veteran Spy', type: 'lookout', loyalty: 80, skill: 'high', trait: 'ng_plus_veteran' },
+      { name: 'Veteran Accountant', type: 'accountant', loyalty: 80, skill: 'high', trait: 'ng_plus_veteran' },
+    ];
+    for (const c of godCrew) {
+      if (!state.henchmen.some(h => h.name === c.name)) {
+        state.henchmen.push(c);
+      }
+    }
+    msgs.push(`⭐ GOD MODE: Full veteran crew assembled.`);
+
+    // All skills at level 3
+    const skillIds = ['combat', 'driving', 'persuasion', 'chemistry', 'business', 'stealth', 'leadership', 'streetwise'];
+    for (const sk of skillIds) {
+      state.skills[sk] = Math.max(state.skills[sk] || 0, 3);
+    }
+    state.skillPoints = (state.skillPoints || 0) + 10; // Bonus points
+    msgs.push(`⭐ GOD MODE: All skills boosted to level 3 + 10 bonus skill points.`);
+  }
+
+  // Apply NG+ modifiers to state
+  state.ngPlusModifiers = {
+    enemyStrengthMod: td.enemyStrengthMod,
+    priceVolatility: td.priceVolatility,
+    xpMultiplier: td.xpMultiplier,
+    heatDecayMod: td.heatDecayMod,
+    loanSharkInterest: td.loanSharkInterest,
+    enemyDamageMultiplier: td.enemyDamageMultiplier,
+  };
+
+  return msgs;
+}
+
+// --- Start New Game Plus (transition function) ---
+function startNewGamePlus(oldState) {
+  if (!oldState) return null;
+
+  // Determine new tier
+  const previousTier = (oldState.newGamePlus && oldState.newGamePlus.active) ? (oldState.newGamePlus.tier || 1) : 0;
+  const newTier = Math.min(previousTier + 1, 5);
+  const tierData = NG_PLUS_TIERS[newTier];
+
+  // Calculate what carries over
+  const oldCash = (oldState.cash || 0) + (oldState.bank || 0);
+  const carriedCash = Math.floor(oldCash * tierData.cashCarryOver);
+
+  // Carry crew (best N by loyalty)
+  let carriedCrew = [];
+  if (tierData.crewCarryOver > 0 && oldState.henchmen && oldState.henchmen.length > 0) {
+    const sortedCrew = [...oldState.henchmen]
+      .filter(h => !h.injured)
+      .sort((a, b) => (b.loyalty || 0) - (a.loyalty || 0));
+    carriedCrew = sortedCrew.slice(0, Math.min(tierData.crewCarryOver, sortedCrew.length)).map(h => ({
+      name: h.name,
+      type: h.type,
+      loyalty: h.loyalty,
+      skill: h.skill || 'mid',
+      trait: h.trait || 'veteran',
+    }));
+  }
+
+  // Carry properties (best N by value)
+  let carriedProperties = [];
+  if (tierData.propertyCarryOver > 0 && oldState.properties) {
+    const allProps = [];
+    for (const locId of Object.keys(oldState.properties)) {
+      for (const prop of (oldState.properties[locId] || [])) {
+        allProps.push({ ...prop, location: locId });
+      }
+    }
+    allProps.sort((a, b) => (b.value || b.price || 0) - (a.value || a.price || 0));
+    carriedProperties = allProps.slice(0, Math.min(tierData.propertyCarryOver, allProps.length));
+  }
+
+  // Carry faction standings (Tier 4+)
+  let carriedFactions = null;
+  if (tierData.keepFactionStandings && oldState.factions) {
+    carriedFactions = JSON.parse(JSON.stringify(oldState.factions));
+    // Reset wars and active conflicts but keep standings
+    if (carriedFactions.wars) carriedFactions.wars = {};
+    if (carriedFactions.factionEvents) carriedFactions.factionEvents = [];
+  }
+
+  // Collect traits/abilities from consequence engine
+  let carriedTraits = [];
+  if (oldState.consequenceEngine && oldState.consequenceEngine.permanentTraits) {
+    carriedTraits = [...oldState.consequenceEngine.permanentTraits];
+  }
+
+  // Collect completed endings across all runs
+  let completedEndings = [];
+  if (oldState.newGamePlus && oldState.newGamePlus.completedEndings) {
+    completedEndings = [...oldState.newGamePlus.completedEndings];
+  }
+  if (oldState.campaign && oldState.campaign.endingId) {
+    if (!completedEndings.includes(oldState.campaign.endingId)) {
+      completedEndings.push(oldState.campaign.endingId);
+    }
+  }
+
+  // Track cumulative NG+ unlocks
+  const cumulativeUnlocks = {};
+  for (let t = 1; t <= newTier; t++) {
+    const td = NG_PLUS_TIERS[t];
+    if (td && td.unlocks) {
+      for (const key of Object.keys(td.unlocks)) {
+        if (key !== 'description') cumulativeUnlocks[key] = true;
+      }
+    }
+  }
+
+  // Build NG+ state to attach to the new game state
+  const ngPlusState = {
+    active: true,
+    tier: newTier,
+    tierName: tierData.name,
+    tierSubtitle: tierData.subtitle,
+    totalCompletions: previousTier + 1,
+    carriedCash: carriedCash,
+    carriedCrew: carriedCrew,
+    carriedProperties: carriedProperties,
+    carriedFactions: carriedFactions,
+    carriedTraits: carriedTraits,
+    completedEndings: completedEndings,
+    unlocks: cumulativeUnlocks,
+    previousRunStats: {
+      finalScore: oldState.finalScore || 0,
+      rank: oldState.rank || 'Unknown',
+      day: oldState.day || 0,
+      characterId: oldState.characterId || 'classic',
+      endingId: (oldState.campaign && oldState.campaign.endingId) || null,
+      netWorth: (oldState.cash || 0) + (oldState.bank || 0) - (oldState.debt || 0),
+      peopleKilled: oldState.peopleKilled || 0,
+      territoriesControlled: Object.keys(oldState.territory || {}).length,
+    },
+    rivalDealer: null,  // Will be initialized for Tier 4+
+    legendaryTitle: newTier >= 5 ? 'The Legendary' : null,
+  };
+
+  // Initialize rival dealer for Tier 4+
+  if (newTier >= 4) {
+    ngPlusState.rivalDealer = {
+      name: NG_PLUS_RIVAL.name,
+      emoji: NG_PLUS_RIVAL.emoji,
+      power: NG_PLUS_RIVAL.basePower,
+      lastSeenDay: 0,
+      lastSeenLocation: null,
+      defeated: false,
+      encounters: 0,
+      territoriesStolen: [],
+    };
+  }
+
+  // Create intro narrative
+  const intro = {
+    type: 'ng_plus_intro',
+    tier: newTier,
+    tierName: tierData.name,
+    tierSubtitle: tierData.subtitle,
+    narrative: tierData.introNarrative,
+    carriedOver: {
+      cash: carriedCash,
+      crew: carriedCrew.length,
+      properties: carriedProperties.length,
+      factions: tierData.keepFactionStandings,
+      traits: carriedTraits.length,
+    },
+    newUnlocks: tierData.unlocks.description,
+  };
+
+  // Persist NG+ data to localStorage for cross-session tracking
+  try {
+    const ngPlusMeta = JSON.parse(localStorage.getItem('drugwars_ngplus_meta') || '{}');
+    ngPlusMeta.highestTier = Math.max(ngPlusMeta.highestTier || 0, newTier);
+    ngPlusMeta.totalCompletions = (ngPlusMeta.totalCompletions || 0) + 1;
+    ngPlusMeta.completedEndings = completedEndings;
+    ngPlusMeta.lastCompletionDate = new Date().toISOString();
+    localStorage.setItem('drugwars_ngplus_meta', JSON.stringify(ngPlusMeta));
+  } catch (e) { /* localStorage unavailable */ }
+
+  return {
+    ngPlusState: ngPlusState,
+    intro: intro,
+    tierData: tierData,
+  };
+}
+
+// --- Process NG+ daily effects (call from waitDay) ---
+function processNGPlusDaily(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return [];
+  const tier = state.newGamePlus.tier || 1;
+  const tierData = NG_PLUS_TIERS[Math.min(tier, 5)];
+  const msgs = [];
+
+  // Apply heat decay modifier
+  // (This is handled in waitDay via heatDecayMod, but we also track here for NG+-specific slow)
+
+  // NG+ exclusive random events
+  for (const evt of NG_PLUS_EVENTS) {
+    if (tier < evt.tierMin) continue;
+    // Scale chance slightly by tier for higher tiers
+    const adjustedChance = evt.chance * (1 + (tier - evt.tierMin) * 0.1);
+    if (Math.random() >= adjustedChance) continue;
+
+    if (evt.type === 'combat') {
+      // Scale enemy stats by tier
+      const scaledEnemyHealth = Math.round(evt.enemyHealth * tierData.enemyStrengthMod);
+      const scaledEnemyDamage = Math.round(evt.enemyDamage * tierData.enemyDamageMultiplier);
+      state.pendingEvent = {
+        type: 'combat',
+        subtype: 'ng_plus_event',
+        eventId: evt.id,
+        msg: evt.msg,
+        enemyName: evt.msg.split('!')[0].replace(/^[^\s]+\s/, ''),
+        enemyHealth: scaledEnemyHealth,
+        enemyMaxHealth: scaledEnemyHealth,
+        enemyDamage: scaledEnemyDamage,
+        enemyCount: evt.enemyCount,
+        reward: evt.reward || 0,
+        heatGain: evt.heatGain || 0,
+        territoryReward: evt.territoryReward || false,
+      };
+      msgs.push(evt.msg);
+      break; // Only one NG+ combat event per day
+    }
+
+    if (evt.type === 'buff') {
+      if (evt.effect) {
+        if (evt.effect.repGain && state.rep) {
+          state.rep.streetCred = Math.min(100, (state.rep.streetCred || 0) + evt.effect.repGain);
+        }
+        if (evt.effect.fearGain && state.rep) {
+          state.rep.fear = Math.min(100, (state.rep.fear || 0) + evt.effect.fearGain);
+        }
+        if (evt.effect.cashGain) {
+          state.cash += evt.effect.cashGain;
+        }
+        if (evt.effect.purchaseDiscount) {
+          state.activeBuffs = state.activeBuffs || [];
+          state.activeBuffs.push({
+            id: 'ngp_price_discount',
+            name: 'Legendary Respect',
+            multiplier: evt.effect.purchaseDiscount,
+            expiresDay: state.day + (evt.effect.duration || 1),
+          });
+        }
+      }
+      msgs.push(evt.msg);
+    }
+
+    if (evt.type === 'global') {
+      if (evt.effect) {
+        if (evt.effect.heatGain) {
+          state.heat = Math.min(100, (state.heat || 0) + evt.effect.heatGain);
+        }
+        if (evt.effect.importCostMult) {
+          state.activeBuffs = state.activeBuffs || [];
+          state.activeBuffs.push({
+            id: 'ngp_import_cost',
+            name: 'Border Crackdown',
+            importCostMult: evt.effect.importCostMult,
+            expiresDay: state.day + (evt.effect.duration || 5),
+          });
+        }
+        if (evt.effect.allPricesVolatile) {
+          // Double volatility for 5 days
+          state.activeBuffs = state.activeBuffs || [];
+          state.activeBuffs.push({
+            id: 'ngp_cartel_war_volatility',
+            name: 'Cartel War',
+            priceVolatilityMult: 2.0,
+            expiresDay: state.day + 5,
+          });
+        }
+      }
+      msgs.push(evt.msg);
+    }
+
+    if (evt.type === 'offer') {
+      state.pendingEvent = {
+        type: 'offer',
+        subtype: 'ng_plus_event',
+        eventId: evt.id,
+        msg: evt.msg,
+        offerType: 'ng_plus_special',
+        price: evt.price || 0,
+        effect: evt.effect || null,
+        reward: evt.reward || null,
+      };
+      msgs.push(evt.msg);
+    }
+
+    break; // Only one NG+ event per day
+  }
+
+  // Tier 4+: Rival dealer daily processing
+  if (tier >= 4 && state.newGamePlus.rivalDealer && !state.newGamePlus.rivalDealer.defeated) {
+    const rivalMsgs = processRivalDealerDaily(state);
+    msgs.push(...rivalMsgs);
+  }
+
+  return msgs;
+}
+
+// --- Process Rival Dealer (Tier 4+) ---
+function processRivalDealerDaily(state) {
+  if (!state.newGamePlus || !state.newGamePlus.rivalDealer) return [];
+  const rival = state.newGamePlus.rivalDealer;
+  if (rival.defeated) return [];
+  const msgs = [];
+
+  // Rival grows stronger each day
+  rival.power = Math.min(NG_PLUS_RIVAL.maxPower, rival.power + NG_PLUS_RIVAL.powerPerDay);
+
+  // Random rival events
+  const roll = Math.random();
+
+  if (roll < NG_PLUS_RIVAL.ambushChance) {
+    // Ambush!
+    const scaledHealth = Math.round(rival.power * 2);
+    const scaledDamage = Math.round(rival.power * 0.3);
+    state.pendingEvent = {
+      type: 'combat',
+      subtype: 'rival_dealer',
+      msg: `${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} strikes! "${rival.encounters === 0 ? 'We meet at last.' : 'You can\'t escape me forever.'}"`,
+      enemyName: NG_PLUS_RIVAL.name,
+      enemyHealth: scaledHealth,
+      enemyMaxHealth: scaledHealth,
+      enemyDamage: scaledDamage,
+      enemyCount: 3 + Math.floor(rival.power / 100),
+      reward: Math.round(rival.power * 50),
+      isRival: true,
+    };
+    rival.encounters++;
+    rival.lastSeenDay = state.day;
+    rival.lastSeenLocation = state.currentLocation;
+    msgs.push(`${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} has found you!`);
+  } else if (roll < NG_PLUS_RIVAL.ambushChance + NG_PLUS_RIVAL.sabotagePriceChance) {
+    // Price sabotage - reduce selling prices in current location
+    msgs.push(`${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} is undercutting your prices! Selling prices reduced by 15% today.`);
+    for (const drugId of Object.keys(state.prices || {})) {
+      if (state.prices[drugId]) {
+        state.prices[drugId] = Math.round(state.prices[drugId] * 0.85);
+      }
+    }
+  } else if (roll < NG_PLUS_RIVAL.ambushChance + NG_PLUS_RIVAL.sabotagePriceChance + NG_PLUS_RIVAL.stealTerritoryChance) {
+    // Territory theft
+    const territories = Object.keys(state.territory || {});
+    if (territories.length > 0) {
+      const stolen = territories[Math.floor(Math.random() * territories.length)];
+      const stolenName = (LOCATIONS.find(l => l.id === stolen) || { name: stolen }).name;
+      delete state.territory[stolen];
+      rival.territoriesStolen.push(stolen);
+      msgs.push(`${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} has seized control of ${stolenName}!`);
+    }
+  }
+
+  // 0.5% daily chance for the rival to send a taunting message
+  if (Math.random() < 0.005) {
+    const taunts = [
+      `${NG_PLUS_RIVAL.emoji} A note arrives: "I know every move before you make it."`,
+      `${NG_PLUS_RIVAL.emoji} Your phone buzzes: "Remember who taught you everything?"`,
+      `${NG_PLUS_RIVAL.emoji} Word on the street: ${NG_PLUS_RIVAL.name} is telling people you\'re finished.`,
+      `${NG_PLUS_RIVAL.emoji} A package arrives. Inside: a mirror and a note. "This is who you used to be."`,
+    ];
+    msgs.push(taunts[Math.floor(Math.random() * taunts.length)]);
+  }
+
+  return msgs;
+}
+
+// --- Apply NG+ modifiers to combat (call from resolveCombatRound) ---
+function getNGPlusCombatMod(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return { damageMod: 1, healthMod: 1, countMod: 0 };
+  const tier = state.newGamePlus.tier || 1;
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  return {
+    damageMod: td.enemyDamageMultiplier,
+    healthMod: td.enemyStrengthMod,
+    countMod: Math.floor(tier / 2), // Extra enemies at higher tiers
+  };
+}
+
+// --- Get NG+ XP multiplier ---
+function getNGPlusXPMultiplier(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return 1;
+  const tier = state.newGamePlus.tier || 1;
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  return td.xpMultiplier || 1;
+}
+
+// --- Check if a drug should be available based on NG+ status ---
+function isDrugAvailableNGPlus(state, drug) {
+  if (!drug.ngPlus) return true; // Not NG+ restricted
+  if (!state.newGamePlus || !state.newGamePlus.active) return false;
+  // Fentanyl requires Tier 2+
+  if (drug.id === 'fentanyl') return (state.newGamePlus.tier || 1) >= 2;
+  return true; // Other NG+ drugs available at any NG+ tier
+}
+
+// --- Get NG+ heat decay modifier ---
+function getNGPlusHeatDecayMod(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return 1;
+  const tier = state.newGamePlus.tier || 1;
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  return td.heatDecayMod || 1;
+}
+
+// --- Can own multiple districts? (Kingpin Mode, Tier 3+) ---
+function canOwnMultipleDistricts(state) {
+  return isNGPlusFeatureUnlocked(state, 'kingpinMode');
+}
+
+// --- Get NG+ intro data for display ---
+function getNGPlusIntro(state) {
+  if (!state.newGamePlus || !state.newGamePlus.active) return null;
+  const tier = state.newGamePlus.tier || 1;
+  const td = NG_PLUS_TIERS[Math.min(tier, 5)];
+  return {
+    tier: tier,
+    name: td.name,
+    subtitle: td.subtitle,
+    narrative: td.introNarrative,
+    previousRun: state.newGamePlus.previousRunStats || null,
+    carriedOver: {
+      cash: state.newGamePlus.carriedCash || 0,
+      crew: (state.newGamePlus.carriedCrew || []).length,
+      properties: (state.newGamePlus.carriedProperties || []).length,
+      factions: td.keepFactionStandings,
+      traits: (state.newGamePlus.carriedTraits || []).length,
+    },
+    newUnlocks: td.unlocks.description,
+  };
 }
 
 // ============================================================
@@ -1028,9 +1816,9 @@ function createGameState() {
     stashes: {},
     campaign: initCampaign(),
     endlessMode: false,
-    newGamePlus: false,
-    ngPlusLevel: 0,
-    ngPlusModifiers: null,
+    newGamePlus: false,   // Will be set to { active: true, tier: N, ... } when NG+ is active
+    ngPlusLevel: 0,       // Legacy compat
+    ngPlusModifiers: null, // Set by applyNGPlusStartBonus
     // Phase 2 systems
     processing: typeof initProcessingState === 'function' ? initProcessingState() : { supplies: {}, activeJobs: [], completedBatches: [], totalBatchesCooked: 0, chemistryXp: 0 },
     processedDrugs: {},
@@ -1143,9 +1931,15 @@ function generatePrices(state) {
     }
 
     // NG+ price volatility
-    if (state.newGamePlus) {
+    if (state.newGamePlus && state.newGamePlus.active) {
       const vol = getNgPlusMod(state, 'priceVolatility', 1);
       price = midPrice + (price - midPrice) * vol;
+    }
+
+    // NG+ drug availability check (e.g., Fentanyl requires Tier 2+)
+    if (drug.ngPlus && !isDrugAvailableNGPlus(state, drug)) {
+      prices[drug.id] = null; // Not available in this NG+ tier
+      continue;
     }
 
     // 8% chance drug is unavailable (reduced from 12% for better market flow)
@@ -1422,6 +2216,12 @@ function waitDay(state) {
     if (cMsgs && cMsgs.length) msgs.push(...cMsgs);
   }
 
+  // === NEW GAME+ daily processing ===
+  if (state.newGamePlus && state.newGamePlus.active) {
+    const ngpMsgs = processNGPlusDaily(state);
+    if (ngpMsgs && ngpMsgs.length) msgs.push(...ngpMsgs);
+  }
+
   // Campaign milestone check
   if (typeof checkActMilestones === 'function' && !GAME_CONFIG.endlessMode) {
     const actEvent = checkActMilestones(state);
@@ -1453,6 +2253,8 @@ function waitDay(state) {
     const repEffects = getRepEffects(state);
     if (repEffects.heatDecayMod > 0) heatDecay *= (1 + repEffects.heatDecayMod);
   }
+  // NG+ heat decay modifier (slower decay at higher tiers)
+  heatDecay *= getNGPlusHeatDecayMod(state);
   state.heat = Math.max(0, state.heat - heatDecay);
 
   // Drift existing prices (±5-20%) and possibly trigger new events
@@ -2662,8 +3464,15 @@ function endGame(state) {
       globalAchievements.push('game_beaten');
       localStorage.setItem('drugwars_achievements', JSON.stringify(globalAchievements));
     }
-    if (state.newGamePlus && state.campaign && state.campaign.endingId && !globalAchievements.includes('ng_plus_complete')) {
-      globalAchievements.push('ng_plus_complete');
+    if (state.newGamePlus && state.newGamePlus.active && state.campaign && state.campaign.endingId) {
+      const ngTier = state.newGamePlus.tier || 1;
+      const tierAchievement = `ng_plus_tier_${ngTier}_complete`;
+      if (!globalAchievements.includes(tierAchievement)) {
+        globalAchievements.push(tierAchievement);
+      }
+      if (!globalAchievements.includes('ng_plus_complete')) {
+        globalAchievements.push('ng_plus_complete');
+      }
       localStorage.setItem('drugwars_achievements', JSON.stringify(globalAchievements));
     }
     // Track all unique endings achieved for the "all_endings" achievement
@@ -2674,6 +3483,20 @@ function endGame(state) {
         endings.push(state.campaign.endingId);
         localStorage.setItem(endingsKey, JSON.stringify(endings));
       }
+    }
+    // Persist NG+ tier completion meta
+    if (state.newGamePlus && state.newGamePlus.active) {
+      const ngPlusMeta = JSON.parse(localStorage.getItem('drugwars_ngplus_meta') || '{}');
+      const ngTier = state.newGamePlus.tier || 1;
+      ngPlusMeta.highestTierCompleted = Math.max(ngPlusMeta.highestTierCompleted || 0, ngTier);
+      ngPlusMeta.totalCompletions = (ngPlusMeta.totalCompletions || 0) + 1;
+      if (state.campaign && state.campaign.endingId) {
+        if (!ngPlusMeta.completedEndings) ngPlusMeta.completedEndings = [];
+        if (!ngPlusMeta.completedEndings.includes(state.campaign.endingId)) {
+          ngPlusMeta.completedEndings.push(state.campaign.endingId);
+        }
+      }
+      localStorage.setItem('drugwars_ngplus_meta', JSON.stringify(ngPlusMeta));
     }
   } catch (e) {}
 

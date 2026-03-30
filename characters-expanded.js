@@ -383,9 +383,21 @@ function getCharacterById(charId) {
 // Get available characters based on game state
 function getAvailableCharacters(state) {
   const chars = [...MIAMI_CHARACTERS];
-  if (state && state.newGamePlus && state.newGamePlus.active) {
+  // NG+ characters available from Tier 1+ (both new object format and legacy boolean)
+  const isNgPlus = state && ((state.newGamePlus && state.newGamePlus.active) || state.newGamePlus === true);
+  if (isNgPlus) {
     chars.push(...NG_PLUS_CHARACTERS);
   }
+  // Also check localStorage for meta-progression (player has beaten the game before)
+  try {
+    const achievements = JSON.parse(localStorage.getItem('drugwars_achievements') || '[]');
+    if (!isNgPlus && achievements.includes('game_beaten')) {
+      // Show NG+ characters but mark them as locked preview
+      for (const c of NG_PLUS_CHARACTERS) {
+        chars.push({ ...c, lockedPreview: true, lockReason: 'Start a New Game+ run to unlock this character' });
+      }
+    }
+  } catch (e) { /* localStorage unavailable */ }
   return chars;
 }
 

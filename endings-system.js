@@ -254,17 +254,17 @@ const CAMPAIGN_ENDINGS = [
 ];
 
 const NG_PLUS_ENDINGS = [
-  { id: 'dynasty', name: 'The Dynasty', emoji: '🏰', desc: 'Build a criminal dynasty spanning generations. Legacy character carries the torch.', ngPlusOnly: true },
-  { id: 'secret', name: 'The Secret Ending', emoji: '❓', desc: 'Complete all 12 campaign endings + specific NG+ conditions.', ngPlusOnly: true, hidden: true },
-  { id: 'revolution', name: 'The Revolution', emoji: '✊', desc: 'Overthrow the entire system. Transform Miami from the ground up.', ngPlusOnly: true },
-  { id: 'ghost', name: 'The Ghost', emoji: '👻', desc: 'Become truly invisible. Run everything from the shadows. No one knows you exist.', ngPlusOnly: true },
-  { id: 'empire_abroad', name: 'Empire Abroad', emoji: '🌍', desc: 'Take your operation international. Miami is just the beginning.', ngPlusOnly: true },
-  { id: 'redemption', name: 'The Redemption Arc', emoji: '🌅', desc: 'Use your criminal empire to genuinely help the community.', ngPlusOnly: true },
-  { id: 'puppet_master', name: 'The Puppet Master', emoji: '🎭', desc: 'Control everything without anyone knowing. The ultimate shadow ruler.', ngPlusOnly: true },
-  { id: 'true_ending', name: 'The True Ending', emoji: '⭐', desc: 'The canonical ending. Requires specific conditions across multiple runs.', ngPlusOnly: true, hidden: true },
+  { id: 'dynasty', name: 'The Dynasty', emoji: '🏰', desc: 'Build a criminal dynasty spanning generations. Legacy character carries the torch.', ngPlusOnly: true, minTier: 1 },
+  { id: 'secret', name: 'The Secret Ending', emoji: '❓', desc: 'Complete all 12 campaign endings + specific NG+ conditions.', ngPlusOnly: true, hidden: true, minTier: 1 },
+  { id: 'revolution', name: 'The Revolution', emoji: '✊', desc: 'Overthrow the entire system. Transform Miami from the ground up.', ngPlusOnly: true, minTier: 1 },
+  { id: 'ghost', name: 'The Ghost', emoji: '👻', desc: 'Become truly invisible. Run everything from the shadows. No one knows you exist.', ngPlusOnly: true, minTier: 1 },
+  { id: 'empire_abroad', name: 'Empire Abroad', emoji: '🌍', desc: 'Take your operation international. Miami is just the beginning.', ngPlusOnly: true, minTier: 2 },
+  { id: 'redemption', name: 'The Redemption Arc', emoji: '🌅', desc: 'Use your criminal empire to genuinely help the community.', ngPlusOnly: true, minTier: 1 },
+  { id: 'puppet_master', name: 'The Puppet Master', emoji: '🎭', desc: 'Control everything without anyone knowing. The ultimate shadow ruler.', ngPlusOnly: true, minTier: 3 },
+  { id: 'true_ending', name: 'The True Ending', emoji: '⭐', desc: 'The canonical ending. Requires specific conditions across multiple runs.', ngPlusOnly: true, hidden: true, minTier: 4 },
 ];
 
-// All endings combined
+// All endings combined (includes tier-gated NG+ endings from campaign-system.js)
 const ALL_ENDINGS = [...CAMPAIGN_ENDINGS, ...NG_PLUS_ENDINGS];
 
 // Determine which endings the player qualifies for
@@ -278,12 +278,17 @@ function getAvailableEndings(state) {
     }
   }
 
-  // NG+ endings
-  if (state.newGamePlus && state.newGamePlus.active) {
+  // NG+ endings (tier-gated)
+  const isNgPlus = state.newGamePlus && state.newGamePlus.active;
+  const ngTier = isNgPlus ? (state.newGamePlus.tier || 1) : 0;
+
+  if (isNgPlus || state.newGamePlus === true) {
+    const effectiveTier = isNgPlus ? ngTier : 1; // Legacy compat: boolean true = tier 1
     for (const ending of NG_PLUS_ENDINGS) {
-      if (!ending.hidden || meetsSecretEndingConditions(state)) {
-        available.push({ ...ending, grade: 'A' });
-      }
+      const minTier = ending.minTier || 1;
+      if (effectiveTier < minTier) continue; // Not at required tier yet
+      if (ending.hidden && !meetsSecretEndingConditions(state)) continue;
+      available.push({ ...ending, grade: 'A', ngPlusTier: effectiveTier });
     }
   }
 
@@ -359,7 +364,18 @@ function calculateEndingGrade(state, ending) {
 
 function meetsSecretEndingConditions(state) {
   if (!state.newGamePlus) return false;
-  return (state.newGamePlus.completedEndings || []).length >= 12;
+  // New format: object with active flag
+  if (state.newGamePlus.active) {
+    return (state.newGamePlus.completedEndings || []).length >= 12;
+  }
+  // Legacy format: boolean
+  if (state.newGamePlus === true) {
+    try {
+      const ngMeta = JSON.parse(localStorage.getItem('drugwars_ngplus_meta') || '{}');
+      return (ngMeta.completedEndings || []).length >= 12;
+    } catch (e) { return false; }
+  }
+  return false;
 }
 
 // Initialize endings state

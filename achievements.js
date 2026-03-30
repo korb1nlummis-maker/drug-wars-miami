@@ -114,8 +114,13 @@ function getNextLevel(xp) {
 
 function awardXP(state, action, amount) {
   if (!state.xp && state.xp !== 0) state.xp = 0;
-  const reward = amount || XP_REWARDS[action] || 0;
+  let reward = amount || XP_REWARDS[action] || 0;
   if (reward <= 0) return null;
+
+  // Apply NG+ XP multiplier
+  if (typeof getNGPlusXPMultiplier === 'function') {
+    reward = Math.round(reward * getNGPlusXPMultiplier(state));
+  }
 
   const oldLevel = getKingpinLevel(state.xp);
   state.xp += reward;
