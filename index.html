@@ -135,7 +135,21 @@ body::before {
   0%, 100% { box-shadow: 0 0 20px var(--neon-pink-glow), 0 0 40px rgba(255, 45, 149, 0.2); }
   50% { box-shadow: 0 0 30px var(--neon-pink-glow), 0 0 60px rgba(255, 45, 149, 0.3); }
 }
-.btn-locked { opacity: 0.5; }
+.btn-locked { opacity: 0.4; pointer-events: none; filter: grayscale(80%); position: relative; }
+.btn-locked-interactive { opacity: 0.45; filter: grayscale(70%); cursor: not-allowed !important; position: relative; }
+.btn-locked-interactive:hover { opacity: 0.55; filter: grayscale(60%); }
+.btn-locked-interactive .lock-icon { margin-right: 0.3rem; }
+.btn-sidebar.btn-locked-interactive { border-color: #444 !important; color: #666 !important; text-shadow: none !important; }
+.btn-sidebar.btn-locked-interactive:hover::after { content: attr(data-lock-tooltip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a1a2e; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.6rem; white-space: nowrap; z-index: 100; pointer-events: none; box-shadow: 0 0 8px rgba(0,255,255,0.2); }
+.main-tab-btn.tab-locked { opacity: 0.35; filter: grayscale(80%); cursor: not-allowed !important; color: #555 !important; border-bottom-color: transparent !important; text-shadow: none !important; }
+.main-tab-btn.tab-locked:hover { color: #666 !important; }
+.main-tab-btn.tab-locked:hover::after { content: attr(data-lock-tooltip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a1a2e; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.6rem; white-space: nowrap; z-index: 100; }
+.main-tab-btn { position: relative; }
+.unlock-toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px); background: linear-gradient(135deg, #0a2a1a, #1a3a2a); border: 2px solid var(--neon-green); color: var(--neon-green); padding: 0.8rem 1.5rem; border-radius: 8px; font-family: var(--font-body); font-size: 0.85rem; font-weight: bold; z-index: 2000; opacity: 0; transition: all 0.4s ease; text-align: center; box-shadow: 0 0 20px rgba(0,255,100,0.3), 0 4px 20px rgba(0,0,0,0.5); text-shadow: 0 0 8px rgba(0,255,100,0.4); }
+.unlock-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.unlock-toast .unlock-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: #88ffaa; margin-bottom: 0.3rem; }
+.unlock-toast .unlock-name { font-size: 1rem; color: #00ff88; }
+.unlock-toast .unlock-desc { font-size: 0.7rem; color: #aaa; margin-top: 0.2rem; font-weight: normal; }
 .ng-plus-badge { display: inline-block; background: linear-gradient(135deg, #ff2d95, #ff9500); color: #000; font-weight: bold; font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 3px; margin-left: 0.5rem; letter-spacing: 0.1rem; animation: ngPlusPulse 3s ease-in-out infinite; }
 @keyframes ngPlusPulse { 0%, 100% { box-shadow: 0 0 8px rgba(255,45,149,0.4); } 50% { box-shadow: 0 0 16px rgba(255,45,149,0.8); } }
 .game-input { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.4rem 0.6rem; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }

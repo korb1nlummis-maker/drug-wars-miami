@@ -193,6 +193,22 @@ function resolveEncounterOutcome(state, outcomeIndex) {
   if (fx.pet) effectParts.push('<span style="color:#ffaa00">New companion: ' + fx.pet + '</span>');
   if (fx.lookout) effectParts.push('<span style="color:#ffaa00">New lookout!</span>');
   if (fx.soldDrugs) effectParts.push('<span style="color:#39ff14">Sold drugs for $' + (fx.soldDrugs).toLocaleString() + '</span>');
+  // Display consequence message and trait changes
+  if (fx.consequences) {
+    if (fx.consequences.message) effectParts.push('<span style="color:#e0c0ff;font-style:italic">' + fx.consequences.message + '</span>');
+    if (fx.consequences.traits) {
+      var traitNames = Object.keys(fx.consequences.traits);
+      if (traitNames.length > 0) {
+        var traitDisp = traitNames.map(function(t) {
+          var val = fx.consequences.traits[t];
+          var def = typeof TRAIT_DEFINITIONS !== 'undefined' ? TRAIT_DEFINITIONS[t] : null;
+          var name = def ? def.emoji + ' ' + def.name : t.replace(/_/g, ' ');
+          return name + (val > 1 ? ' x' + val : '');
+        }).join(', ');
+        effectParts.push('<span style="color:#cc88ff">Traits: ' + traitDisp + '</span>');
+      }
+    }
+  }
   enc.resolvedEffects = effectParts.length > 0 ? effectParts.join(' &nbsp;|&nbsp; ') : '';
 
   state.encounters.encounterLog.push({
@@ -222,10 +238,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Someone is being robbed in a dark alley. The victim is crying for help while two thugs rifle through their pockets.',
     outcomes: [
-      { label: 'Help the victim (fight)', effects: { trust: 3, health: -10, streetCred: 2 }, result: 'You jump in swinging. The muggers scatter. The grateful victim slips you $200 and promises to remember your face.' },
-      { label: 'Rob the robber', effects: { cash: 350, streetCred: 3 }, result: 'You wait for the muggers to finish, then corner them. They hand over everything. Street justice.' },
-      { label: 'Ignore and walk away', effects: {}, result: 'You keep walking. Not your problem. The cries fade behind you.' },
-      { label: 'Join the robbery', effects: { cash: 500, trust: -3, publicImage: -2 }, result: 'Three on one makes it quick. You split the take. The victim will remember your face too.' }
+      { label: 'Help the victim (fight)', effects: { trust: 3, health: -10, streetCred: 2, consequences: { traits: { merciful: 1, brave: 1 }, stats: { reputation: 3 }, message: 'Word spreads that you stood up for a stranger. People remember protectors.' } }, result: 'You jump in swinging. The muggers scatter. The grateful victim slips you $200 and promises to remember your face.' },
+      { label: 'Rob the robber', effects: { cash: 350, streetCred: 3, consequences: { traits: { opportunistic: 1 }, stats: { reputation: 1 }, message: 'Robbing robbers -- street justice with profit. Your reputation grows.' } }, result: 'You wait for the muggers to finish, then corner them. They hand over everything. Street justice.' },
+      { label: 'Ignore and walk away', effects: { consequences: { traits: { cold: 1 }, message: 'You walked past someone in need. The streets notice who helps and who doesn\'t.' } }, result: 'You keep walking. Not your problem. The cries fade behind you.' },
+      { label: 'Join the robbery', effects: { cash: 500, trust: -3, publicImage: -2, consequences: { traits: { ruthless: 1, predatory: 1 }, stats: { heat: 3 }, message: 'You preyed on the weak. The victim will tell everyone what you look like.' } }, result: 'Three on one makes it quick. You split the take. The victim will remember your face too.' }
     ]
   },
   {
@@ -233,10 +249,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { district: ['wynwood', 'south_beach', 'miami_beach'] },
     description: 'A confused tourist with an expensive watch and a fat wallet is wandering around looking at a map upside down.',
     outcomes: [
-      { label: 'Help with directions', effects: { publicImage: 2, cash: 100 }, result: 'You point them the right way. They tip you $100 and thank you profusely. They might come back as a customer.' },
-      { label: 'Scam them on a fake tour', effects: { cash: 300, trust: -1 }, result: 'You charge $300 for a "VIP local tour" of two blocks. They seem thrilled. Tourists.' },
-      { label: 'Rob them', effects: { cash: 800, heat: 5, publicImage: -3 }, result: 'Quick hands relieve them of wallet and watch. $800 richer but a security camera might have caught that.' },
-      { label: 'Sell to them', effects: { cash: 400, streetCred: 1 }, result: 'You offer party supplies for their vacation. They buy eagerly. Returning customer potential.' }
+      { label: 'Help with directions', effects: { publicImage: 2, cash: 100, consequences: { traits: { charitable: 1 }, stats: { reputation: 2 }, message: 'A kind deed in a rough world. Tourists talk to other tourists.' } }, result: 'You point them the right way. They tip you $100 and thank you profusely. They might come back as a customer.' },
+      { label: 'Scam them on a fake tour', effects: { cash: 300, trust: -1, consequences: { traits: { cunning: 1, scammer: 1 }, message: 'Easy marks make easy money. Your silver tongue is getting sharper.' } }, result: 'You charge $300 for a "VIP local tour" of two blocks. They seem thrilled. Tourists.' },
+      { label: 'Rob them', effects: { cash: 800, heat: 5, publicImage: -3, consequences: { traits: { ruthless: 1, predatory: 1 }, stats: { heat: 3 }, message: 'Robbing tourists brings heat -- cameras everywhere in tourist zones.' } }, result: 'Quick hands relieve them of wallet and watch. $800 richer but a security camera might have caught that.' },
+      { label: 'Sell to them', effects: { cash: 400, streetCred: 1, consequences: { traits: { entrepreneurial: 1 }, stats: { reputation: 1 }, message: 'New customer acquired. Party tourists always come back for more.' } }, result: 'You offer party supplies for their vacation. They buy eagerly. Returning customer potential.' }
     ]
   },
   {
@@ -244,10 +260,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 10 },
     description: 'An enemy faction member is watching your territory from across the street, taking notes on a phone.',
     outcomes: [
-      { label: 'Confront them', effects: { streetCred: 2, fear: 1 }, result: 'You get in their face. They stammer out some intel about rival plans before running off.' },
-      { label: 'Follow them quietly', effects: { streetCred: 1 }, result: 'You tail them for an hour. They lead you straight to a rival stash house. Valuable intelligence.' },
-      { label: 'Attack', effects: { heat: 8, fear: 3, health: -5 }, result: 'A quick beatdown sends a message. But someone called the cops.' },
-      { label: 'Ignore them', effects: { fear: -1 }, result: 'You let them observe. They report your defenses back to their boss. Not ideal.' }
+      { label: 'Confront them', effects: { streetCred: 2, fear: 1, consequences: { traits: { bold: 1, territorial: 1 }, message: 'You confronted a spy in broad daylight. Rivals know you\'re watching.' } }, result: 'You get in their face. They stammer out some intel about rival plans before running off.' },
+      { label: 'Follow them quietly', effects: { streetCred: 1, consequences: { traits: { cunning: 1, patient: 1 }, stats: { reputation: 2 }, message: 'Patience paid off with actionable intelligence. You know where they hide.' } }, result: 'You tail them for an hour. They lead you straight to a rival stash house. Valuable intelligence.' },
+      { label: 'Attack', effects: { heat: 8, fear: 3, health: -5, consequences: { traits: { violent: 1, ruthless: 1 }, stats: { heat: 5 }, message: 'Violence sends a clear message but draws attention you don\'t need.' } }, result: 'A quick beatdown sends a message. But someone called the cops.' },
+      { label: 'Ignore them', effects: { fear: -1, consequences: { traits: { cautious: 1 }, message: 'They got a good look at your setup. That intel will be used against you.' } }, result: 'You let them observe. They report your defenses back to their boss. Not ideal.' }
     ]
   },
   {
@@ -255,9 +271,9 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A scraggly but friendly stray dog has been following you around all day. It sits at your feet and looks up with big brown eyes.',
     outcomes: [
-      { label: 'Adopt the dog', effects: { pet: { type: 'dog', name: 'Lucky', stressRelief: 2 }, stress: -5, cash: -50 }, result: 'You name him Lucky. He follows you everywhere now. Having a companion eases the tension of this life.' },
-      { label: 'Feed it and move on', effects: { cash: -10, stress: -1 }, result: 'You buy a hot dog from a cart and toss it over. The dog wags its tail as you leave.' },
-      { label: 'Chase it away', effects: {}, result: 'You shoo the dog off. It whimpers and trots away. Cold but practical.' }
+      { label: 'Adopt the dog', effects: { pet: { type: 'dog', name: 'Lucky', stressRelief: 2 }, stress: -5, cash: -50, consequences: { traits: { compassionate: 1, animal_lover: 1 }, stats: { reputation: 3 }, message: 'Lucky becomes your loyal companion. The neighborhood sees a softer side of you.' } }, result: 'You name him Lucky. He follows you everywhere now. Having a companion eases the tension of this life.' },
+      { label: 'Feed it and move on', effects: { cash: -10, stress: -1, consequences: { traits: { charitable: 1 }, message: 'A small kindness. It costs nothing to be decent.' } }, result: 'You buy a hot dog from a cart and toss it over. The dog wags its tail as you leave.' },
+      { label: 'Chase it away', effects: { consequences: { traits: { cold: 1 }, message: 'You shooed away a friendly animal. Practical, but it says something about you.' } }, result: 'You shoo the dog off. It whimpers and trots away. Cold but practical.' }
     ]
   },
   {
@@ -265,10 +281,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A fiery street preacher points directly at you, warning about the wages of sin. A small crowd is watching.',
     outcomes: [
-      { label: 'Listen respectfully', effects: { publicImage: 1, stress: -1 }, result: 'You stand and listen. The crowd notices your humility. The preacher nods approvingly.' },
-      { label: 'Argue back', effects: { publicImage: -1, streetCred: 1 }, result: 'You get into a heated debate. The crowd is split. At least you stood your ground.' },
-      { label: 'Donate $500', effects: { cash: -500, publicImage: 3, communityRep: 2 }, result: 'You drop five bills in the collection plate. The preacher blesses you publicly. The community takes notice.' },
-      { label: 'Threaten him', effects: { publicImage: -5, fear: 2 }, result: 'You get in his face. The crowd recoils. Word spreads that you threatened a man of God.' }
+      { label: 'Listen respectfully', effects: { publicImage: 1, stress: -1, consequences: { traits: { humble: 1 }, message: 'Humility in a crowd. People noticed you listening.' } }, result: 'You stand and listen. The crowd notices your humility. The preacher nods approvingly.' },
+      { label: 'Argue back', effects: { publicImage: -1, streetCred: 1, consequences: { traits: { defiant: 1, bold: 1 }, message: 'You challenged a preacher publicly. Bold or reckless, people took sides.' } }, result: 'You get into a heated debate. The crowd is split. At least you stood your ground.' },
+      { label: 'Donate $500', effects: { cash: -500, publicImage: 3, communityRep: 2, consequences: { traits: { charitable: 2, pious: 1 }, stats: { reputation: 5 }, message: 'Generosity in public view. The community sees a benefactor, not a dealer.' } }, result: 'You drop five bills in the collection plate. The preacher blesses you publicly. The community takes notice.' },
+      { label: 'Threaten him', effects: { publicImage: -5, fear: 2, consequences: { traits: { ruthless: 1, feared: 1 }, stats: { heat: 2 }, message: 'You threatened a preacher. Even hardened criminals think that\'s low.' } }, result: 'You get in his face. The crowd recoils. Word spreads that you threatened a man of God.' }
     ]
   },
   {
@@ -276,10 +292,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A homeless man tugs your sleeve. "I see things, you know? Things people pay good money for. You interested?"',
     outcomes: [
-      { label: 'Buy info ($300)', effects: { cash: -300 }, result: 'He whispers a police patrol schedule for the week. This could save your operations some serious heat.' },
-      { label: 'Recruit as lookout ($50/day)', effects: { cash: -50, lookout: { type: 'homeless', name: 'Street Eyes', intel: 1 } }, result: 'He agrees eagerly. "I see everything from my corner, boss. Everything." You now have eyes on the street.' },
-      { label: 'Ignore', effects: {}, result: 'You walk past. He shrugs and shuffles away to find another buyer.' },
-      { label: 'Give him $20 and move on', effects: { cash: -20, communityRep: 1 }, result: 'He pockets the bill gratefully. "God bless. I remember the good ones."' }
+      { label: 'Buy info ($300)', effects: { cash: -300, consequences: { traits: { networker: 1, strategic: 1 }, stats: { heat: -3 }, message: 'Intel acquired. Knowing patrol schedules is worth more than guns.' } }, result: 'He whispers a police patrol schedule for the week. This could save your operations some serious heat.' },
+      { label: 'Recruit as lookout ($50/day)', effects: { cash: -50, lookout: { type: 'homeless', name: 'Street Eyes', intel: 1 }, consequences: { traits: { resourceful: 1, leader: 1 }, message: 'You see assets where others see lost causes. Smart leadership.' } }, result: 'He agrees eagerly. "I see everything from my corner, boss. Everything." You now have eyes on the street.' },
+      { label: 'Ignore', effects: { consequences: { traits: { cold: 1 }, message: 'You ignored a potential resource. In this game, information is survival.' } }, result: 'You walk past. He shrugs and shuffles away to find another buyer.' },
+      { label: 'Give him $20 and move on', effects: { cash: -20, communityRep: 1, consequences: { traits: { charitable: 1 }, stats: { reputation: 1 }, message: 'Small charity, big memory. The homeless see everything and forget nothing.' } }, result: 'He pockets the bill gratefully. "God bless. I remember the good ones."' }
     ]
   },
   {
@@ -287,10 +303,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Two cars have collided at an intersection. Steam pours from the hoods. One driver is slumped over the wheel.',
     outcomes: [
-      { label: 'Help the victims', effects: { publicImage: 3, communityRep: 2 }, result: 'You pull the driver out and call 911. Bystanders film your heroism. Good PR for once.' },
-      { label: 'Steal from the wreck', effects: { cash: 400, publicImage: -2, heat: 3 }, result: 'While everyone is distracted, you grab a briefcase from the back seat. $400 in cash inside.' },
-      { label: 'Call ambulance only', effects: { publicImage: 1 }, result: 'You dial 911 and keep walking. Minimal involvement, minor good deed.' },
-      { label: 'Loot and run', effects: { cash: 600, heat: 8 }, result: 'You grab everything not bolted down. A witness is on their phone. Time to go.' }
+      { label: 'Help the victims', effects: { publicImage: 3, communityRep: 2, consequences: { traits: { merciful: 1, brave: 1, heroic: 1 }, stats: { reputation: 5 }, message: 'Bystander footage goes viral. The drug dealer who saved a life. Complicated PR.' } }, result: 'You pull the driver out and call 911. Bystanders film your heroism. Good PR for once.' },
+      { label: 'Steal from the wreck', effects: { cash: 400, publicImage: -2, heat: 3, consequences: { traits: { opportunistic: 1, predatory: 1 }, stats: { heat: 2 }, message: 'You looted an accident scene. If the camera footage surfaces, it\'s bad.' } }, result: 'While everyone is distracted, you grab a briefcase from the back seat. $400 in cash inside.' },
+      { label: 'Call ambulance only', effects: { publicImage: 1, consequences: { traits: { cautious: 1 }, message: 'Minimal involvement, minimal risk. A practical approach.' } }, result: 'You dial 911 and keep walking. Minimal involvement, minor good deed.' },
+      { label: 'Loot and run', effects: { cash: 600, heat: 8, consequences: { traits: { ruthless: 1, greedy: 1 }, stats: { heat: 5 }, message: 'Witnesses saw you. That footage will circulate. Greed has a price.' } }, result: 'You grab everything not bolted down. A witness is on their phone. Time to go.' }
     ]
   },
   {
@@ -298,10 +314,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { district: ['south_beach', 'wynwood', 'miami_beach'] },
     description: 'A famous rapper is walking into a restaurant with a small entourage. No bodyguards in sight.',
     outcomes: [
-      { label: 'Approach and network', effects: { streetCred: 3, publicImage: 2 }, result: 'You introduce yourself smoothly. They invite you to a private party next week. Connections made.' },
-      { label: 'Offer VIP product', effects: { cash: 2000, streetCred: 2 }, result: 'A discreet exchange in the bathroom. They pay premium without blinking. VIP recurring customer potential.' },
-      { label: 'Photograph for blackmail', effects: { cash: 5000, trust: -3, heat: 5 }, result: 'You snap photos of them doing something they shouldn\'t. A quick DM later and $5K lands in your account.' },
-      { label: 'Ignore', effects: {}, result: 'You keep it moving. Celebrities are drama magnets.' }
+      { label: 'Approach and network', effects: { streetCred: 3, publicImage: 2, consequences: { traits: { networker: 1, charismatic: 1 }, stats: { reputation: 3 }, message: 'Celebrity connections open doors money can\'t buy. VIP access unlocked.' } }, result: 'You introduce yourself smoothly. They invite you to a private party next week. Connections made.' },
+      { label: 'Offer VIP product', effects: { cash: 2000, streetCred: 2, consequences: { traits: { entrepreneurial: 1 }, stats: { reputation: 2 }, message: 'Celebrity clients mean premium prices and no haggling. Smart business.' } }, result: 'A discreet exchange in the bathroom. They pay premium without blinking. VIP recurring customer potential.' },
+      { label: 'Photograph for blackmail', effects: { cash: 5000, trust: -3, heat: 5, consequences: { traits: { treacherous: 1, blackmailer: 1 }, stats: { heat: 5 }, message: 'Blackmail brings fast money and lasting enemies. Their team will look for you.' } }, result: 'You snap photos of them doing something they shouldn\'t. A quick DM later and $5K lands in your account.' },
+      { label: 'Ignore', effects: { consequences: { traits: { disciplined: 1 }, message: 'Staying focused on business. No distractions.' } }, result: 'You keep it moving. Celebrities are drama magnets.' }
     ]
   },
   {
@@ -309,10 +325,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A nice car sits running with the keys in the ignition. No one around. Too easy?',
     outcomes: [
-      { label: 'Steal it', effects: { heat: 10, streetCred: 1 }, result: 'You hop in and drive off. Free wheels, but it might be reported soon.' },
-      { label: 'Search it', effects: { cash: 250 }, result: 'You find $250 in the glovebox and a half-eaten burrito. Not bad.' },
-      { label: 'Report it', effects: { publicImage: 1 }, result: 'You call non-emergency. Being a good citizen for once feels weird.' },
-      { label: 'Be cautious — it\'s a trap', effects: {}, result: 'Good instincts. An unmarked police car is parked around the corner. You dodge a sting operation.' }
+      { label: 'Steal it', effects: { heat: 10, streetCred: 1, consequences: { traits: { reckless: 1 }, stats: { heat: 5 }, message: 'Grand theft auto on your record. The car might have a tracker.' } }, result: 'You hop in and drive off. Free wheels, but it might be reported soon.' },
+      { label: 'Search it', effects: { cash: 250, consequences: { traits: { opportunistic: 1 }, message: 'Quick search, low risk. You know how to read a situation.' } }, result: 'You find $250 in the glovebox and a half-eaten burrito. Not bad.' },
+      { label: 'Report it', effects: { publicImage: 1, consequences: { traits: { honorable: 1 }, stats: { heat: -2 }, message: 'Good citizenship is unusual for you. Cops might remember the gesture.' } }, result: 'You call non-emergency. Being a good citizen for once feels weird.' },
+      { label: 'Be cautious — it\'s a trap', effects: { consequences: { traits: { paranoid: 1, streetwise: 1 }, message: 'Your survival instincts saved you from a sting. Trust your gut.' } }, result: 'Good instincts. An unmarked police car is parked around the corner. You dodge a sting operation.' }
     ]
   },
   {
@@ -320,10 +336,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A talented musician is playing guitar on the corner, drawing a decent crowd.',
     outcomes: [
-      { label: 'Tip generously ($50)', effects: { cash: -50, publicImage: 1 }, result: 'The musician nods gratefully and plays a song just for you. The crowd smiles.' },
-      { label: 'Recruit for music biz', effects: { streetCred: 1 }, result: 'You hand them a card. "Call me. I can make you famous." They look intrigued.' },
-      { label: 'Ignore', effects: {}, result: 'Good music, but you\'ve got business to handle.' },
-      { label: 'Demand a cut (protection)', effects: { cash: 30, fear: 1, publicImage: -2 }, result: 'The musician\'s face falls as they hand over their earnings. The crowd disperses uncomfortably.' }
+      { label: 'Tip generously ($50)', effects: { cash: -50, publicImage: 1, consequences: { traits: { charitable: 1, patron: 1 }, stats: { reputation: 1 }, message: 'Supporting local artists. People see you as more than just a dealer.' } }, result: 'The musician nods gratefully and plays a song just for you. The crowd smiles.' },
+      { label: 'Recruit for music biz', effects: { streetCred: 1, consequences: { traits: { entrepreneurial: 1, networker: 1 }, message: 'You see potential where others see a street corner. Empire mindset.' } }, result: 'You hand them a card. "Call me. I can make you famous." They look intrigued.' },
+      { label: 'Ignore', effects: { consequences: { message: 'Not everything needs your attention. Focus is a weapon.' } }, result: 'Good music, but you\'ve got business to handle.' },
+      { label: 'Demand a cut (protection)', effects: { cash: 30, fear: 1, publicImage: -2, consequences: { traits: { predatory: 1, extortionist: 1 }, stats: { heat: 1 }, message: 'Shaking down a musician. The crowd will remember your face -- and not fondly.' } }, result: 'The musician\'s face falls as they hand over their earnings. The crowd disperses uncomfortably.' }
     ]
   },
   {
@@ -344,22 +360,22 @@ const RANDOM_ENCOUNTERS = [
         const qty = Math.min(inv[drugId], Math.max(1, Math.floor(Math.random() * 3) + 1));
         const total = doublePrice * qty;
         const drugName = drug ? drug.name : drugId;
-        sellOutcome = { label: 'Sell ' + qty + ' ' + drugName + ' at double ($' + total.toLocaleString() + ')', effects: { cash: total, streetCred: -1, _sellDrug: drugId, _sellQty: qty }, result: 'They hand over $' + total.toLocaleString() + ' without blinking — ' + qty + ' ' + drugName + ' at double market price. Easy money from desperation.' };
+        sellOutcome = { label: 'Sell ' + qty + ' ' + drugName + ' at double ($' + total.toLocaleString() + ')', effects: { cash: total, streetCred: -1, _sellDrug: drugId, _sellQty: qty, consequences: { traits: { exploitative: 1, greedy: 1 }, message: 'You charged double to someone in agony. Profit from suffering.' } }, result: 'They hand over $' + total.toLocaleString() + ' without blinking — ' + qty + ' ' + drugName + ' at double market price. Easy money from desperation.' };
       } else {
         sellOutcome = { label: 'Sell at double markup (no drugs!)', effects: {}, result: 'You pat your empty pockets. Nothing to sell. The addict shuffles away.' };
       }
       return [
         sellOutcome,
-        { label: 'Give a free sample', effects: { trust: 2, _giveDrug: drugs.length > 0 ? drugs[0] : null, _giveQty: 1 }, result: 'Generosity today means a loyal customer tomorrow. They\'ll be back, and they\'ll tell their friends.' },
-        { label: 'Turn them away', effects: {}, result: 'You wave them off. They stumble away looking for another source.' },
-        { label: 'Recruit as runner ($25/day)', effects: { streetCred: 1 }, result: '"You want to earn your fix? Run deliveries for me." Their eyes light up. Cheap labor acquired.' }
+        { label: 'Give a free sample', effects: { trust: 2, _giveDrug: drugs.length > 0 ? drugs[0] : null, _giveQty: 1, consequences: { traits: { merciful: 1, strategic: 1 }, stats: { reputation: 2 }, message: 'Free samples create repeat customers. Generosity as a business strategy.' } }, result: 'Generosity today means a loyal customer tomorrow. They\'ll be back, and they\'ll tell their friends.' },
+        { label: 'Turn them away', effects: { consequences: { traits: { cold: 1 }, message: 'Another desperate soul turned away. The streets are brutal.' } }, result: 'You wave them off. They stumble away looking for another source.' },
+        { label: 'Recruit as runner ($25/day)', effects: { streetCred: 1, consequences: { traits: { resourceful: 1, exploitative: 1 }, message: 'Exploiting desperation for cheap labor. Effective but morally grey.' } }, result: '"You want to earn your fix? Run deliveries for me." Their eyes light up. Cheap labor acquired.' }
       ];
     },
     outcomes: [
-      { label: 'Sell at double markup', effects: { cash: 200, streetCred: -1 }, result: 'They pay double without hesitation. Easy money from desperation.' },
-      { label: 'Give a free sample', effects: { trust: 2 }, result: 'Generosity today means a loyal customer tomorrow. They\'ll be back, and they\'ll tell their friends.' },
-      { label: 'Turn them away', effects: {}, result: 'You wave them off. They stumble away looking for another source.' },
-      { label: 'Recruit as runner ($25/day)', effects: { streetCred: 1 }, result: '"You want to earn your fix? Run deliveries for me." Their eyes light up. Cheap labor acquired.' }
+      { label: 'Sell at double markup', effects: { cash: 200, streetCred: -1, consequences: { traits: { exploitative: 1, greedy: 1 }, message: 'Profit from desperation. The addict won\'t forget who charged double.' } }, result: 'They pay double without hesitation. Easy money from desperation.' },
+      { label: 'Give a free sample', effects: { trust: 2, consequences: { traits: { merciful: 1, strategic: 1 }, stats: { reputation: 2 }, message: 'Free samples create repeat customers. Generosity as strategy.' } }, result: 'Generosity today means a loyal customer tomorrow. They\'ll be back, and they\'ll tell their friends.' },
+      { label: 'Turn them away', effects: { consequences: { traits: { cold: 1 }, message: 'Another desperate soul turned away.' } }, result: 'You wave them off. They stumble away looking for another source.' },
+      { label: 'Recruit as runner ($25/day)', effects: { streetCred: 1, consequences: { traits: { resourceful: 1, exploitative: 1 }, message: 'Exploiting desperation for cheap labor.' } }, result: '"You want to earn your fix? Run deliveries for me." Their eyes light up. Cheap labor acquired.' }
     ]
   },
   {
@@ -367,10 +383,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'An off-duty police officer is drinking alone at a dive bar. Badge visible on their belt. They look miserable.',
     outcomes: [
-      { label: 'Bribe for patrol info ($2000)', effects: { cash: -2000, heat: -5 }, result: 'Two grand and three beers later, you know every patrol route for the next month.' },
-      { label: 'Befriend over drinks', effects: { cash: -100, trust: 1 }, result: 'You buy a round and chat. No business talk. But now you have a cop who might pick up the phone someday.' },
-      { label: 'Avoid entirely', effects: {}, result: 'Smart. You finish your drink and slip out the back. No need to tempt fate.' },
-      { label: 'Blackmail (risky)', effects: { cash: 1000, heat: 10 }, result: 'You snap a photo of them drinking on duty. They pay $1K to delete it. But they won\'t forget your face.' }
+      { label: 'Bribe for patrol info ($2000)', effects: { cash: -2000, heat: -5, consequences: { traits: { corruptor: 1, strategic: 1 }, stats: { heat: -5 }, abilities: ['trusted_by_cops'], message: 'A corrupt cop on your payroll. Patrol routes give you a huge advantage.' } }, result: 'Two grand and three beers later, you know every patrol route for the next month.' },
+      { label: 'Befriend over drinks', effects: { cash: -100, trust: 1, consequences: { traits: { charismatic: 1, networker: 1 }, stats: { reputation: 2 }, message: 'A cop who owes you a drink. Relationships are the real currency.' } }, result: 'You buy a round and chat. No business talk. But now you have a cop who might pick up the phone someday.' },
+      { label: 'Avoid entirely', effects: { consequences: { traits: { cautious: 1 }, message: 'Discretion is the better part of valor. You live to deal another day.' } }, result: 'Smart. You finish your drink and slip out the back. No need to tempt fate.' },
+      { label: 'Blackmail (risky)', effects: { cash: 1000, heat: 10, consequences: { traits: { treacherous: 1, blackmailer: 1 }, stats: { heat: 8 }, message: 'You made an enemy in blue. Blackmailed cops don\'t forget -- they wait.' } }, result: 'You snap a photo of them drinking on duty. They pay $1K to delete it. But they won\'t forget your face.' }
     ]
   },
   {
@@ -378,10 +394,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'Someone from your past life spots you across the street. "Holy shit, is that you?! It\'s been years!"',
     outcomes: [
-      { label: 'Reconnect', effects: { stress: -3, trust: 2 }, result: 'You catch up over coffee. It feels good to be reminded of who you were before all this.' },
-      { label: 'Ignore them', effects: { stress: 1 }, result: 'You pretend not to hear. They look hurt. Another bridge burned.' },
-      { label: 'Help with their problem', effects: { cash: -500, trust: 3, communityRep: 1 }, result: 'They\'re in a tough spot. You help out with $500. Old debts of friendship repaid.' },
-      { label: 'Ask for a loan', effects: { cash: 2000 }, result: 'They\'re doing well and spot you $2K. "Pay me back whenever, for old times\' sake."' }
+      { label: 'Reconnect', effects: { stress: -3, trust: 2, consequences: { traits: { loyal: 1, sentimental: 1 }, message: 'Reconnecting with your past. Not everyone forgets where they came from.' } }, result: 'You catch up over coffee. It feels good to be reminded of who you were before all this.' },
+      { label: 'Ignore them', effects: { stress: 1, consequences: { traits: { cold: 1, isolated: 1 }, message: 'Another connection severed. The game changes you.' } }, result: 'You pretend not to hear. They look hurt. Another bridge burned.' },
+      { label: 'Help with their problem', effects: { cash: -500, trust: 3, communityRep: 1, consequences: { traits: { loyal: 1, charitable: 1 }, stats: { reputation: 3 }, message: 'You helped an old friend without being asked. Loyalty like that is rare in your world.' } }, result: 'They\'re in a tough spot. You help out with $500. Old debts of friendship repaid.' },
+      { label: 'Ask for a loan', effects: { cash: 2000, consequences: { traits: { opportunistic: 1 }, message: 'Using old friendships for cash. Practical, but it changes the dynamic forever.' } }, result: 'They\'re doing well and spot you $2K. "Pay me back whenever, for old times\' sake."' }
     ]
   },
   {
@@ -389,10 +405,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A group of kids are playing in your territory. They wave at you like you\'re a celebrity.',
     outcomes: [
-      { label: 'Give them money ($100)', effects: { cash: -100, communityRep: 3 }, result: 'Their eyes go wide. "Thanks mister!" The neighborhood sees you looking out for the kids.' },
-      { label: 'Set up basketball court ($5000)', effects: { cash: -5000, communityRep: 10, publicImage: 5 }, result: 'You fund a new court. The whole block shows up for the ribbon cutting. Hero status unlocked.' },
-      { label: 'Ignore', effects: {}, result: 'You walk past. They go back to playing. Life goes on.' },
-      { label: 'Ask what they\'ve seen', effects: { communityRep: 1 }, result: '"We saw some weird guys in a black car last night!" Free intel from the most observant spies in the city — kids.' }
+      { label: 'Give them money ($100)', effects: { cash: -100, communityRep: 3, consequences: { traits: { charitable: 1, community_minded: 1 }, stats: { reputation: 3 }, message: 'The kids will grow up remembering who looked out for them.' } }, result: 'Their eyes go wide. "Thanks mister!" The neighborhood sees you looking out for the kids.' },
+      { label: 'Set up basketball court ($5000)', effects: { cash: -5000, communityRep: 10, publicImage: 5, consequences: { traits: { charitable: 3, community_minded: 2, philanthropist: 1 }, stats: { reputation: 10 }, message: 'You built something lasting. The neighborhood will protect you like family now.' } }, result: 'You fund a new court. The whole block shows up for the ribbon cutting. Hero status unlocked.' },
+      { label: 'Ignore', effects: { consequences: { message: 'The kids waved. You walked past. They\'ll remember that too.' } }, result: 'You walk past. They go back to playing. Life goes on.' },
+      { label: 'Ask what they\'ve seen', effects: { communityRep: 1, consequences: { traits: { strategic: 1, networker: 1 }, message: 'Kids see everything adults miss. A network of tiny spies, and they like you.' } }, result: '"We saw some weird guys in a black car last night!" Free intel from the most observant spies in the city -- kids.' }
     ]
   },
   {
@@ -400,10 +416,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A group of locals are shooting dice in an alley. The pot looks fat. They wave you over.',
     outcomes: [
-      { label: 'Join the game ($500 bet)', effects: { cash: Math.random() > 0.5 ? 1000 : -500 }, result: Math.random() > 0.5 ? 'Hot dice! You walk away $1000 richer.' : 'Cold dice. You\'re out $500. The alley laughs.' },
-      { label: 'Break it up and take the pot', effects: { cash: 800, fear: 3, communityRep: -3 }, result: 'You flash iron and everyone scatters. $800 in the pot. But the neighborhood remembers.' },
-      { label: 'Run the game (take a cut)', effects: { cash: 200, streetCred: 2 }, result: 'You set up as the house. $200 rake by the end of the night. Gambling operation potential noted.' },
-      { label: 'Watch from the side', effects: { streetCred: 1 }, result: 'You observe the players. You spot who has money, who\'s desperate, and who cheats. Intel gathered.' }
+      { label: 'Join the game ($500 bet)', effects: { cash: Math.random() > 0.5 ? 1000 : -500, consequences: { traits: { gambler: 1, risk_taker: 1 }, message: 'Gambling with the locals. Win or lose, they respect a player.' } }, result: Math.random() > 0.5 ? 'Hot dice! You walk away $1000 richer.' : 'Cold dice. You\'re out $500. The alley laughs.' },
+      { label: 'Break it up and take the pot', effects: { cash: 800, fear: 3, communityRep: -3, consequences: { traits: { ruthless: 1, predatory: 1, feared: 1 }, stats: { heat: 2 }, message: 'You robbed a neighborhood game. People fear you but no one will trust you here.' } }, result: 'You flash iron and everyone scatters. $800 in the pot. But the neighborhood remembers.' },
+      { label: 'Run the game (take a cut)', effects: { cash: 200, streetCred: 2, consequences: { traits: { entrepreneurial: 1, hustler: 1 }, stats: { reputation: 2 }, message: 'Running the house. You see every operation as a business opportunity.' } }, result: 'You set up as the house. $200 rake by the end of the night. Gambling operation potential noted.' },
+      { label: 'Watch from the side', effects: { streetCred: 1, consequences: { traits: { patient: 1, observant: 1 }, message: 'Watching teaches you more than playing. You noted three potential recruits.' } }, result: 'You observe the players. You spot who has money, who\'s desperate, and who cheats. Intel gathered.' }
     ]
   },
   {
@@ -411,10 +427,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A food truck pulls up in your territory. The tacos smell incredible and a line is forming fast.',
     outcomes: [
-      { label: 'Eat ($15)', effects: { cash: -15, stress: -2, health: 3 }, result: 'Best tacos in Miami. You eat three. Life\'s not all bad.' },
-      { label: 'Buy the truck ($8000)', effects: { cash: -8000, streetCred: 1 }, result: 'The owner looks shocked when you offer cash on the spot. Mobile distribution cover acquired.' },
-      { label: 'Extort for protection', effects: { cash: 200, fear: 2, publicImage: -1 }, result: '"Nice truck. Shame if something happened to it." $200/day protection fee established.' },
-      { label: 'Partner with them', effects: { cash: -500 }, result: 'You fund their expansion. They sell your product under the counter. $500/day income, ultra-low heat.' }
+      { label: 'Eat ($15)', effects: { cash: -15, stress: -2, health: 3, consequences: { traits: { human: 1 }, message: 'Even kingpins need tacos. A moment of normalcy in a crazy life.' } }, result: 'Best tacos in Miami. You eat three. Life\'s not all bad.' },
+      { label: 'Buy the truck ($8000)', effects: { cash: -8000, streetCred: 1, consequences: { traits: { entrepreneurial: 1, visionary: 1 }, stats: { reputation: 2 }, message: 'Mobile distribution disguised as food service. Genius cover operation.' } }, result: 'The owner looks shocked when you offer cash on the spot. Mobile distribution cover acquired.' },
+      { label: 'Extort for protection', effects: { cash: 200, fear: 2, publicImage: -1, consequences: { traits: { extortionist: 1, predatory: 1 }, stats: { heat: 2 }, message: 'Protection rackets are reliable income but make you enemies in the community.' } }, result: '"Nice truck. Shame if something happened to it." $200/day protection fee established.' },
+      { label: 'Partner with them', effects: { cash: -500, consequences: { traits: { entrepreneurial: 1, strategic: 1 }, stats: { reputation: 1 }, message: 'A legitimate partnership with an illegal twist. Low-profile distribution channel acquired.' } }, result: 'You fund their expansion. They sell your product under the counter. $500/day income, ultra-low heat.' }
     ]
   },
   {
@@ -422,10 +438,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Your ride blows a tire in the middle of a delivery route. You\'re exposed on the street.',
     outcomes: [
-      { label: 'Call for a mechanic ($500)', effects: { cash: -500 }, result: 'A tow truck arrives in 20 minutes. Expensive but you\'re back on the road.' },
-      { label: 'Fix it yourself', effects: { stress: 2 }, result: 'You jack the car up and swap the spare. Dirty hands but zero cost and zero witnesses.' },
-      { label: 'Abandon and walk', effects: { heat: 3 }, result: 'You grab your product and hoof it. The car gets towed and traced. Minor heat.' },
-      { label: 'Carjack a passing vehicle', effects: { heat: 12, fear: 2 }, result: 'You flag down a sedan and take it at gunpoint. Effective but very hot.' }
+      { label: 'Call for a mechanic ($500)', effects: { cash: -500, consequences: { traits: { practical: 1 }, message: 'Money solves problems. Quick fix, minimal exposure.' } }, result: 'A tow truck arrives in 20 minutes. Expensive but you\'re back on the road.' },
+      { label: 'Fix it yourself', effects: { stress: 2, consequences: { traits: { self_reliant: 1, resourceful: 1 }, message: 'You handled it yourself. No witnesses, no trail, no cost.' } }, result: 'You jack the car up and swap the spare. Dirty hands but zero cost and zero witnesses.' },
+      { label: 'Abandon and walk', effects: { heat: 3, consequences: { traits: { reckless: 1 }, stats: { heat: 2 }, message: 'Abandoned vehicle with your prints. Sloppy operational security.' } }, result: 'You grab your product and hoof it. The car gets towed and traced. Minor heat.' },
+      { label: 'Carjack a passing vehicle', effects: { heat: 12, fear: 2, consequences: { traits: { violent: 1, reckless: 1 }, stats: { heat: 10 }, message: 'Armed carjacking on a public street. Every camera caught that.' } }, result: 'You flag down a sedan and take it at gunpoint. Effective but very hot.' }
     ]
   },
   {
@@ -433,10 +449,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'The whole district goes dark. Streetlights die, alarms go silent, security cameras blink off. Opportunity knocks.',
     outcomes: [
-      { label: 'Raid a rival while security is down', effects: { cash: 3000, heat: 10, streetCred: 3 }, result: 'Their electronic locks are useless. You clean out $3K in product and cash before the lights come back.' },
-      { label: 'Loot nearby stores', effects: { cash: 2000, heat: 15, publicImage: -5 }, result: 'You join the chaos. Electronics, cash registers, whatever fits. But cameras might have battery backup.' },
-      { label: 'Protect your territory', effects: { trust: 3, communityRep: 3 }, result: 'You and your crew patrol the streets. Nothing gets touched. The community respects the protection.' },
-      { label: 'Do nothing', effects: { cash: -500 }, result: 'You hunker down. When power returns, you find someone hit YOUR stash in the dark. -$500 in losses.' }
+      { label: 'Raid a rival while security is down', effects: { cash: 3000, heat: 10, streetCred: 3, consequences: { traits: { opportunistic: 1, bold: 1, territorial: 1 }, stats: { reputation: 3 }, message: 'You struck when the cameras were blind. Rivals know you capitalize on chaos.' } }, result: 'Their electronic locks are useless. You clean out $3K in product and cash before the lights come back.' },
+      { label: 'Loot nearby stores', effects: { cash: 2000, heat: 15, publicImage: -5, consequences: { traits: { greedy: 1, reckless: 1 }, stats: { heat: 10 }, message: 'Looting your own neighborhood. Even in the dark, people remember who took advantage.' } }, result: 'You join the chaos. Electronics, cash registers, whatever fits. But cameras might have battery backup.' },
+      { label: 'Protect your territory', effects: { trust: 3, communityRep: 3, consequences: { traits: { protector: 1, leader: 1, honorable: 1 }, stats: { reputation: 5 }, message: 'You protected the block when the lights went out. The community will repay this loyalty tenfold.' } }, result: 'You and your crew patrol the streets. Nothing gets touched. The community respects the protection.' },
+      { label: 'Do nothing', effects: { cash: -500, consequences: { traits: { passive: 1 }, message: 'Inaction has consequences. Someone else seized the moment while you waited.' } }, result: 'You hunker down. When power returns, you find someone hit YOUR stash in the dark. -$500 in losses.' }
     ]
   },
   {
@@ -444,10 +460,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A wedding celebration (or funeral procession) is moving through your district. The whole community is present.',
     outcomes: [
-      { label: 'Attend respectfully', effects: { communityRep: 3, publicImage: 2 }, result: 'You pay your respects. People notice. Being part of the community has value.' },
-      { label: 'Use as cover for a deal', effects: { cash: 500 }, result: 'While everyone\'s distracted, you close a deal in the back. Zero heat today.' },
-      { label: 'Donate $1000', effects: { cash: -1000, communityRep: 5, publicImage: 3 }, result: 'Your generous contribution makes the rounds. The family publicly thanks you. Respect earned.' },
-      { label: 'Make a scene', effects: { communityRep: -5, fear: 3 }, result: 'You show up loud and flashy. People are intimidated but disgusted. Fear up, respect down.' }
+      { label: 'Attend respectfully', effects: { communityRep: 3, publicImage: 2, consequences: { traits: { respectful: 1, community_minded: 1 }, stats: { reputation: 3 }, message: 'Showing respect at community events builds bonds no money can buy.' } }, result: 'You pay your respects. People notice. Being part of the community has value.' },
+      { label: 'Use as cover for a deal', effects: { cash: 500, consequences: { traits: { cunning: 1, opportunistic: 1 }, message: 'Using a community event as cover. Efficient, but disrespectful if anyone notices.' } }, result: 'While everyone\'s distracted, you close a deal in the back. Zero heat today.' },
+      { label: 'Donate $1000', effects: { cash: -1000, communityRep: 5, publicImage: 3, consequences: { traits: { charitable: 2, philanthropist: 1 }, stats: { reputation: 5 }, message: 'Your generosity at a community milestone will be remembered for years.' } }, result: 'Your generous contribution makes the rounds. The family publicly thanks you. Respect earned.' },
+      { label: 'Make a scene', effects: { communityRep: -5, fear: 3, consequences: { traits: { disrespectful: 1, feared: 1 }, stats: { heat: 3 }, message: 'Disrespecting a community event. Even your crew cringes. Fear is not the same as respect.' } }, result: 'You show up loud and flashy. People are intimidated but disgusted. Fear up, respect down.' }
     ]
   },
   {
@@ -455,10 +471,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A wrapped package lies in the gutter. Someone dropped it in a hurry. Could be drugs, cash, or trouble.',
     outcomes: [
-      { label: 'Keep it', effects: { cash: 1500 }, result: 'You open it carefully. $1500 in small bills. Someone\'s very bad day is your payday.' },
-      { label: 'Return to owner (if findable)', effects: { trust: 5, streetCred: 2 }, result: 'You ask around. It belongs to a local crew. They\'re shocked and grateful. Major trust earned.' },
-      { label: 'Turn in to police', effects: { heat: -5, trust: -3 }, result: 'The cops are suspicious of your "good deed" but your heat drops. Word gets out you cooperated though.' },
-      { label: 'Set a trap for the owner', effects: { cash: 2000, fear: 2, heat: 5 }, result: 'You wait. When they come back looking, you shake them down for $2K to return it.' }
+      { label: 'Keep it', effects: { cash: 1500, consequences: { traits: { opportunistic: 1 }, message: 'Finders keepers. Someone will come looking, but the cash is already spent.' } }, result: 'You open it carefully. $1500 in small bills. Someone\'s very bad day is your payday.' },
+      { label: 'Return to owner (if findable)', effects: { trust: 5, streetCred: 2, consequences: { traits: { honorable: 2, trustworthy: 1 }, stats: { reputation: 5 }, message: 'You returned stolen goods to their rightful owner. That kind of honor is legendary on the streets.' } }, result: 'You ask around. It belongs to a local crew. They\'re shocked and grateful. Major trust earned.' },
+      { label: 'Turn in to police', effects: { heat: -5, trust: -3, consequences: { traits: { cautious: 1 }, stats: { heat: -5 }, removeTraits: ['trusted'], message: 'Cooperating with police drops heat but destroys street credibility. Careful with that line.' } }, result: 'The cops are suspicious of your "good deed" but your heat drops. Word gets out you cooperated though.' },
+      { label: 'Set a trap for the owner', effects: { cash: 2000, fear: 2, heat: 5, consequences: { traits: { cunning: 1, predatory: 1 }, stats: { heat: 3 }, message: 'Using bait to shake someone down. Clever but you\'ve made an enemy who wants payback.' } }, result: 'You wait. When they come back looking, you shake them down for $2K to return it.' }
     ]
   },
   {

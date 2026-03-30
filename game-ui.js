@@ -48,6 +48,57 @@ function showNotification(msg, type = 'info') {
   }, 2500);
 }
 
+// Progressive unlock toast notification
+let _unlockToastQueue = [];
+let _unlockToastShowing = false;
+
+function showUnlockToast(info) {
+  _unlockToastQueue.push(info);
+  if (!_unlockToastShowing) _processUnlockToastQueue();
+}
+
+function _processUnlockToastQueue() {
+  if (_unlockToastQueue.length === 0) { _unlockToastShowing = false; return; }
+  _unlockToastShowing = true;
+  const info = _unlockToastQueue.shift();
+  const existing = document.getElementById('unlock-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'unlock-toast';
+  toast.className = 'unlock-toast';
+  toast.innerHTML = `
+    <div class="unlock-title">NEW SYSTEM UNLOCKED</div>
+    <div class="unlock-name">${info.emoji} ${info.name}</div>
+    <div class="unlock-desc">${info.desc}</div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 50);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.remove();
+      _processUnlockToastQueue();
+    }, 500);
+  }, 3000);
+}
+
+// Check for new unlocks and show notifications + message log entries
+function checkAndAnnounceUnlocks() {
+  if (!gameState || typeof checkNewUnlocks !== 'function') return;
+  const newUnlocks = checkNewUnlocks(gameState);
+  for (const info of newUnlocks) {
+    gameState.messageLog.push(`🔓 NEW SYSTEM UNLOCKED: ${info.emoji} ${info.name}! ${info.desc}`);
+    showUnlockToast(info);
+  }
+}
+
+// Helper: render a locked sidebar button
+function renderLockedSidebarBtn(emoji, label, featureKey) {
+  const tooltip = typeof getUnlockRequirement === 'function' ? getUnlockRequirement(featureKey) : 'Locked';
+  return `<button class="btn btn-sidebar btn-secondary btn-locked-interactive" data-lock-tooltip="${tooltip}" onclick="showNotification('${tooltip}', 'info'); return false;">🔒 ${label}</button>`;
+}
+
 function updateMusic() {
   if (MusicEngine.isMuted()) return;
   MusicEngine.playTrack('background');
@@ -98,6 +149,15 @@ function loadGame(slot) {
     combatEvent = null;
     playSound('load');
     gameState.messageLog.push(`Game loaded from Slot ${slot}.`);
+    // Initialize progressive unlock tracking for loaded saves
+    if (!gameState.announcedUnlocks) {
+      gameState.announcedUnlocks = {};
+      // Silently mark all currently-unlocked features as announced (no spam on load)
+      if (typeof getUnlockedFeatures === 'function') {
+        const uf = getUnlockedFeatures(gameState);
+        for (const key in uf) { if (uf[key]) gameState.announcedUnlocks[key] = true; }
+      }
+    }
     MusicEngine.init();
     render();
   } catch (e) {
@@ -379,6 +439,10 @@ function confirmCharacterSelection(characterId) {
   combatEvent = null;
   chartDrugId = null;
   showChart = false;
+
+  // Initialize progressive unlock tracking
+  gameState.announcedUnlocks = {};
+  if (typeof checkNewUnlocks === 'function') checkNewUnlocks(gameState);
 
   // Check for character intro cutscene
   if (typeof CHARACTER_INTROS !== 'undefined' && CHARACTER_INTROS[characterId]) {
@@ -1469,11 +1533,22 @@ function renderGame() {
   }
 
   // Tab bar for main content
+  // Progressive unlock gates for main tab bar
+  const _tabUf = typeof getUnlockedFeatures === 'function' ? getUnlockedFeatures(gameState) : {};
+  const _tabLocked = (emoji, label, featureKey) => {
+    const tip = typeof getUnlockRequirement === 'function' ? getUnlockRequirement(featureKey) : 'Locked';
+    return `<button class="main-tab-btn tab-locked" data-lock-tooltip="${tip}" onclick="showNotification('${tip}', 'info'); return false;">🔒 ${label}</button>`;
+  };
+
   const mainTabBar = `
-    <div class="main-tab-bar" style="display:flex;gap:0;margin-bottom:0.5rem;border-bottom:2px solid var(--border-color);">
+    <div class="main-tab-bar" style="display:flex;gap:0;margin-bottom:0.5rem;border-bottom:2px solid var(--border-color);flex-wrap:wrap;">
       <button class="main-tab-btn${mainTab === 'portfolio' ? ' active' : ''}" onclick="mainTab='portfolio'; render();">💼 Portfolio</button>
       <button class="main-tab-btn${mainTab === 'buysell' ? ' active' : ''}" onclick="mainTab='buysell'; render();">💰 Buy / Sell</button>
       <button class="main-tab-btn${mainTab === 'prices' ? ' active' : ''}" onclick="mainTab='prices'; render();">💊 Street Prices</button>
+      <button class="main-tab-btn${mainTab === 'intel' ? ' active' : ''}" onclick="mainTab='intel'; render();">🗺️ Price Intel</button>
+      ${_tabUf.futures ? `<button class="main-tab-btn${mainTab === 'futures_tab' ? ' active' : ''}" onclick="currentScreen='futures'; render();">📊 Futures</button>` : _tabLocked('📊', 'Futures', 'futures')}
+      ${_tabUf.imports ? `<button class="main-tab-btn${mainTab === 'imports_tab' ? ' active' : ''}" onclick="currentScreen='imports'; render();">🌍 Import</button>` : _tabLocked('🌍', 'Import', 'imports')}
+      ${_tabUf.shipping ? `<button class="main-tab-btn${mainTab === 'shipping_tab' ? ' active' : ''}" onclick="currentScreen='shipping'; render();">🚛 Ship</button>` : _tabLocked('🚛', 'Ship', 'shipping')}
     </div>
   `;
 
@@ -1601,11 +1676,108 @@ function renderGame() {
     `;
   }
 
+  // === PRICE INTEL TAB ===
+  if (mainTab === 'intel') {
+    const knownPrices = gameState.knownPrices || {};
+    const locationIds = Object.keys(knownPrices).filter(id => id !== gameState.currentLocation);
+    const locTrades = gameState.locationTrades || {};
+
+    // Market reputation summary for current location
+    const curLocTrades = locTrades[gameState.currentLocation] || 0;
+    let repTier = 'Stranger';
+    let repColor = '#888';
+    let repBonus = '0%';
+    if (curLocTrades >= 20) { repTier = 'Trusted Regular'; repColor = 'var(--neon-green)'; repBonus = '8%'; }
+    else if (curLocTrades >= 5) { repTier = 'Known Dealer'; repColor = 'var(--neon-yellow)'; repBonus = '3%'; }
+    const curLoc = LOCATIONS.find(l => l.id === gameState.currentLocation);
+
+    let intelRows = '';
+    if (locationIds.length === 0) {
+      intelRows = '<tr><td colspan="4" style="color:#888;text-align:center;padding:1.5rem;">No price intel yet. Travel to other locations to learn their prices.</td></tr>';
+    } else {
+      // Sort by most recently visited
+      locationIds.sort((a, b) => (knownPrices[b]._day || 0) - (knownPrices[a]._day || 0));
+      for (const locId of locationIds) {
+        const loc = LOCATIONS.find(l => l.id === locId);
+        if (!loc) continue;
+        const data = knownPrices[locId];
+        const dayAge = gameState.day - (data._day || 0);
+        const freshness = dayAge === 0 ? '<span style="color:var(--neon-green)">Today</span>' :
+          dayAge <= 3 ? '<span style="color:var(--neon-yellow)">' + dayAge + 'd ago</span>' :
+          dayAge <= 7 ? '<span style="color:var(--neon-orange,#ff8844)">' + dayAge + 'd ago</span>' :
+          '<span style="color:var(--neon-red)">' + dayAge + 'd ago (stale)</span>';
+        // Market rep for that location
+        const lt = locTrades[locId] || 0;
+        const locRep = lt >= 20 ? '⭐⭐ Trusted' : lt >= 5 ? '⭐ Known' : 'New';
+        // Find best buy/sell opportunities by comparing with current prices
+        let opportunities = [];
+        for (const drugId in data) {
+          if (drugId === '_day') continue;
+          const theirPrice = data[drugId];
+          const ourPrice = gameState.prices[drugId];
+          if (theirPrice && ourPrice) {
+            const diff = ourPrice - theirPrice;
+            const pctDiff = ((diff / theirPrice) * 100).toFixed(0);
+            if (diff > 0) {
+              // Their price was cheaper - buy there sell here
+              opportunities.push({ type: 'buy', drugId, diff, pctDiff: Math.abs(pctDiff), theirPrice, ourPrice });
+            } else if (diff < 0) {
+              // Our price is cheaper - buy here sell there
+              opportunities.push({ type: 'sell', drugId, diff: Math.abs(diff), pctDiff: Math.abs(pctDiff), theirPrice, ourPrice });
+            }
+          }
+        }
+        opportunities.sort((a, b) => b.pctDiff - a.pctDiff);
+        const topOps = opportunities.slice(0, 3).map(op => {
+          const drug = DRUGS.find(d => d.id === op.drugId);
+          const name = drug ? drug.emoji + ' ' + drug.name : op.drugId;
+          if (op.type === 'buy') {
+            return '<span style="color:var(--neon-green);font-size:0.7rem">' + name + ' cheaper there ($' + op.theirPrice.toLocaleString() + ' vs $' + op.ourPrice.toLocaleString() + ', +' + op.pctDiff + '% margin)</span>';
+          } else {
+            return '<span style="color:var(--neon-cyan);font-size:0.7rem">' + name + ' cheaper here ($' + op.ourPrice.toLocaleString() + ' vs $' + op.theirPrice.toLocaleString() + ', +' + op.pctDiff + '% margin)</span>';
+          }
+        }).join('<br>');
+        intelRows += '<tr><td style="font-weight:bold;">' + (loc.emoji || '') + ' ' + loc.name + '</td><td>' + freshness + '</td><td>' + locRep + '</td><td>' + (topOps || '<span style="color:#666;font-size:0.7rem">No opportunities</span>') + '</td></tr>';
+      }
+    }
+
+    mainContent = `
+      <div class="market-section" style="margin-bottom:0.8rem;">
+        <h3 class="section-title">🏪 MARKET REPUTATION — ${curLoc ? curLoc.name : 'Here'}</h3>
+        <div style="display:flex;gap:1rem;align-items:center;padding:0.5rem;background:rgba(0,255,255,0.03);border:1px solid var(--border-color);border-radius:6px;">
+          <div><span style="color:${repColor};font-weight:bold;font-size:1rem;">${repTier}</span></div>
+          <div style="font-size:0.75rem;color:var(--text-dim);">Trades here: <strong>${curLocTrades}</strong></div>
+          <div style="font-size:0.75rem;color:var(--text-dim);">Price bonus: <strong style="color:var(--neon-green);">${repBonus}</strong></div>
+          <div style="font-size:0.7rem;color:var(--text-dim);">
+            ${curLocTrades < 5 ? 'Need ' + (5 - curLocTrades) + ' more trades for 3% bonus' :
+              curLocTrades < 20 ? 'Need ' + (20 - curLocTrades) + ' more trades for 8% bonus' : 'Max reputation reached!'}
+          </div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-dim);margin-top:0.3rem;padding:0.3rem;">
+          Bulk trades (10+ units) get an extra 5% discount/premium on top of reputation bonuses.
+        </div>
+      </div>
+      <div class="market-section">
+        <h3 class="section-title">🗺️ PRICE INTEL — REMEMBERED PRICES</h3>
+        <p style="font-size:0.7rem;color:var(--text-dim);margin-bottom:0.5rem;">Prices from locations you've visited. Older data may be inaccurate. Trade routes with the best margins are highlighted.</p>
+        <table class="data-table drug-table">
+          <thead><tr><th>Location</th><th>Last Visit</th><th>Rep</th><th>Best Opportunities</th></tr></thead>
+          <tbody>${intelRows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   // Sidebar action buttons
   const mainMissionCount = gameState.missions && gameState.missions.activeMainMission ? 1 : 0;
   const sideMissionCount = gameState.missions ? (gameState.missions.activeMissions || []).length : 0;
   const missionAlert = (gameState.missions && gameState.missions.pendingDilemma) ? ' ⚖️' : '';
   const totalMissions = mainMissionCount + sideMissionCount;
+
+  // Progressive unlock gating
+  const _uf = typeof getUnlockedFeatures === 'function' ? getUnlockedFeatures(gameState) : {};
+  const _isUnlocked = (key) => _uf[key] !== false && _uf[key] !== undefined ? _uf[key] : true;
+  const _lockedBtn = (emoji, label, featureKey) => renderLockedSidebarBtn(emoji, label, featureKey);
 
   const sidebar = `
     <div class="game-sidebar">
@@ -1620,7 +1792,7 @@ function renderGame() {
         ${loc.hasLoanShark ? `<button class="btn btn-sidebar btn-secondary" onclick="openLoanShark()">🦈 Loan Shark</button>` : ''}
         ${loc.hasHospital && gameState.health < gameState.maxHealth ? `<button class="btn btn-sidebar btn-secondary" onclick="doHospital()">🏥 Hospital</button>` : ''}
         ${loc.hasBlackMarket ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='blackmarket'; render();">🏴 Black Market</button>` : ''}
-        ${(typeof getStashCapacity === 'function' && getStashCapacity(gameState, gameState.currentLocation) > 0) ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : (gameState.currentLocation === 'miami' ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : '')}
+        ${_isUnlocked('stash') ? ((typeof getStashCapacity === 'function' && getStashCapacity(gameState, gameState.currentLocation) > 0) ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : (gameState.currentLocation === 'miami' ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : '')) : _lockedBtn('📦', 'Stash', 'stash')}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🎯 MISSIONS</div>
@@ -1635,11 +1807,11 @@ function renderGame() {
             ${(() => { let b = []; if (gameState.futures && (gameState.futures.contracts||[]).length > 0) b.push('📊'); if (gameState.importExport && gameState.importExport.activeShipments.length > 0) b.push('🌍'); return b.length ? '<span class="group-badge">' + b.join('') + '</span>' : ''; })()}
           </div>
           <div class="sidebar-group-content ${openSidebarGroups.money ? 'open' : ''}">
-            ${loc.hasBank ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='fronts'; render();">🏢 Fronts</button>` : ''}
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='properties'; render();">🏠 Properties${typeof getTotalPropertyCount === 'function' && getTotalPropertyCount(gameState) > 0 ? ` (${getTotalPropertyCount(gameState)})` : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff9900;color:#ff9900" onclick="currentScreen='businesses_v2'; render();">🏢 Businesses${gameState.businesses && gameState.businesses.owned ? ' (' + gameState.businesses.owned.length + ')' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#00cc88;color:#00cc88" onclick="currentScreen='futures'; render();">📊 Futures${gameState.futures && (gameState.futures.contracts || []).length > 0 ? ` (${gameState.futures.contracts.length})` : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="currentScreen='imports'; render();">🌍 Import/Export${gameState.importExport && gameState.importExport.activeShipments.length > 0 ? ` (${gameState.importExport.activeShipments.length})` : ''}</button>
+            ${_isUnlocked('fronts') ? (loc.hasBank ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='fronts'; render();">🏢 Fronts</button>` : '') : _lockedBtn('🏢', 'Fronts', 'fronts')}
+            ${_isUnlocked('properties') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='properties'; render();">🏠 Properties${typeof getTotalPropertyCount === 'function' && getTotalPropertyCount(gameState) > 0 ? ` (${getTotalPropertyCount(gameState)})` : ''}</button>` : _lockedBtn('🏠', 'Properties', 'properties')}
+            ${_isUnlocked('businesses') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff9900;color:#ff9900" onclick="currentScreen='businesses_v2'; render();">🏢 Businesses${gameState.businesses && gameState.businesses.owned ? ' (' + gameState.businesses.owned.length + ')' : ''}</button>` : _lockedBtn('🏢', 'Businesses', 'businesses')}
+            ${_isUnlocked('futures') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00cc88;color:#00cc88" onclick="currentScreen='futures'; render();">📊 Futures${gameState.futures && (gameState.futures.contracts || []).length > 0 ? ` (${gameState.futures.contracts.length})` : ''}</button>` : _lockedBtn('📊', 'Futures', 'futures')}
+            ${_isUnlocked('imports') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="currentScreen='imports'; render();">🌍 Import/Export${gameState.importExport && gameState.importExport.activeShipments.length > 0 ? ` (${gameState.importExport.activeShipments.length})` : ''}</button>` : _lockedBtn('🌍', 'Import/Export', 'imports')}
           </div>
         </div>
 
@@ -1649,13 +1821,13 @@ function renderGame() {
             ${(() => { let b = []; if (gameState.factions && Object.keys(gameState.factions.wars||{}).length > 0) b.push('⚔️'); if (gameState.bodies_state && gameState.bodies_state.bodies > 0) b.push('☠️'); if (gameState.heists && gameState.heists.activeHeist) b.push('🔥'); if (gameState.territoryDefense && gameState.territoryDefense.activeSieges && gameState.territoryDefense.activeSieges.length > 0) b.push('🏰'); return b.length ? '<span class="group-badge">' + b.join('') + '</span>' : ''; })()}
           </div>
           <div class="sidebar-group-content ${openSidebarGroups.crime ? 'open' : ''}">
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff4488;color:#ff4488" onclick="currentScreen='factions'; render();">⚔️ Factions${gameState.factions && Object.keys(gameState.factions.wars || {}).length > 0 ? ' ⚔️' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff4444;color:#ff4444" onclick="currentScreen='rivals'; render();">🏴 Rivals${gameState.rivalState && gameState.rivalState.rivals.filter(r => r.alive).length > 0 ? ` (${gameState.rivalState.rivals.filter(r => r.alive).length})` : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#88ff44;color:#88ff44" onclick="currentScreen='defense'; render();">🏰 Defense${gameState.territoryDefense && gameState.territoryDefense.activeSieges && gameState.territoryDefense.activeSieges.length > 0 ? ' ⚔️' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#cc3333;color:#cc3333" onclick="currentScreen='bodies'; render();">☠️ Bodies${gameState.bodies_state && gameState.bodies_state.bodies > 0 ? ' <span style="color:#ff0;font-weight:bold">(' + gameState.bodies_state.bodies + ')</span>' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff6600;color:#ff6600" onclick="currentScreen='operations'; render();">🏢 Operations${gameState.mafiaOps && gameState.mafiaOps.activeOperations ? ` (${typeof gameState.mafiaOps.activeOperations === 'object' && !Array.isArray(gameState.mafiaOps.activeOperations) ? Object.keys(gameState.mafiaOps.activeOperations).length : (Array.isArray(gameState.mafiaOps.activeOperations) ? gameState.mafiaOps.activeOperations.length : 0)})` : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='heist'; render();">🎯 Heists${gameState.heists && gameState.heists.activeHeist ? ' 🔥' : ''}</button>
-            ${!isTerritory(gameState, gameState.currentLocation) && getTerritoryGang(gameState.currentLocation) ? `<button class="btn btn-sidebar btn-secondary" style="border-color:var(--neon-purple)" onclick="doChallenge()">🏴 Take Over</button>` : ''}
+            ${_isUnlocked('factions') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff4488;color:#ff4488" onclick="currentScreen='factions'; render();">⚔️ Factions${gameState.factions && Object.keys(gameState.factions.wars || {}).length > 0 ? ' ⚔️' : ''}</button>` : _lockedBtn('⚔️', 'Factions', 'factions')}
+            ${_isUnlocked('rivals') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff4444;color:#ff4444" onclick="currentScreen='rivals'; render();">🏴 Rivals${gameState.rivalState && gameState.rivalState.rivals.filter(r => r.alive).length > 0 ? ` (${gameState.rivalState.rivals.filter(r => r.alive).length})` : ''}</button>` : _lockedBtn('🏴', 'Rivals', 'rivals')}
+            ${_isUnlocked('defense') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#88ff44;color:#88ff44" onclick="currentScreen='defense'; render();">🏰 Defense${gameState.territoryDefense && gameState.territoryDefense.activeSieges && gameState.territoryDefense.activeSieges.length > 0 ? ' ⚔️' : ''}</button>` : _lockedBtn('🏰', 'Defense', 'defense')}
+            ${_isUnlocked('bodies') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#cc3333;color:#cc3333" onclick="currentScreen='bodies'; render();">☠️ Bodies${gameState.bodies_state && gameState.bodies_state.bodies > 0 ? ' <span style="color:#ff0;font-weight:bold">(' + gameState.bodies_state.bodies + ')</span>' : ''}</button>` : _lockedBtn('☠️', 'Bodies', 'bodies')}
+            ${_isUnlocked('mafiaOps') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6600;color:#ff6600" onclick="currentScreen='operations'; render();">🏢 Operations${gameState.mafiaOps && gameState.mafiaOps.activeOperations ? ` (${typeof gameState.mafiaOps.activeOperations === 'object' && !Array.isArray(gameState.mafiaOps.activeOperations) ? Object.keys(gameState.mafiaOps.activeOperations).length : (Array.isArray(gameState.mafiaOps.activeOperations) ? gameState.mafiaOps.activeOperations.length : 0)})` : ''}</button>` : _lockedBtn('🏢', 'Operations', 'mafiaOps')}
+            ${_isUnlocked('heists') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='heist'; render();">🎯 Heists${gameState.heists && gameState.heists.activeHeist ? ' 🔥' : ''}</button>` : _lockedBtn('🎯', 'Heists', 'heists')}
+            ${_isUnlocked('territory') ? (!isTerritory(gameState, gameState.currentLocation) && getTerritoryGang(gameState.currentLocation) ? `<button class="btn btn-sidebar btn-secondary" style="border-color:var(--neon-purple)" onclick="doChallenge()">🏴 Take Over</button>` : '') : ''}
           </div>
         </div>
 
@@ -1665,11 +1837,11 @@ function renderGame() {
             ${(() => { let b = []; if (gameState.phone && gameState.phone.unreadCount > 0) b.push('📱'); if ((gameState.lifestyle?.stress || 0) > 60) b.push('⚠️'); return b.length ? '<span class="group-badge">' + b.join('') + '</span>' : ''; })()}
           </div>
           <div class="sidebar-group-content ${openSidebarGroups.people ? 'open' : ''}">
-            ${gameState.henchmen.length > 0 ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='crew'; render();">👥 Crew (${gameState.henchmen.length}/${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</button>` : ''}
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff6699;color:#ff6699" onclick="currentScreen='romance'; render();">💕 Romance</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff44ff;color:#ff44ff" onclick="currentScreen='nightlife'; render();">🌙 Nightlife</button>
+            ${_isUnlocked('crew') ? (gameState.henchmen.length > 0 ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='crew'; render();">👥 Crew (${gameState.henchmen.length}/${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</button>` : '') : _lockedBtn('👥', 'Crew', 'crew')}
+            ${_isUnlocked('romance') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6699;color:#ff6699" onclick="currentScreen='romance'; render();">💕 Romance</button>` : _lockedBtn('💕', 'Romance', 'romance')}
+            ${_isUnlocked('nightlife') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff44ff;color:#ff44ff" onclick="currentScreen='nightlife'; render();">🌙 Nightlife</button>` : _lockedBtn('🌙', 'Nightlife', 'nightlife')}
             <button class="btn btn-sidebar btn-secondary" style="border-color:#00aaff;color:#00aaff" onclick="currentScreen='phone'; render();">📱 Phone${gameState.phone && gameState.phone.unreadCount > 0 ? ' <span class="badge">' + gameState.phone.unreadCount + '</span>' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='lifestyle'; render();">🏠 Lifestyle${(gameState.lifestyle?.stress || 0) > 60 ? ' ⚠️' : ''}</button>
+            ${_isUnlocked('lifestyle') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='lifestyle'; render();">🏠 Lifestyle${(gameState.lifestyle?.stress || 0) > 60 ? ' ⚠️' : ''}</button>` : _lockedBtn('🏠', 'Lifestyle', 'lifestyle')}
           </div>
         </div>
 
@@ -1679,13 +1851,13 @@ function renderGame() {
             ${(() => { let b = []; if (gameState.pendingRaid) b.push('🚨'); if (gameState.shipping && gameState.shipping.activeShipments.length > 0) b.push('🚛'); return b.length ? '<span class="group-badge">' + b.join('') + '</span>' : ''; })()}
           </div>
           <div class="sidebar-group-content ${openSidebarGroups.infra ? 'open' : ''}">
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#00aaff;color:#00aaff" onclick="currentScreen='safehouse'; render();">🏠 Safe House${gameState.safehouse && gameState.safehouse.current ? ' ✓' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#00ccff;color:#00ccff" onclick="currentScreen='vehicles'; render();">🚗 Vehicles${gameState.vehicles && gameState.vehicles.garage ? ` (${gameState.vehicles.garage.length})` : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#ff8800;color:#ff8800" onclick="currentScreen='shipping'; render();">🚛 Shipping${gameState.shipping && gameState.shipping.activeShipments.length > 0 ? ` (${gameState.shipping.activeShipments.length})` : ''}</button>
-            <button class="btn btn-sidebar ${gameState.pendingRaid ? 'btn-primary' : 'btn-secondary'}" style="border-color:#ff6666;color:#ff6666${gameState.pendingRaid ? ';text-shadow:0 0 8px #ff0000;animation:pulse 1s infinite' : ''}" onclick="currentScreen='security'; render();">🛡️ Security${gameState.pendingRaid ? ' 🚨' : ''}</button>
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#cc88ff;color:#cc88ff" onclick="currentScreen='politics'; render();">🏛️ Politics${gameState.politics && Object.keys(gameState.politics.corruptOfficials || {}).length > 0 ? ` (${Object.keys(gameState.politics.corruptOfficials).length})` : ''}</button>
-            ${getControlledTerritories(gameState).length > 0 ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="currentScreen='distribution'; render();">📡 Distribution</button>` : ''}
-            ${typeof getLabTier === 'function' && getLabTier(gameState, gameState.currentLocation) > 0 ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ffcc;color:#00ffcc" onclick="currentScreen='processing'; render();">⚗️ Lab${gameState.processing && gameState.processing.activeJobs.length > 0 ? ` (${gameState.processing.activeJobs.length})` : ''}</button>` : ''}
+            ${_isUnlocked('safehouse') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00aaff;color:#00aaff" onclick="currentScreen='safehouse'; render();">🏠 Safe House${gameState.safehouse && gameState.safehouse.current ? ' ✓' : ''}</button>` : _lockedBtn('🏠', 'Safe House', 'safehouse')}
+            ${_isUnlocked('vehicles') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ccff;color:#00ccff" onclick="currentScreen='vehicles'; render();">🚗 Vehicles${gameState.vehicles && gameState.vehicles.garage ? ` (${gameState.vehicles.garage.length})` : ''}</button>` : _lockedBtn('🚗', 'Vehicles', 'vehicles')}
+            ${_isUnlocked('shipping') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff8800;color:#ff8800" onclick="currentScreen='shipping'; render();">🚛 Shipping${gameState.shipping && gameState.shipping.activeShipments.length > 0 ? ` (${gameState.shipping.activeShipments.length})` : ''}</button>` : _lockedBtn('🚛', 'Shipping', 'shipping')}
+            ${_isUnlocked('security') ? `<button class="btn btn-sidebar ${gameState.pendingRaid ? 'btn-primary' : 'btn-secondary'}" style="border-color:#ff6666;color:#ff6666${gameState.pendingRaid ? ';text-shadow:0 0 8px #ff0000;animation:pulse 1s infinite' : ''}" onclick="currentScreen='security'; render();">🛡️ Security${gameState.pendingRaid ? ' 🚨' : ''}</button>` : _lockedBtn('🛡️', 'Security', 'security')}
+            ${_isUnlocked('politics') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#cc88ff;color:#cc88ff" onclick="currentScreen='politics'; render();">🏛️ Politics${gameState.politics && Object.keys(gameState.politics.corruptOfficials || {}).length > 0 ? ` (${Object.keys(gameState.politics.corruptOfficials).length})` : ''}</button>` : _lockedBtn('🏛️', 'Politics', 'politics')}
+            ${_isUnlocked('distribution') ? (getControlledTerritories(gameState).length > 0 ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="currentScreen='distribution'; render();">📡 Distribution</button>` : '') : _lockedBtn('📡', 'Distribution', 'distribution')}
+            ${_isUnlocked('processing') ? (typeof getLabTier === 'function' && getLabTier(gameState, gameState.currentLocation) > 0 ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ffcc;color:#00ffcc" onclick="currentScreen='processing'; render();">⚗️ Lab${gameState.processing && gameState.processing.activeJobs.length > 0 ? ` (${gameState.processing.activeJobs.length})` : ''}</button>` : '') : _lockedBtn('⚗️', 'Lab', 'processing')}
           </div>
         </div>
       </div>
@@ -1695,7 +1867,7 @@ function renderGame() {
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
-        <button class="btn btn-sidebar btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}</button>
+        ${_isUnlocked('skills') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}</button>` : _lockedBtn('🌳', 'Skills', 'skills')}
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stats'; render();">📊 Stats</button>
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='achievements'; render();">🏆 Achievements</button>
       </div>
@@ -1792,12 +1964,22 @@ function renderTradeModal() {
     maxAmount = owned;
   }
 
+  // Calculate bonus info for display
+  const _ltCount = (gameState.locationTrades || {})[gameState.currentLocation] || 0;
+  const _repBonus = _ltCount >= 20 ? (tradeMode === 'buy' ? '-8%' : '+8%') : _ltCount >= 5 ? (tradeMode === 'buy' ? '-3%' : '+3%') : null;
+  const _repLabel = _ltCount >= 20 ? 'Trusted Regular' : _ltCount >= 5 ? 'Known Dealer' : null;
+  const _bulkNote = tradeMode === 'buy' ? 'Buy 10+ for 5% discount' : 'Sell 10+ for 5% premium';
+
   return `
     <div class="trade-modal">
       <div class="trade-content">
         <h3>${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
         <p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>
         <p>You have: ${owned} units | Cash: $${gameState.cash.toLocaleString()} | Space: ${getFreeSpace(gameState)}</p>
+        <div style="font-size:0.7rem;color:var(--text-dim);margin:0.3rem 0;padding:0.3rem 0.5rem;background:rgba(0,255,255,0.03);border-radius:4px;border:1px solid var(--border-color);">
+          <span style="margin-right:0.8rem;">📦 ${_bulkNote}</span>
+          ${_repLabel ? '<span style="color:var(--neon-yellow);">⭐ ' + _repLabel + ' (' + _repBonus + ')</span>' : '<span>🏪 Trade here more for rep discounts (' + Math.max(0, 5 - _ltCount) + ' more trades)</span>'}
+        </div>
         <div class="trade-controls">
           <button class="btn btn-sm" onclick="adjustTradeAmount(-10)">-10</button>
           <button class="btn btn-sm" onclick="adjustTradeAmount(-1)">-1</button>
@@ -3509,6 +3691,9 @@ function processNewAchievements() {
     playSound('achievement');
     showAchievementToast(earned[earned.length - 1]);
   }
+
+  // Check for newly unlocked features (progressive unlock system)
+  checkAndAnnounceUnlocks();
 }
 
 function showAchievementToast(ach) {
@@ -5821,6 +6006,11 @@ function migrateGameState(state) {
 
   if (!state.npcStory) state.npcStory = null; // UI bridge for NPC story screen
   if (!state.version || state.version < 6) state.version = 6;
+
+  // Strategic trading mechanics migration
+  if (!state.knownPrices) state.knownPrices = {};
+  if (!state.locationTrades) state.locationTrades = {};
+
   return state;
 }
 
