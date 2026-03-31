@@ -4366,6 +4366,102 @@ function processCrewDaily(state) {
     }
   }
 
+  // === CREW JOB ASSIGNMENT EFFECTS ===
+  var bodyDisposers = 0, territoryGuards = 0, frontWorkers = 0, drugRunners = 0;
+  var lookouts = 0, labWorkers = 0, enforcers = 0, drivers = 0, recruiters = 0;
+
+  for (var ci = 0; ci < state.henchmen.length; ci++) {
+    var cm = state.henchmen[ci];
+    if (cm.injured || !cm.assignedTo) continue;
+    switch (cm.assignedTo) {
+      case 'bodyguard': break; // Combat bonus handled in resolveCombat
+      case 'territory_guard': territoryGuards++; break;
+      case 'front_cover': frontWorkers++; break;
+      case 'drug_runner': drugRunners++; break;
+      case 'body_disposal': bodyDisposers++; break;
+      case 'lookout_duty': lookouts++; break;
+      case 'lab_worker': labWorkers++; break;
+      case 'enforcer_duty': enforcers++; break;
+      case 'driver': drivers++; break;
+      case 'recruiter': recruiters++; break;
+    }
+  }
+
+  // Territory guards: +5 defense per guard, reduce territory attack chance
+  if (territoryGuards > 0 && state.territoryDefense) {
+    state.territoryDefense._guardBonus = territoryGuards * 5;
+  }
+
+  // Front workers: +10% business income per worker (up to 50%)
+  if (frontWorkers > 0 && state.frontBusinesses) {
+    state._frontWorkerBonus = Math.min(0.5, frontWorkers * 0.1);
+  }
+
+  // Drug runners: passive income from distribution ($200-500 per runner per day)
+  if (drugRunners > 0) {
+    var runnerIncome = drugRunners * (200 + Math.floor(Math.random() * 300));
+    state.cash += runnerIncome;
+    if (runnerIncome > 500) messages.push('💊 Drug runners earned $' + runnerIncome.toLocaleString() + ' today.');
+    // Small heat increase
+    state.heat = Math.min(100, (state.heat || 0) + drugRunners * 0.5);
+  }
+
+  // Body disposers: auto-dispose 1 body per disposer per day
+  if (bodyDisposers > 0 && state.bodies_state && state.bodies_state.bodies > 0) {
+    var disposed = Math.min(state.bodies_state.bodies, bodyDisposers);
+    state.bodies_state.bodies -= disposed;
+    state.bodies_state.disposedBodies = (state.bodies_state.disposedBodies || 0) + disposed;
+    if (disposed > 0) messages.push('💀 Body crew disposed of ' + disposed + ' bod' + (disposed > 1 ? 'ies' : 'y') + ' quietly.');
+  }
+
+  // Lookouts: reduce encounter chance & heat gain
+  if (lookouts > 0) {
+    state._lookoutBonus = Math.min(0.4, lookouts * 0.1); // Up to 40% encounter reduction
+  }
+
+  // Lab workers: speed up processing by 1 day per worker
+  if (labWorkers > 0 && state.processing && state.processing.activeJobs) {
+    for (var ji = 0; ji < state.processing.activeJobs.length; ji++) {
+      state.processing.activeJobs[ji].completionDay = Math.max(state.day, state.processing.activeJobs[ji].completionDay - labWorkers);
+    }
+  }
+
+  // Enforcers: collect debts, intimidation bonus, passive income from protection
+  if (enforcers > 0) {
+    var protectionIncome = enforcers * (100 + Math.floor(Math.random() * 200));
+    state.cash += protectionIncome;
+    state.heat = Math.min(100, (state.heat || 0) + enforcers * 0.3);
+  }
+
+  // Drivers: reduce travel time (handled in travel function via state._driverBonus)
+  if (drivers > 0) {
+    state._driverBonus = Math.min(0.5, drivers * 0.15); // Up to 50% faster travel
+  }
+
+  // Recruiters: chance to find new crew members
+  if (recruiters > 0 && Math.random() < recruiters * 0.05) { // 5% per recruiter per day
+    var maxCrew = typeof getMaxCrewSize === 'function' ? getMaxCrewSize(state) : 4;
+    if (state.henchmen.length < maxCrew) {
+      var recruitTypes = ['thug', 'lookout', 'smuggler'];
+      var recruitType = recruitTypes[Math.floor(Math.random() * recruitTypes.length)];
+      var rType = HENCHMEN_TYPES.find(function(t) { return t.id === recruitType; });
+      if (rType) {
+        var recruitName = typeof generateHenchmanName === 'function' ? generateHenchmanName() : 'New Recruit';
+        state.henchmen.push({
+          id: rType.id, type: rType.id, name: recruitName,
+          combat: rType.combat, carry: rType.carry, dailyPay: rType.dailyPay,
+          loyalty: 60 + Math.floor(Math.random() * 20),
+          health: rType.health || 100, maxHealth: rType.health || 100,
+          injured: false, daysSincePaid: 0, rank: 0, daysServed: 0,
+          hiddenLoyalty: 60, betrayalRisk: 0, traits: [],
+          uniqueId: 'crew_' + Math.random().toString(36).substr(2, 8),
+          assignedTo: null
+        });
+        messages.push('📢 Your recruiter found ' + recruitName + ' (' + rType.name + ') willing to join!');
+      }
+    }
+  }
+
   return messages;
 }
 

@@ -3343,6 +3343,22 @@ function renderCrewPanel() {
             Combat: +${type.combat} · Carry: +${type.carry}
           </div>
           ${warningSign ? `<div style="font-size:0.7rem;color:var(--neon-red);margin-top:0.2rem">⚠️ Acting suspicious...</div>` : ''}
+          <div style="margin-top:0.3rem;font-size:0.7rem">
+            <span style="color:var(--neon-purple)">📋 Assignment:</span>
+            <select onchange="doAssignCrewJob(${i}, this.value)" style="background:var(--bg-dark);color:var(--text-main);border:1px solid var(--neon-purple);border-radius:4px;padding:2px 4px;font-size:0.7rem;margin-left:0.3rem">
+              <option value="idle" ${(!h.assignedTo || h.assignedTo === 'idle') ? 'selected' : ''}>Idle (with you)</option>
+              <option value="bodyguard" ${h.assignedTo === 'bodyguard' ? 'selected' : ''}>🛡️ Personal Guard</option>
+              <option value="territory_guard" ${h.assignedTo === 'territory_guard' ? 'selected' : ''}>🏴 Territory Guard</option>
+              <option value="front_cover" ${h.assignedTo === 'front_cover' ? 'selected' : ''}>🏢 Run Front Business</option>
+              <option value="drug_runner" ${h.assignedTo === 'drug_runner' ? 'selected' : ''}>💊 Drug Runner</option>
+              <option value="body_disposal" ${h.assignedTo === 'body_disposal' ? 'selected' : ''}>💀 Body Disposal</option>
+              <option value="lookout_duty" ${h.assignedTo === 'lookout_duty' ? 'selected' : ''}>👁️ Lookout/Intel</option>
+              <option value="lab_worker" ${h.assignedTo === 'lab_worker' ? 'selected' : ''}>⚗️ Lab Worker</option>
+              <option value="enforcer_duty" ${h.assignedTo === 'enforcer_duty' ? 'selected' : ''}>💪 Enforcer/Collections</option>
+              <option value="driver" ${h.assignedTo === 'driver' ? 'selected' : ''}>🚗 Getaway Driver</option>
+              <option value="recruiter" ${h.assignedTo === 'recruiter' ? 'selected' : ''}>📢 Recruit New Crew</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:0.3rem">
           ${canPromote && canPromote.can ? `<button class="btn btn-sm crew-promote-btn" onclick="doPromoteCrew(${i})">⬆️ PROMOTE</button>` : ''}
@@ -3386,9 +3402,34 @@ function renderCrewPanel() {
   }).join('');
 
   // Assignment summary
+  // Count job assignments
+  const jobCounts = {};
+  const JOB_INFO = {
+    idle: { emoji: '🧍', name: 'With You', desc: 'Available for combat & travel' },
+    bodyguard: { emoji: '🛡️', name: 'Personal Guard', desc: '+Combat in fights' },
+    territory_guard: { emoji: '🏴', name: 'Territory Guard', desc: '+5 defense each' },
+    front_cover: { emoji: '🏢', name: 'Front Worker', desc: '+10% business income each (max 50%)' },
+    drug_runner: { emoji: '💊', name: 'Drug Runner', desc: '$200-500/day passive income' },
+    body_disposal: { emoji: '💀', name: 'Body Disposal', desc: 'Auto-dispose 1 body/day each' },
+    lookout_duty: { emoji: '👁️', name: 'Lookout', desc: '-10% encounter chance each (max 40%)' },
+    lab_worker: { emoji: '⚗️', name: 'Lab Worker', desc: 'Speed up processing by 1 day each' },
+    enforcer_duty: { emoji: '💪', name: 'Enforcer', desc: 'Protection racket income' },
+    driver: { emoji: '🚗', name: 'Driver', desc: '-15% travel time each (max 50%)' },
+    recruiter: { emoji: '📢', name: 'Recruiter', desc: '5% daily chance to find new crew each' },
+  };
+  gameState.henchmen.forEach(h => {
+    const job = h.assignedTo || 'idle';
+    jobCounts[job] = (jobCounts[job] || 0) + 1;
+  });
+  const jobSummaryHtml = Object.entries(jobCounts).map(([job, count]) => {
+    const info = JOB_INFO[job] || { emoji: '❓', name: job, desc: '' };
+    return `<span title="${info.desc}">${info.emoji} ${info.name}: <b>${count}</b></span>`;
+  }).join(' · ');
+
   const assignmentSummary = gameState.henchmen.length > 0 ? `
     <div style="margin-top:1rem;padding:0.5rem;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:4px">
-      <h4 style="color:var(--neon-green);margin:0 0 0.3rem 0;font-size:0.85rem">CREW BONUSES ACTIVE</h4>
+      <h4 style="color:var(--neon-green);margin:0 0 0.3rem 0;font-size:0.85rem">CREW OPERATIONS</h4>
+      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.5rem">${jobSummaryHtml}</div>
       <div style="font-size:0.75rem;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:0.5rem">
         ${gameState.henchmen.some(h => h.type === 'lawyer' && !h.injured) ? '<span>⚖️ Lawyer: -40% investigation</span>' : ''}
         ${gameState.henchmen.some(h => h.type === 'lookout' && !h.injured) ? '<span>👁️ Lookout: -15% encounter chance</span>' : ''}
@@ -3427,6 +3468,22 @@ function renderCrewPanel() {
       <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-top:1rem">← BACK</button>
     </div>
   `;
+}
+
+function doAssignCrewJob(index, job) {
+  var h = gameState.henchmen[index];
+  if (!h) return;
+  var oldJob = h.assignedTo || 'idle';
+  h.assignedTo = job === 'idle' ? null : job;
+  var JOB_NAMES = {
+    idle: 'Idle (with you)', bodyguard: 'Personal Guard', territory_guard: 'Territory Guard',
+    front_cover: 'Run Front Business', drug_runner: 'Drug Runner', body_disposal: 'Body Disposal',
+    lookout_duty: 'Lookout/Intel', lab_worker: 'Lab Worker', enforcer_duty: 'Enforcer/Collections',
+    driver: 'Getaway Driver', recruiter: 'Recruit New Crew'
+  };
+  showNotification(h.name + ' assigned to: ' + (JOB_NAMES[job] || job), 'success');
+  playSound('click');
+  render();
 }
 
 function doFireCrew(index) {
