@@ -36,20 +36,38 @@ const BETRAYAL_TYPES = [
 
 // Get max crew size (dynamic based on skills + properties)
 function getMaxCrewSize(state) {
-  let max = 4; // base
+  let max = 4; // base crew slots
+
+  // Kingpin level adds crew slots (2 per level after 3)
+  var level = typeof getKingpinLevel === 'function' ? getKingpinLevel(state.xp || 0).level : 1;
+  if (level >= 3) max += (level - 2) * 2; // Level 3: +2, Level 5: +6, Level 10: +16, Level 20: +36
+
   // Skills bonus
   if (typeof getSkillEffect === 'function') {
     max += getSkillEffect(state, 'extraCrewSlots') || 0;
   }
-  // Property bonus
+  // Property bonus (safe houses, HQs, etc.)
   if (typeof getPropertyCrewBonus === 'function') {
     max += getPropertyCrewBonus(state);
   }
+  // Territory bonus: each controlled territory adds 2 crew slots
+  if (state.territory) {
+    var controlledCount = Object.keys(state.territory).filter(function(id) { return state.territory[id].controlled; }).length;
+    max += controlledCount * 2;
+  }
   // Level perks
   if (typeof hasPerk === 'function' && hasPerk(state, 'crew_loyalty')) {
-    max += 1;
+    max += 2;
   }
-  return Math.min(max, 12); // absolute cap
+  // Consequence engine ability
+  if (typeof getAbilityBonus === 'function') {
+    max += Math.floor(getAbilityBonus(state, 'crew_slots') || 0);
+  }
+  // NG+ bonus
+  if (state.newGamePlus && state.newGamePlus.active) {
+    max += 5 * (state.newGamePlus.tier || 1);
+  }
+  return Math.min(max, 100); // empire-scale cap
 }
 
 // Resolve rank (string or number) to numeric index

@@ -4641,6 +4641,10 @@ function startGameAfterIntro() {
   introPages = [];
   introPageIndex = 0;
   currentScreen = 'game';
+  // Start tutorial on first game
+  if (typeof startTutorial === 'function' && gameState.day <= 1) {
+    startTutorial();
+  }
   render();
 }
 
