@@ -3469,6 +3469,32 @@ function resolveCombatRound(state, action, event) {
       }
     }
 
+    // Post-combat consequences: hospital bills, scars
+    if (results.playerDamage > 0 && state.health > 0 && state.health < 100) {
+      // Hospital bill if health drops below 50
+      if (state.health < 50) {
+        var hospitalCost = Math.round((100 - state.health) * 100); // $100 per HP missing
+        if (typeof hasNPCBenefit === 'function' && hasNPCBenefit(state, 'full_medical')) {
+          results.msg += ' 🏥 Dr. Rosa patches you up for free.';
+          state.health = Math.min(100, state.health + 20);
+        } else {
+          results.msg += ' 🏥 Hospital bill: $' + hospitalCost.toLocaleString() + '.';
+          state.cash = Math.max(0, state.cash - hospitalCost);
+          state.health = Math.min(100, state.health + 15); // Partial healing
+        }
+      }
+      // Permanent scar from near-death (health dropped below 20)
+      if (state.health < 20) {
+        if (!state.scars) state.scars = [];
+        var scarTypes = ['bullet wound', 'knife scar', 'broken ribs', 'cracked skull', 'shattered hand'];
+        var scar = scarTypes[Math.floor(Math.random() * scarTypes.length)];
+        state.scars.push({ type: scar, day: state.day });
+        state.maxHealth = Math.max(50, (state.maxHealth || 100) - 5); // Permanent max health reduction
+        results.msg += ' 💉 Permanent injury: ' + scar + '. Max health reduced.';
+        if (typeof adjustRep === 'function') adjustRep(state, 'fear', 3); // Scars add fear
+      }
+    }
+
   } else if (action === 'run') {
     let escapeChance = 0.4 + (state.henchmen.filter(h => !h.injured).length * 0.1) - (event.enemyCount * 0.05);
     // Character passive: Corner Kid +20% escape chance

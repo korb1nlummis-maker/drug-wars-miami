@@ -83,14 +83,27 @@ function updateMarketOnSell(state, drugId, amount, locationId) {
   if (!mm.demand[locationId]) mm.demand[locationId] = {};
   if (!mm.playerSales[locationId]) mm.playerSales[locationId] = {};
 
-  // Selling floods local supply (you're saturating the market)
-  const supplyImpact = Math.min(amount * 0.4, 50); // Selling has bigger impact than buying
-  mm.supply[locationId][drugId] = Math.min(200, (mm.supply[locationId][drugId] || 100) + supplyImpact);
+  // Selling floods local supply — dumping large amounts CRASHES the price
+  // Small sales (1-10): minor impact. Large dumps (50+): devastating.
+  const supplyImpact = amount <= 10 ? amount * 0.3 :
+                       amount <= 50 ? 3 + (amount - 10) * 0.5 :
+                       23 + (amount - 50) * 1.0; // 50+ units = massive flooding
+  mm.supply[locationId][drugId] = Math.min(250, (mm.supply[locationId][drugId] || 100) + Math.min(supplyImpact, 80));
 
-  // Large sells reduce demand (market is saturated)
-  if (amount > 30) {
-    const demandDrop = Math.min((amount - 30) * 0.2, 30);
+  // Large sells crush demand — market saturated, buyers have plenty
+  if (amount > 15) {
+    const demandDrop = Math.min((amount - 15) * 0.3, 50);
     mm.demand[locationId][drugId] = Math.max(10, (mm.demand[locationId][drugId] || 100) - demandDrop);
+  }
+
+  // Massive dump: affects NEIGHBORING locations too (word spreads)
+  if (amount >= 50 && typeof LOCATIONS !== 'undefined') {
+    for (var loc of LOCATIONS) {
+      if (loc.id !== locationId) {
+        if (!mm.supply[loc.id]) mm.supply[loc.id] = {};
+        mm.supply[loc.id][drugId] = Math.min(200, (mm.supply[loc.id][drugId] || 100) + Math.floor(supplyImpact * 0.2));
+      }
+    }
   }
 
   // Track player sales
