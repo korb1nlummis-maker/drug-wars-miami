@@ -286,11 +286,28 @@ function resolveFactionBattle(state, factionId) {
     state.factions.factionPower[factionId] = Math.max(10, factionPower - 30);
     state.factions.diplomacyCooldowns[factionId] = state.day + 30;
 
+    // Win the war: seize one of their territories
+    const factionTerr = state.factions.factionTerritory[factionId] || [];
+    let seizedTerritory = null;
+    if (factionTerr.length > 0) {
+      const seizable = factionTerr.filter(t => !state.territory || !state.territory[t] || !state.territory[t].controlled);
+      if (seizable.length > 0) {
+        seizedTerritory = seizable[Math.floor(Math.random() * seizable.length)];
+        if (!state.territory) state.territory = {};
+        state.territory[seizedTerritory] = { controlled: true, defense: 30, income: 500 };
+        // Remove from faction territory
+        const idx = factionTerr.indexOf(seizedTerritory);
+        if (idx >= 0) factionTerr.splice(idx, 1);
+      }
+    }
+
     // Can absorb weakened faction
     if (state.factions.factionPower[factionId] <= 20) {
-      return { result: 'war_won', canAbsorb: true, msg: `⚔️ You crushed ${faction.name}! They're weakened enough to absorb.`, playerWon: true };
+      const seizeMsg = seizedTerritory ? ` Seized territory: ${seizedTerritory}.` : '';
+      return { result: 'war_won', canAbsorb: true, msg: `⚔️ You crushed ${faction.name}! They're weakened enough to absorb.${seizeMsg}`, playerWon: true };
     }
-    return { result: 'war_won', canAbsorb: false, msg: `⚔️ You won the war against ${faction.name}!`, playerWon: true };
+    const seizeMsg = seizedTerritory ? ` Seized territory: ${seizedTerritory}.` : '';
+    return { result: 'war_won', canAbsorb: false, msg: `⚔️ You won the war against ${faction.name}!${seizeMsg}`, playerWon: true };
   }
 
   if (war.factionWins >= 3) {
@@ -449,16 +466,336 @@ function isEnemyTerritory(state, locationId) {
 }
 
 // ============================================================
-// TRADE DISCOUNT FROM ALLIANCE
+// TRADE DISCOUNT FROM ALLIANCE + FACTION STANDING
+// Standing-based price modifiers for districts with gang presence
 // ============================================================
 function getFactionTradeDiscount(state, locationId) {
   if (!state.factions) return 1.0;
+
+  // Check if player controls this territory — best prices
+  if (state.territory && state.territory[locationId] && state.territory[locationId].controlled) {
+    // Territory control handled by applyTerritoryPriceMod, don't double-dip
+    // But check alliances for additional stacking
+    const factions = getFactionAtLocation(state, locationId);
+    for (const f of factions) {
+      if (state.factions.alliances[f.faction.id] === 'joint_venture') {
+        return 0.90; // Small additional discount from joint venture on owned territory
+      }
+    }
+    return 1.0;
+  }
+
+  const factions = getFactionAtLocation(state, locationId);
+  if (factions.length === 0) return 1.0; // Neutral territory — no gang modifiers
+
+  // Check gang standing effects
+  for (const f of factions) {
+    const factionId = f.faction.id;
+    const standingVal = state.factions.standings[factionId] || 0;
+
+    // Formal alliance overrides standing
+    if (state.factions.alliances[factionId] === 'joint_venture') {
+      return 0.75; // 25% discount — best deal
+    }
+    if (state.factions.alliances[factionId] === 'trade') {
+      return 0.80; // 20% discount
+    }
+
+    // At war — worst prices
+    if (state.factions.wars[factionId]) {
+      return 1.25; // +25% prices in enemy territory
+    }
+
+    // Standing-based modifiers
+    if (standingVal >= 50) {
+      return 0.90; // -10% prices — good standing
+    } else if (standingVal >= 15) {
+      return 0.95; // -5% prices — cordial
+    } else if (standingVal <= -50) {
+      return 1.15; // +15% prices — hostile
+    } else if (standingVal <= -15) {
+      return 1.08; // +8% prices — unfriendly
+    }
+  }
+
+  return 1.0;
+}
+
+// ============================================================
+// GANG TERRITORY HEAT MODIFIER
+// Bad standing in a gang's territory generates extra heat per deal
+// ============================================================
+function getGangTerritoryHeatMod(state, locationId) {
+  if (!state.factions) return 0;
+  const factions = getFactionAtLocation(state, locationId);
+  if (factions.length === 0) return 0;
+
+  // Player controls territory — reduced heat
+  if (state.territory && state.territory[locationId] && state.territory[locationId].controlled) {
+    return -2; // Less heat on own turf
+  }
+
+  let heatMod = 0;
+  for (const f of factions) {
+    const factionId = f.faction.id;
+    const standingVal = state.factions.standings[factionId] || 0;
+
+    if (state.factions.wars[factionId]) {
+      heatMod += 15; // Major heat dealing in enemy territory
+    } else if (standingVal <= -50) {
+      heatMod += 10; // Hostile gang — they report you
+    } else if (standingVal <= -15) {
+      heatMod += 5; // Unfriendly — some extra attention
+    } else if (standingVal >= 50) {
+      heatMod -= 3; // Friendly gang covers for you
+    }
+  }
+  return heatMod;
+}
+
+// ============================================================
+// AMBUSH CHECK — Risk of gang ambush when dealing in hostile territory
+// Returns null if no ambush, or an ambush event object
+// ============================================================
+function checkGangAmbush(state, locationId) {
+  if (!state.factions) return null;
+  const factions = getFactionAtLocation(state, locationId);
+  if (factions.length === 0) return null;
+
+  // Player controls territory — no ambush
+  if (state.territory && state.territory[locationId] && state.territory[locationId].controlled) {
+    return null;
+  }
+
+  for (const f of factions) {
+    const factionId = f.faction.id;
+    const standingVal = state.factions.standings[factionId] || 0;
+
+    // Allied territory — safe
+    if (state.factions.alliances[factionId]) return null;
+    if (standingVal >= 15) continue; // Cordial or better — no ambush
+
+    let ambushChance = 0;
+    let ambushSeverity = 'light';
+
+    if (state.factions.wars[factionId]) {
+      ambushChance = 0.12; // 12% per deal in war zone
+      ambushSeverity = 'heavy';
+    } else if (standingVal <= -50) {
+      ambushChance = 0.08; // 8% per deal — hostile
+      ambushSeverity = 'medium';
+    } else if (standingVal <= -15) {
+      ambushChance = 0.05; // 5% per deal — unfriendly
+      ambushSeverity = 'light';
+    }
+
+    // Lookout crew member reduces ambush chance
+    if (state.henchmen && state.henchmen.some(h => h.type === 'lookout' && !h.injured)) {
+      ambushChance *= 0.5;
+    }
+
+    if (ambushChance > 0 && Math.random() < ambushChance) {
+      const faction = f.faction;
+      let cashLoss = 0;
+      let healthLoss = 0;
+      let heatGain = 0;
+
+      if (ambushSeverity === 'heavy') {
+        cashLoss = Math.min(state.cash, Math.floor(state.cash * (0.05 + Math.random() * 0.10)));
+        healthLoss = 15 + Math.floor(Math.random() * 20);
+        heatGain = 8;
+      } else if (ambushSeverity === 'medium') {
+        cashLoss = Math.min(state.cash, Math.floor(state.cash * (0.02 + Math.random() * 0.05)));
+        healthLoss = 8 + Math.floor(Math.random() * 12);
+        heatGain = 5;
+      } else {
+        cashLoss = Math.min(state.cash, Math.floor(state.cash * 0.02));
+        healthLoss = 3 + Math.floor(Math.random() * 8);
+        heatGain = 3;
+      }
+
+      // Bodyguard/enforcer reduce damage
+      if (state.henchmen) {
+        const protectors = state.henchmen.filter(h => (h.type === 'bodyguard' || h.type === 'enforcer') && !h.injured);
+        if (protectors.length > 0) {
+          healthLoss = Math.floor(healthLoss * 0.5);
+          cashLoss = Math.floor(cashLoss * 0.7);
+          // Protector may get injured
+          if (Math.random() < 0.25) {
+            const target = protectors[Math.floor(Math.random() * protectors.length)];
+            target.health = Math.max(10, (target.health || 100) - 20);
+            if (target.health <= 30) target.injured = true;
+          }
+        }
+      }
+
+      state.cash -= cashLoss;
+      state.health = Math.max(1, (state.health || 100) - healthLoss);
+      state.heat = Math.min(100, (state.heat || 0) + heatGain);
+
+      // Worsen standing further from the fight
+      adjustFactionStanding(state, factionId, -2);
+
+      return {
+        faction: faction,
+        severity: ambushSeverity,
+        cashLoss: cashLoss,
+        healthLoss: healthLoss,
+        heatGain: heatGain,
+        msg: `⚔️ ${faction.name} ambushed you! Lost $${cashLoss.toLocaleString()}, -${healthLoss} HP, +${heatGain} heat.`
+      };
+    }
+  }
+
+  return null;
+}
+
+// ============================================================
+// FACTION STANDING CHANGE ON DEAL
+// Called after buying or selling drugs in a district
+// ============================================================
+function adjustFactionStandingFromDeal(state, locationId, isSelling, totalValue) {
+  if (!state.factions) return [];
+  ensureFactionState(state);
+  const msgs = [];
+
+  // Get the gang controlling this location via TERRITORY_GANGS or gangPresence
+  const gang = typeof TERRITORY_GANGS !== 'undefined' ? TERRITORY_GANGS[locationId] : null;
+  if (!gang || !gang.factionId) return msgs;
+
+  const factionId = gang.factionId;
+  const faction = FACTIONS.find(f => f.id === factionId);
+  if (!faction) return msgs;
+  if (state.factions.absorptions && state.factions.absorptions.includes(factionId)) return msgs;
+
+  const standingVal = state.factions.standings[factionId] || 0;
+
+  // Selling in their territory
+  if (isSelling) {
+    if (state.factions.alliances[factionId]) {
+      // Allied — they appreciate the business
+      if (totalValue >= 5000 && Math.random() < 0.3) {
+        adjustFactionStanding(state, factionId, 1);
+        msgs.push(`🤝 ${faction.name} appreciates your business on their turf. (+1 standing)`);
+      }
+    } else if (state.factions.wars[factionId]) {
+      // At war — they hate you dealing on their turf
+      adjustFactionStanding(state, factionId, -3);
+      msgs.push(`😡 ${faction.name} caught you dealing on their turf during war! (-3 standing)`);
+    } else if (standingVal <= -15) {
+      // Hostile/unfriendly — they don't appreciate it
+      adjustFactionStanding(state, factionId, -2);
+      if (Math.random() < 0.4) msgs.push(`⚠️ ${faction.name} noticed you dealing in their territory uninvited. (-2 standing)`);
+    } else if (standingVal >= 15) {
+      // Cordial+ — they tolerate or welcome it
+      if (totalValue >= 10000 && Math.random() < 0.15) {
+        adjustFactionStanding(state, factionId, 1);
+        msgs.push(`🤝 ${faction.name} got a taste from your deal. (+1 standing)`);
+      }
+    } else {
+      // Neutral — slight negative unless large enough to share
+      if (Math.random() < 0.2) {
+        if (totalValue >= 10000) {
+          // Sharing profits implicitly
+          adjustFactionStanding(state, factionId, 1);
+        } else {
+          adjustFactionStanding(state, factionId, -1);
+        }
+      }
+    }
+  }
+
+  // Buying in their territory (always slightly positive — you're bringing business)
+  if (!isSelling && totalValue >= 5000) {
+    if (!state.factions.wars[factionId] && Math.random() < 0.15) {
+      adjustFactionStanding(state, factionId, 1);
+    }
+  }
+
+  return msgs;
+}
+
+// ============================================================
+// BRIBE FACTION — Pay cash for standing improvement
+// ============================================================
+function bribeFaction(state, factionId) {
+  ensureFactionState(state);
+  const faction = FACTIONS.find(f => f.id === factionId);
+  if (!faction) return { success: false, msg: 'Unknown faction.' };
+  if (state.factions.absorptions && state.factions.absorptions.includes(factionId)) {
+    return { success: false, msg: 'Faction already absorbed.' };
+  }
+
+  const standingVal = state.factions.standings[factionId] || 0;
+  // Cost scales with current standing (cheaper to bribe neutral, expensive to bribe enemies)
+  let baseCost = 5000;
+  if (standingVal <= -50) baseCost = 25000;
+  else if (standingVal <= -15) baseCost = 15000;
+  else if (standingVal >= 50) baseCost = 3000;
+
+  // Diplomat crew member reduces cost
+  if (state.henchmen && state.henchmen.some(h => h.type === 'diplomat_crew' && !h.injured)) {
+    baseCost = Math.round(baseCost * 0.7);
+  }
+
+  if (state.cash < baseCost) return { success: false, msg: `Need $${baseCost.toLocaleString()} to bribe ${faction.name}.` };
+
+  // Cooldown check
+  const cooldownKey = 'bribe_' + factionId;
+  if (!state.factions.diplomacyCooldowns) state.factions.diplomacyCooldowns = {};
+  const cd = state.factions.diplomacyCooldowns[cooldownKey] || 0;
+  if (state.day < cd) return { success: false, msg: `Can't bribe ${faction.name} again until day ${cd}.` };
+
+  // At war — bribe is less effective
+  if (state.factions.wars[factionId]) {
+    state.cash -= baseCost;
+    const gain = 2 + Math.floor(Math.random() * 3); // 2-4 standing
+    adjustFactionStanding(state, factionId, gain);
+    state.factions.diplomacyCooldowns[cooldownKey] = state.day + 10;
+    return { success: true, msg: `💰 Bribed ${faction.name} contacts for $${baseCost.toLocaleString()}. (+${gain} standing, limited effect during war)` };
+  }
+
+  state.cash -= baseCost;
+  const gain = 4 + Math.floor(Math.random() * 4); // 4-7 standing
+  adjustFactionStanding(state, factionId, gain);
+  state.factions.diplomacyCooldowns[cooldownKey] = state.day + 7;
+
+  if (typeof adjustRep === 'function') {
+    adjustRep(state, 'trust', -1); // Bribing slightly reduces trust reputation
+  }
+
+  return { success: true, msg: `💰 Bribed ${faction.name} for $${baseCost.toLocaleString()}. (+${gain} standing)` };
+}
+
+// ============================================================
+// GET SELL PRICE MODIFIER FOR PLAYER-CONTROLLED TERRITORY
+// ============================================================
+function getFactionSellBonus(state, locationId) {
+  if (!state.factions) return 1.0;
+
+  // Player controls territory — bonus sell prices
+  if (state.territory && state.territory[locationId] && state.territory[locationId].controlled) {
+    // Handled by applyTerritoryPriceMod; check for additional alliance stacking
+    const factions = getFactionAtLocation(state, locationId);
+    for (const f of factions) {
+      if (state.factions.alliances[f.faction.id] === 'joint_venture') {
+        return 1.10; // Additional 10% from joint venture
+      }
+    }
+    return 1.0;
+  }
+
   const factions = getFactionAtLocation(state, locationId);
   for (const f of factions) {
-    if (state.factions.alliances[f.faction.id] === 'trade' ||
-        state.factions.alliances[f.faction.id] === 'joint_venture') {
-      return 0.8; // 20% discount
-    }
+    const factionId = f.faction.id;
+    const standingVal = state.factions.standings[factionId] || 0;
+
+    if (state.factions.alliances[factionId] === 'joint_venture') return 1.15;
+    if (state.factions.alliances[factionId] === 'trade') return 1.10;
+
+    if (state.factions.wars[factionId]) return 0.75; // -25% sell prices in enemy territory
+    if (standingVal >= 50) return 1.05; // +5% — friends help sell
+    if (standingVal <= -50) return 0.85; // -15% — hostile territory dump
   }
   return 1.0;
 }

@@ -259,9 +259,10 @@ function collectBatch(state, batchIndex) {
   const batch = state.processing.completedBatches[batchIndex];
   const qualityLevel = QUALITY_LEVELS.find(q => q.id === batch.quality) || QUALITY_LEVELS[2];
 
-  // Add output drugs to inventory
+  // Add output drugs to inventory (with character processing yield bonus)
+  const charYieldBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'processingYield') : 0;
   for (const [drugId, amount] of Object.entries(batch.output)) {
-    const adjustedAmount = Math.round(amount * qualityLevel.multiplier);
+    const adjustedAmount = Math.round(amount * qualityLevel.multiplier * (1 + charYieldBonus));
     state.inventory[drugId] = (state.inventory[drugId] || 0) + adjustedAmount;
   }
 

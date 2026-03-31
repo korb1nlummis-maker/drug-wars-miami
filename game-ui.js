@@ -1450,6 +1450,20 @@ function renderGame() {
         <span class="badge badge-danger">Danger: ${'★'.repeat(Math.min(loc.dangerLevel, 10))}${'☆'.repeat(Math.max(0, 10 - loc.dangerLevel))}</span>
         ${isTerritory(gameState, loc.id) ? '<span class="badge" style="background:var(--neon-purple);color:#fff">🏴 YOUR TERRITORY</span>' :
           getTerritoryGang(loc.id) ? `<span class="badge" style="background:rgba(180,50,255,0.2);color:var(--neon-purple);border:1px solid var(--neon-purple)">🏴 ${getTerritoryGang(loc.id).name}</span>` : ''}
+        ${(() => {
+          if (typeof getFactionAtLocation !== 'function' || typeof getFactionStanding !== 'function') return '';
+          const locFactions = getFactionAtLocation(gameState, loc.id);
+          if (locFactions.length === 0) return '<span class="badge" style="background:rgba(136,136,136,0.2);color:#888;border:1px solid #555">Neutral Zone</span>';
+          const lf = locFactions[0];
+          const ls = getFactionStanding(gameState, lf.faction.id);
+          const lsVal = gameState.factions ? (gameState.factions.standings[lf.faction.id] || 0) : 0;
+          let tradeTip = '';
+          if (gameState.factions && gameState.factions.wars && gameState.factions.wars[lf.faction.id]) tradeTip = 'DANGER: +25% prices, ambush risk';
+          else if (lsVal >= 50) tradeTip = '-10% buy prices';
+          else if (lsVal <= -50) tradeTip = '+15% buy, ambush risk';
+          else if (lsVal <= -15) tradeTip = '+8% buy, 5% ambush';
+          return tradeTip ? `<span class="badge" style="background:rgba(255,136,0,0.15);color:${ls.color};border:1px solid ${ls.color};font-size:0.6rem">${ls.emoji} ${ls.label}: ${tradeTip}</span>` : '';
+        })()}
       </div>
     </div>
   `;
@@ -2064,6 +2078,13 @@ function executeTrade() {
     }
     processNewAchievements();
     gameState.messageLog.push(result.msg);
+    // Show faction-related messages from the deal (ambushes, standing changes)
+    if (result.factionMsgs && result.factionMsgs.length > 0) {
+      for (const fMsg of result.factionMsgs) {
+        gameState.messageLog.push(fMsg);
+        showNotification(fMsg, fMsg.includes('ambush') || fMsg.includes('😡') ? 'error' : 'info');
+      }
+    }
     closeTrade();
   } else {
     alert(result.msg);
@@ -3338,15 +3359,71 @@ function renderCrewPanel() {
     return sum + (type ? type.dailyPay : 0);
   }, 0);
 
+  // Build hire section directly in crew panel
+  const canHireHere = loc && loc.hasBlackMarket;
+  const maxCrew = typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4;
+  const crewFull = gameState.henchmen.length >= maxCrew;
+
+  const hireRows = HENCHMEN_TYPES.filter(h => !h.ngPlus || (gameState.newGamePlus && gameState.newGamePlus.active)).map(h => {
+    const canAfford = gameState.cash >= h.cost;
+    const disabled = !canHireHere || crewFull || !canAfford;
+    const reasonText = !canHireHere ? 'No black market here' : crewFull ? 'Crew full' : !canAfford ? 'Not enough cash' : '';
+    return `
+      <tr>
+        <td style="font-weight:700">${h.name}</td>
+        <td style="font-size:0.75rem;color:var(--neon-yellow);max-width:200px">${h.special || 'General purpose'}</td>
+        <td>+${h.combat}</td>
+        <td>+${h.carry}</td>
+        <td>$${h.cost.toLocaleString()}</td>
+        <td>$${h.dailyPay}/day</td>
+        <td>
+          ${disabled
+            ? `<button class="btn btn-sm btn-secondary" disabled title="${reasonText}" style="opacity:0.4">HIRE</button>`
+            : `<button class="btn btn-sm btn-buy" onclick="doHireFromCrewPanel('${h.id}')">HIRE</button>`}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Assignment summary
+  const assignmentSummary = gameState.henchmen.length > 0 ? `
+    <div style="margin-top:1rem;padding:0.5rem;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:4px">
+      <h4 style="color:var(--neon-green);margin:0 0 0.3rem 0;font-size:0.85rem">CREW BONUSES ACTIVE</h4>
+      <div style="font-size:0.75rem;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:0.5rem">
+        ${gameState.henchmen.some(h => h.type === 'lawyer' && !h.injured) ? '<span>⚖️ Lawyer: -40% investigation</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'lookout' && !h.injured) ? '<span>👁️ Lookout: -15% encounter chance</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'chemist' && !h.injured) ? '<span>🧪 Chemist: Can cut drugs +20%</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'fall_guy' && !h.injured) ? '<span>🎯 Fall Guy: Arrest protection (1x)</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'accountant' && !h.injured) ? '<span>📊 Accountant: +30% laundering</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'diplomat_crew' && !h.injured) ? '<span>🕊️ Diplomat: +15% diplomacy</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'pilot' && !h.injured) ? '<span>✈️ Pilot: Air transport ready</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'boat_captain' && !h.injured) ? '<span>🚤 Captain: Sea transport ready</span>' : ''}
+        ${gameState.henchmen.some(h => h.type === 'hacker' && !h.injured) ? '<span>💻 Hacker: Digital ops ready</span>' : ''}
+        <span>⚔️ Total Combat: +${gameState.henchmen.reduce((s, h) => s + (h.injured ? 0 : (HENCHMEN_TYPES.find(t => t.id === h.type)?.combat || 0)), 0)}</span>
+        <span>📦 Total Carry: +${gameState.henchmen.reduce((s, h) => s + (h.injured ? 0 : (HENCHMEN_TYPES.find(t => t.id === h.type)?.carry || 0)), 0)}</span>
+      </div>
+    </div>
+  ` : '';
+
   return `
     <div class="screen-container">
       ${renderToolbar()}
       ${backButton()}
       <div class="crew-panel">
-        <h2 class="section-title neon-cyan">👥 YOUR CREW (${gameState.henchmen.length}/${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</h2>
-        <p class="text-dim" style="margin-bottom:0.8rem">Daily payroll: <span class="neon-yellow">$${totalPay.toLocaleString()}/day</span></p>
-        ${crewCards || '<p class="text-dim">No crew members. Visit a Black Market to hire.</p>'}
+        <h2 class="section-title neon-cyan">👥 YOUR CREW (${gameState.henchmen.length}/${maxCrew})</h2>
+        <p class="text-dim" style="margin-bottom:0.8rem">Daily payroll: <span class="neon-yellow">$${totalPay.toLocaleString()}/day</span> | Cash: <span class="neon-green">$${gameState.cash.toLocaleString()}</span></p>
+        ${crewCards || '<p class="text-dim">No crew members yet. Hire from below!</p>'}
+        ${assignmentSummary}
       </div>
+
+      <div style="margin-top:1.5rem">
+        <h3 class="section-title neon-yellow">🤝 AVAILABLE FOR HIRE ${!canHireHere ? '<span style="color:var(--neon-red);font-size:0.7rem">(Need Black Market)</span>' : ''}</h3>
+        <div style="overflow-x:auto">
+          <table class="data-table"><thead><tr><th>Type</th><th>Abilities</th><th>Combat</th><th>Carry</th><th>Cost</th><th>Daily Pay</th><th></th></tr></thead>
+          <tbody>${hireRows}</tbody></table>
+        </div>
+      </div>
+
       <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-top:1rem">← BACK</button>
     </div>
   `;
@@ -3394,6 +3471,19 @@ function doConfrontCrew(index) {
     gameState.messageLog.push(result.msg);
   } else {
     alert(result.msg);
+  }
+  render();
+}
+
+function doHireFromCrewPanel(typeId) {
+  const result = hireHenchman(gameState, typeId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
   }
   render();
 }
@@ -4231,13 +4321,48 @@ function renderFactions() {
       statusBadge += ` <span class="neon-green">${aType ? aType.emoji : '🤝'} ${aType ? aType.name : alliance}</span>`;
     }
 
+    // Standing bar visual
+    const standingPct = Math.abs(standingVal);
+    const standingBarColor = standingVal > 0 ? '#00ff88' : standingVal < 0 ? '#ff4444' : '#888';
+    const standingBar = `<div style="display:inline-flex;align-items:center;gap:4px;margin-top:3px">
+      <span style="font-size:0.65rem;width:30px;text-align:right;color:${standingBarColor}">${standingVal}</span>
+      <div style="width:120px;height:6px;background:#222;border-radius:3px;overflow:hidden;position:relative">
+        <div style="position:absolute;left:50%;width:1px;height:100%;background:#555"></div>
+        ${standingVal > 0
+          ? `<div style="position:absolute;left:50%;width:${standingPct * 0.5}%;height:100%;background:${standingBarColor};border-radius:0 3px 3px 0"></div>`
+          : standingVal < 0
+            ? `<div style="position:absolute;right:50%;width:${standingPct * 0.5}%;height:100%;background:${standingBarColor};border-radius:3px 0 0 3px"></div>`
+            : ''}
+      </div>
+    </div>`;
+
+    // Trade effects summary
+    let tradeEffects = '';
+    if (war) {
+      tradeEffects = '<div style="font-size:0.65rem;color:#ff4444;margin-top:3px">TRADE: +25% buy prices, -25% sell prices, 12% ambush risk, +15 heat/deal</div>';
+    } else if (standingVal >= 50) {
+      tradeEffects = '<div style="font-size:0.65rem;color:#00ff88;margin-top:3px">TRADE: -10% buy prices, +5% sell, no ambush, -3 heat/deal</div>';
+    } else if (standingVal <= -50) {
+      tradeEffects = '<div style="font-size:0.65rem;color:#ff8800;margin-top:3px">TRADE: +15% buy prices, -15% sell, 8% ambush risk, +10 heat/deal</div>';
+    } else if (standingVal <= -15) {
+      tradeEffects = '<div style="font-size:0.65rem;color:#ffaa00;margin-top:3px">TRADE: +8% buy prices, 5% ambush risk, +5 heat/deal</div>';
+    } else if (alliance === 'trade') {
+      tradeEffects = '<div style="font-size:0.65rem;color:#00ff88;margin-top:3px">TRADE: -20% buy prices, +10% sell. Safe territory.</div>';
+    } else if (alliance === 'joint_venture') {
+      tradeEffects = '<div style="font-size:0.65rem;color:#00ff88;margin-top:3px">TRADE: -25% buy prices, +15% sell. Full partnership benefits.</div>';
+    }
+
     // Actions with consequence hints
     let actions = '';
     if (war) {
       actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="doNegotiatePeace('${faction.id}')">☮️ Peace</button>
-        <div style="font-size:0.65rem;color:#ff9500;margin-top:2px">Ends conflict - costs standing but stops losses</div>`;
+        <button class="btn btn-sm btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="doFactionBribe('${faction.id}')">💰 Bribe</button>
+        <div style="font-size:0.65rem;color:#ff9500;margin-top:2px">Peace: Ends conflict. Bribe: Slow path to peace.</div>`;
     } else if (!alliance) {
-      actions = ALLIANCE_TYPES.map(at => {
+      // Bribe always available when not absorbed
+      actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="doFactionBribe('${faction.id}')">💰 Bribe</button> `;
+
+      actions += ALLIANCE_TYPES.map(at => {
         const check = canFormAlliance(gameState, faction.id, at.id);
         return check.ok
           ? `<button class="btn btn-sm btn-secondary" style="border-color:${standing.color};color:${standing.color};font-size:0.65rem" onclick="doFormAlliance('${faction.id}', '${at.id}')" title="Form ${at.name} alliance - builds cooperation">${at.emoji} ${at.name} ($${at.cost.toLocaleString()})</button>`
@@ -4248,12 +4373,14 @@ function renderFactions() {
       }
       if (actions.trim()) {
         const hintParts = [];
+        hintParts.push('<span style="color:#ffcc00">Bribe: Pay cash for +4-7 standing</span>');
         if (actions.includes('War')) hintParts.push('<span style="color:#ff4444">War: High risk, may gain territory if you win</span>');
         if (actions.includes('Alliance') || actions.includes('Pact') || actions.includes('Trade')) hintParts.push('<span style="color:#44ff88">Alliances: Build cooperation, share benefits</span>');
         if (hintParts.length > 0) actions += `<div style="font-size:0.6rem;margin-top:3px">${hintParts.join(' | ')}</div>`;
       }
     } else {
       actions = `<button class="btn btn-sm btn-secondary" style="border-color:#ff4444;color:#ff4444" onclick="doBreakAlliance('${faction.id}')">💔 Break</button>
+        <button class="btn btn-sm btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="doFactionBribe('${faction.id}')">💰 Bribe</button>
         <div style="font-size:0.65rem;color:#ff4444;margin-top:2px">Breaking alliance damages trust and standing</div>`;
     }
 
@@ -4263,15 +4390,26 @@ function renderFactions() {
         <div style="font-size:0.65rem;color:#00ff88;margin-top:2px">Absorb: Gain their territory and resources permanently</div>`;
     }
 
+    // How standing changes hint
+    const standingHint = `<div style="font-size:0.6rem;color:var(--text-dim);margin-top:4px;border-top:1px solid #222;padding-top:3px">
+      Standing changes: <span style="color:#00ff88">Sell on their turf (allied: +1)</span> |
+      <span style="color:#ff4444">Sell uninvited: -2</span> |
+      <span style="color:#ff4444">Fight them: -10</span> |
+      <span style="color:#00ff88">Bribe: +5</span> |
+      <span style="color:#00ff88">Missions: +5</span>
+    </div>`;
+
     return `<div class="prop-card" style="border-color:${faction.color}">
       <div class="prop-header">${faction.emoji} ${faction.name} <span style="font-size:0.7rem;color:${faction.color}">[${faction.leader.name}]</span></div>
       <div class="prop-details">
         ${faction.desc}<br>
         <span class="text-dim">Specialty:</span> ${faction.specialty} | <span class="text-dim">Power:</span> ${power}/100 | <span class="text-dim">Style:</span> ${faction.leader.personality}<br>
         <span class="text-dim">Territory:</span> ${territories}<br>
-        ${statusBadge}
+        ${statusBadge} ${standingBar}
+        ${tradeEffects}
       </div>
       <div style="margin-top:0.3rem">${actions}</div>
+      ${standingHint}
     </div>`;
   }).join('');
 
@@ -4279,11 +4417,28 @@ function renderFactions() {
   const warCount = Object.keys(f.wars).length;
   const allianceCount = Object.keys(f.alliances).length;
 
+  // Current location gang info
+  const curLoc = gameState.currentLocation;
+  const curGang = typeof TERRITORY_GANGS !== 'undefined' ? TERRITORY_GANGS[curLoc] : null;
+  let curGangInfo = '';
+  if (curGang) {
+    const curFaction = FACTIONS.find(fc => fc.id === curGang.factionId);
+    const curStanding = curFaction ? getFactionStanding(gameState, curFaction.id) : null;
+    const curStandingVal = curFaction ? (f.standings[curFaction.id] || 0) : 0;
+    curGangInfo = `<div style="background:rgba(255,68,136,0.08);border:1px solid rgba(255,68,136,0.3);border-radius:4px;padding:0.5rem;margin-bottom:1rem">
+      <span style="font-size:0.85rem;font-weight:700;color:#ff4488">📍 Current District Gang: ${curGang.name}</span>
+      ${curStanding ? `<span style="color:${curStanding.color};margin-left:0.5rem">${curStanding.emoji} ${curStanding.label} (${curStandingVal})</span>` : ''}
+      ${curStandingVal <= -15 ? '<span style="color:#ff4444;margin-left:0.5rem">Dealing here is risky!</span>' : ''}
+      ${curStandingVal >= 50 ? '<span style="color:#00ff88;margin-left:0.5rem">Friendly turf - good prices</span>' : ''}
+    </div>`;
+  }
+
   return `
     <div class="screen-container">
       ${renderToolbar()}
       ${backButton()}
       <h2 class="section-title" style="color:#ff4488">⚔️ FACTIONS & ALLIANCES</h2>
+      ${curGangInfo}
       <div class="status-row" style="justify-content:center;gap:2rem;margin-bottom:1rem">
         <span class="stat"><span class="stat-label">Alliances</span> <span class="stat-value neon-green">${allianceCount}</span></span>
         <span class="stat"><span class="stat-label">Wars</span> <span class="stat-value neon-red">${warCount}</span></span>
@@ -4306,6 +4461,22 @@ function doBreakAlliance(factionId) {
   if (!confirm('Break alliance? This will damage your standing.')) return;
   const result = breakAlliance(gameState, factionId);
   gameState.messageLog.push(result.msg);
+  render();
+}
+
+function doFactionBribe(factionId) {
+  if (typeof bribeFaction !== 'function') {
+    alert('Bribe system not available.');
+    return;
+  }
+  const result = bribeFaction(gameState, factionId);
+  gameState.messageLog.push(result.msg);
+  if (result.success) {
+    playSound('cash');
+    showNotification(result.msg, 'success');
+  } else {
+    showNotification(result.msg, 'error');
+  }
   render();
 }
 

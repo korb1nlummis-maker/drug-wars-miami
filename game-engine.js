@@ -442,12 +442,14 @@ function launderMoney(state, amount) {
   if (!state.frontBusinesses || state.frontBusinesses.length === 0) return { success: false, msg: 'No front businesses to launder through.' };
   if (amount > state.cash) return { success: false, msg: 'Not enough cash.' };
 
-  // Calculate total launder capacity
+  // Calculate total launder capacity (Cleanskin gets +25% bonus)
   let totalCapacity = 0;
   for (const owned of state.frontBusinesses) {
     const biz = FRONT_BUSINESSES.find(b => b.id === owned.id);
     if (biz) totalCapacity += biz.launderMax;
   }
+  const charLaunderBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'launderBonus') : 0;
+  if (charLaunderBonus > 0) totalCapacity = Math.round(totalCapacity * (1 + charLaunderBonus));
 
   const actual = Math.min(amount, totalCapacity);
   if (actual <= 0) return { success: false, msg: 'Laundering capacity maxed out for today.' };
@@ -796,26 +798,29 @@ function getTotalDistributionRevenue(state) {
 // TERRITORY SYSTEM
 // ============================================================
 const TERRITORY_GANGS = {
-  miami: { name: 'Griselda Cartel', strength: 3, soldiers: [4, 6], hp: [250, 400], dmg: [15, 25] },
-  bogota: { name: 'Cali Cartel', strength: 5, soldiers: [6, 10], hp: [400, 600], dmg: [25, 40] },
-  new_york: { name: 'Five Families', strength: 4, soldiers: [5, 8], hp: [300, 500], dmg: [20, 35] },
-  medellin: { name: 'Medellín Cartel', strength: 5, soldiers: [8, 12], hp: [500, 700], dmg: [30, 45] },
-  los_angeles: { name: 'Crips & Bloods', strength: 3, soldiers: [4, 7], hp: [200, 350], dmg: [15, 25] },
-  rio: { name: 'Comando Vermelho', strength: 4, soldiers: [5, 8], hp: [300, 450], dmg: [20, 30] },
-  mexico_city: { name: 'Sinaloa Cartel', strength: 5, soldiers: [7, 10], hp: [450, 650], dmg: [25, 40] },
-  amsterdam: { name: 'Penose Syndicate', strength: 2, soldiers: [3, 5], hp: [150, 250], dmg: [10, 20] },
-  london: { name: 'Firm', strength: 3, soldiers: [4, 6], hp: [200, 350], dmg: [15, 25] },
-  marseille: { name: 'French Connection', strength: 3, soldiers: [4, 7], hp: [250, 400], dmg: [20, 30] },
-  moscow: { name: 'Bratva', strength: 4, soldiers: [5, 9], hp: [350, 550], dmg: [25, 35] },
-  istanbul: { name: 'Grey Wolves', strength: 3, soldiers: [4, 6], hp: [250, 400], dmg: [20, 30] },
-  bangkok: { name: 'Red Wa Militia', strength: 3, soldiers: [4, 7], hp: [250, 400], dmg: [20, 30] },
-  hong_kong: { name: 'Sun Yee On Triad', strength: 4, soldiers: [5, 8], hp: [300, 500], dmg: [20, 35] },
-  tokyo: { name: 'Yamaguchi-gumi', strength: 4, soldiers: [5, 8], hp: [350, 500], dmg: [25, 35] },
-  kabul: { name: 'Taliban Warlords', strength: 5, soldiers: [6, 10], hp: [400, 600], dmg: [30, 40] },
-  mumbai: { name: 'D-Company', strength: 4, soldiers: [5, 8], hp: [300, 450], dmg: [20, 30] },
-  casablanca: { name: 'Mocro Maffia', strength: 3, soldiers: [4, 6], hp: [200, 350], dmg: [15, 25] },
-  lagos: { name: 'Black Axe', strength: 3, soldiers: [4, 7], hp: [250, 400], dmg: [20, 30] },
-  sydney: { name: 'Rebels MC', strength: 2, soldiers: [3, 5], hp: [150, 300], dmg: [15, 20] },
+  // Miami Districts — mapped from MIAMI_FACTIONS gangPresence
+  liberty_city: { name: 'Zoe Pound', factionId: 'zoe_pound', strength: 6, soldiers: [10, 20], hp: [300, 450], dmg: [8, 18] },
+  overtown: { name: 'Miami Cartel Remnants', factionId: 'cartel_remnants', strength: 3, soldiers: [2, 6], hp: [200, 350], dmg: [10, 20] },
+  little_havana: { name: 'Los Cubanos', factionId: 'los_cubanos', strength: 7, soldiers: [8, 15], hp: [350, 500], dmg: [12, 22] },
+  downtown: { name: 'The Eastern Bloc', factionId: 'eastern_bloc', strength: 8, soldiers: [5, 10], hp: [400, 600], dmg: [18, 30] },
+  south_beach: { name: 'The Eastern Bloc', factionId: 'eastern_bloc', strength: 8, soldiers: [5, 10], hp: [400, 600], dmg: [18, 30] },
+  little_haiti: { name: 'Zoe Pound', factionId: 'zoe_pound', strength: 6, soldiers: [10, 20], hp: [300, 450], dmg: [8, 18] },
+  hialeah: { name: 'Los Cubanos', factionId: 'los_cubanos', strength: 7, soldiers: [8, 15], hp: [350, 500], dmg: [12, 22] },
+  opa_locka: { name: 'The Southern Boys', factionId: 'southern_boys', strength: 5, soldiers: [15, 30], hp: [250, 400], dmg: [8, 16] },
+  kendall: { name: 'The Dixie Mafia', factionId: 'dixie_mafia', strength: 6, soldiers: [8, 14], hp: [300, 450], dmg: [14, 24] },
+  the_port: { name: 'The Port Authority', factionId: 'port_authority', strength: 4, soldiers: [5, 12], hp: [250, 350], dmg: [8, 14] },
+  miami_gardens: { name: 'The Southern Boys', factionId: 'southern_boys', strength: 5, soldiers: [15, 30], hp: [250, 400], dmg: [8, 16] },
+  // NG+ districts
+  north_liberty: { name: 'Zoe Pound', factionId: 'zoe_pound', strength: 6, soldiers: [10, 20], hp: [300, 450], dmg: [8, 18] },
+  model_city: { name: 'Zoe Pound', factionId: 'zoe_pound', strength: 5, soldiers: [8, 16], hp: [250, 400], dmg: [8, 16] },
+  east_little_havana: { name: 'Los Cubanos', factionId: 'los_cubanos', strength: 6, soldiers: [6, 12], hp: [300, 450], dmg: [12, 20] },
+  brickell_key: { name: 'The Eastern Bloc', factionId: 'eastern_bloc', strength: 7, soldiers: [4, 8], hp: [350, 550], dmg: [16, 28] },
+  mid_beach: { name: 'The Eastern Bloc', factionId: 'eastern_bloc', strength: 7, soldiers: [4, 8], hp: [350, 550], dmg: [16, 28] },
+  lemon_city: { name: 'Zoe Pound', factionId: 'zoe_pound', strength: 5, soldiers: [8, 15], hp: [250, 400], dmg: [8, 16] },
+  homestead: { name: 'The Dixie Mafia', factionId: 'dixie_mafia', strength: 5, soldiers: [6, 12], hp: [280, 420], dmg: [12, 22] },
+  carol_city: { name: 'The Southern Boys', factionId: 'southern_boys', strength: 5, soldiers: [12, 25], hp: [250, 380], dmg: [8, 16] },
+  norwood: { name: 'The Southern Boys', factionId: 'southern_boys', strength: 4, soldiers: [10, 20], hp: [230, 360], dmg: [8, 14] },
+  virginia_key: { name: 'The Port Authority', factionId: 'port_authority', strength: 4, soldiers: [4, 10], hp: [230, 330], dmg: [8, 14] },
 };
 
 // Benefits of controlling territory
@@ -2031,6 +2036,66 @@ function waitDay(state) {
     state.debtDaysUnpaid = 0;
   }
 
+  // === CHARACTER FLAG DAILY EFFECTS ===
+  if (typeof hasCharacterFlag === 'function') {
+    // Active Bounty (Connected Kid): 5% daily chance of bounty hunter attack
+    if (hasCharacterFlag(state, 'activeBounty') && Math.random() < 0.05) {
+      const bountyDmg = 10 + Math.floor(Math.random() * 15);
+      state.health = Math.max(1, (state.health || 100) - bountyDmg);
+      state.heat = Math.min(100, (state.heat || 0) + 5);
+      msgs.push(`⚠️ Bounty hunter attack! Someone from your father's past came looking. -${bountyDmg} HP, +5 heat.`);
+    }
+    // Family Dependent (Immigrant): $200/day remittance or family rep penalty
+    if (hasCharacterFlag(state, 'familyDependent')) {
+      if (state.cash >= 200) {
+        state.cash -= 200;
+        state.familyRemittancePaid = (state.familyRemittancePaid || 0) + 200;
+        // Every $5K sent, gain trust
+        if (state.familyRemittancePaid % 5000 < 200 && typeof adjustRep === 'function') {
+          adjustRep(state, 'trust', 3);
+          msgs.push('💌 Your family back home says thank you. +3 Trust.');
+        }
+      } else {
+        state.familyMissedPayments = (state.familyMissedPayments || 0) + 1;
+        if (state.familyMissedPayments % 7 === 0) {
+          msgs.push('📞 Your family called. They need money. You can\'t keep missing payments.');
+          if (typeof adjustRep === 'function') adjustRep(state, 'trust', -2);
+        }
+      }
+    }
+    // Old Injury (Veteran): health recovers 25% slower, occasional pain flare
+    if (hasCharacterFlag(state, 'oldInjury') && state.health < 100) {
+      // Slow healing: remove 25% of daily health regen
+      if (state.health < (state.maxHealth || 100) && Math.random() < 0.15) {
+        state.health = Math.max(1, state.health - 2);
+        msgs.push('🩹 Old injury flares up. -2 HP.');
+      }
+    }
+    // Known Enforcer (Veteran): intimidation events happen more often
+    // (handled via intimidation bonus already)
+    // Smooth Talker (Hustler): occasional free intel from contacts
+    if (hasCharacterFlag(state, 'smoothTalker') && Math.random() < 0.08) {
+      const intelCash = 500 + Math.floor(Math.random() * 1500);
+      state.cash += intelCash;
+      msgs.push(`🗣️ Your smooth talking paid off — a contact tipped you $${intelCash.toLocaleString()} for a favor.`);
+    }
+    // Known on Streets (Corner Kid): occasional street gifts/intel
+    if (hasCharacterFlag(state, 'knownOnStreets') && Math.random() < 0.06) {
+      msgs.push('👀 Someone on the block recognized you. "Yo, cops are doing a sweep on the east side today." You adjust your route.');
+      state.heat = Math.max(0, (state.heat || 0) - 3);
+    }
+    // International Contact (Immigrant): occasional import deal offer
+    if (hasCharacterFlag(state, 'internationalContact') && Math.random() < 0.04 && state.day > 10) {
+      const drugId = ['cocaine', 'heroin', 'opium'][Math.floor(Math.random() * 3)];
+      const drug = DRUGS.find(d => d.id === drugId);
+      if (drug && state.inventory) {
+        const amount = 3 + Math.floor(Math.random() * 5);
+        state.inventory[drugId] = (state.inventory[drugId] || 0) + amount;
+        msgs.push(`📦 Your international contact sent ${amount} ${drug.name} as a loyalty gift.`);
+      }
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
@@ -2497,6 +2562,16 @@ function buyDrug(state, drugId, amount) {
   // Consequence engine: ability buy discount (e.g. Haggle Master)
   const abilityBuyDiscount = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'buy_discount') : 0;
   if (abilityBuyDiscount > 0) price = Math.round(price * (1 - abilityBuyDiscount / 100));
+  // Character passive: buy discount (Hustler -10%)
+  const charBuyDiscount = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'buyDiscount') : 0;
+  if (charBuyDiscount > 0) price = Math.round(price * (1 - charBuyDiscount));
+  // Character passive: Americas discount (Connected Kid -15% on Americas imports)
+  const charAmericasDiscount = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'americasDiscount') : 0;
+  if (charAmericasDiscount > 0 && state.currentRegion && (state.currentRegion === 'south_america' || state.currentRegion === 'central_america' || state.currentRegion === 'mexico')) {
+    price = Math.round(price * (1 - charAmericasDiscount));
+  }
+  // Character passive: transport discount (Immigrant -25% on transport)
+  // (applied in travel cost, not buy price)
   // Bulk discount: buying 10+ units gets 5% discount
   if (amount >= 10) price = Math.round(price * 0.95);
   // Market reputation: frequent trading at a location gives better prices
@@ -2562,6 +2637,27 @@ function buyDrug(state, drugId, amount) {
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
   state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  // Gang territory heat modifier
+  if (typeof getGangTerritoryHeatMod === 'function') {
+    const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);
+    if (gangHeat !== 0) {
+      state.heat = Math.max(0, Math.min(100, (state.heat || 0) + gangHeat));
+    }
+  }
+  // Faction standing adjustment from buying in gang territory
+  let factionDealMsgs = [];
+  if (typeof adjustFactionStandingFromDeal === 'function') {
+    factionDealMsgs = adjustFactionStandingFromDeal(state, state.currentLocation, false, totalCost);
+  }
+  // Check for gang ambush
+  let ambushMsg = '';
+  if (typeof checkGangAmbush === 'function') {
+    const ambush = checkGangAmbush(state, state.currentLocation);
+    if (ambush) {
+      ambushMsg = ' ' + ambush.msg;
+      factionDealMsgs.push(ambush.msg);
+    }
+  }
   // Build buy message with bonus info
   const buyBonuses = [];
   if (amount >= 10) buyBonuses.push('Bulk -5%');
@@ -2569,7 +2665,9 @@ function buyDrug(state, drugId, amount) {
   if (_locT >= 20) buyBonuses.push('Rep -8%');
   else if (_locT >= 5) buyBonuses.push('Rep -3%');
   const buyBonusStr = buyBonuses.length > 0 ? ' (' + buyBonuses.join(', ') + ')' : '';
-  return { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}` };
+  const result = { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}${ambushMsg}` };
+  if (factionDealMsgs.length > 0) result.factionMsgs = factionDealMsgs;
+  return result;
 }
 
 function sellDrug(state, drugId, amount) {
@@ -2586,6 +2684,10 @@ function sellDrug(state, drugId, amount) {
   }
   if (!state.inventory[drugId] || state.inventory[drugId] < amount) return { success: false, msg: 'You don\'t have that much.' };
   price = applyTerritoryPriceMod(state, state.currentLocation, price, false);
+  // Faction sell bonus (gang standing affects sell prices)
+  if (typeof getFactionSellBonus === 'function') {
+    price = Math.round(price * getFactionSellBonus(state, state.currentLocation));
+  }
   // Reputation penalty — low-level dealers get worse prices
   const playerLevel = typeof getKingpinLevel === 'function' ? getKingpinLevel(state.xp || 0).level : 1;
   if (playerLevel <= 3) price = Math.round(price * 0.70);       // Street punk: 30% penalty
@@ -2608,6 +2710,10 @@ function sellDrug(state, drugId, amount) {
   // Consequence engine: ability sell bonus (e.g. Haggle Master, Purity Expert)
   const abilitySellBonus = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'sell_bonus') : 0;
   if (abilitySellBonus > 0) price = Math.round(price * (1 + abilitySellBonus / 100));
+  // Character passive: Hustler gets no sell bonus (buy discount only) but check for generic sell perk
+  // No character currently has a sell passive, but future-proofed:
+  const charSellBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'sellBonus') : 0;
+  if (charSellBonus > 0) price = Math.round(price * (1 + charSellBonus));
   // Bulk premium: selling 10+ units at once gets 5% premium
   if (amount >= 10) price = Math.round(price * 1.05);
   // Market reputation: frequent trading at a location gives better prices
@@ -2658,6 +2764,28 @@ function sellDrug(state, drugId, amount) {
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
   state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  // Gang territory heat modifier on sell (selling is riskier than buying)
+  if (typeof getGangTerritoryHeatMod === 'function') {
+    const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);
+    if (gangHeat !== 0) {
+      const sellHeatMod = gangHeat > 0 ? Math.ceil(gangHeat * 1.2) : gangHeat; // Selling generates slightly more heat
+      state.heat = Math.max(0, Math.min(100, (state.heat || 0) + sellHeatMod));
+    }
+  }
+  // Faction standing adjustment from selling in gang territory
+  let factionSellMsgs = [];
+  if (typeof adjustFactionStandingFromDeal === 'function') {
+    factionSellMsgs = adjustFactionStandingFromDeal(state, state.currentLocation, true, totalRevenue);
+  }
+  // Check for gang ambush after sell
+  let ambushSellMsg = '';
+  if (typeof checkGangAmbush === 'function') {
+    const ambush = checkGangAmbush(state, state.currentLocation);
+    if (ambush) {
+      ambushSellMsg = ' ' + ambush.msg;
+      factionSellMsgs.push(ambush.msg);
+    }
+  }
   // Build sell message with bonus info
   const sellBonuses = [];
   if (amount >= 10) sellBonuses.push('Bulk +5%');
@@ -2665,7 +2793,9 @@ function sellDrug(state, drugId, amount) {
   if (_locTS >= 20) sellBonuses.push('Rep +8%');
   else if (_locTS >= 5) sellBonuses.push('Rep +3%');
   const sellBonusStr = sellBonuses.length > 0 ? ' (' + sellBonuses.join(', ') + ')' : '';
-  return { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${tapMsg}` };
+  const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${tapMsg}${ambushSellMsg}` };
+  if (factionSellMsgs.length > 0) result.factionMsgs = factionSellMsgs;
+  return result;
 }
 
 // ============================================================
@@ -2797,6 +2927,9 @@ function travel(state, destinationId, transportId) {
   // Skill tree: kingmaker cost reduction
   const skillGlobalCost = getSkillEffect(state, 'globalCostMod');
   if (skillGlobalCost < 0) transportCost = Math.round(transportCost * (1 + skillGlobalCost));
+  // Character passive: Immigrant -25% transport costs
+  const charTransportDiscount = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'transportDiscount') : 0;
+  if (charTransportDiscount > 0) transportCost = Math.round(transportCost * (1 - charTransportDiscount));
   transportCost = Math.max(0, transportCost);
   // Pay for transport
   state.cash -= transportCost;
@@ -3179,6 +3312,9 @@ function resolveCombatRound(state, action, event) {
       if (hasPerk(state, 'muscle')) playerPower = Math.round(playerPower * 1.25);
       if (hasPerk(state, 'immortal')) playerPower = Math.round(playerPower * 1.15);
     }
+    // Character passive: Veteran +25% combat damage
+    const charCombatMod = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'combatDamageMod') : 0;
+    if (charCombatMod > 0) playerPower = Math.round(playerPower * (1 + charCombatMod));
     // Skill tree: brawler damage boost
     const damageMod = getSkillEffect(state, 'damageMod');
     if (damageMod > 0) playerPower = Math.round(playerPower * (1 + damageMod));
@@ -3290,6 +3426,16 @@ function resolveCombatRound(state, action, event) {
         results.msg += ` You found $${loot.toLocaleString()} on them.`;
       }
 
+      // Faction standing penalty for fighting gang members in their territory
+      if (typeof adjustFactionStanding === 'function' && typeof TERRITORY_GANGS !== 'undefined') {
+        const combatLoc = event.territoryLocation || state.currentLocation;
+        const gangData = TERRITORY_GANGS[combatLoc];
+        if (gangData && gangData.factionId) {
+          adjustFactionStanding(state, gangData.factionId, -10);
+          results.msg += ` ${gangData.name} won't forget this. (-10 standing)`;
+        }
+      }
+
       // Territory takeover
       if (event.combatType === 'territory' && event.territoryLocation) {
         const claim = claimTerritory(state, event.territoryLocation);
@@ -3325,6 +3471,9 @@ function resolveCombatRound(state, action, event) {
 
   } else if (action === 'run') {
     let escapeChance = 0.4 + (state.henchmen.filter(h => !h.injured).length * 0.1) - (event.enemyCount * 0.05);
+    // Character passive: Corner Kid +20% escape chance
+    const charEscapeBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'escapeChance') : 0;
+    if (charEscapeBonus > 0) escapeChance += charEscapeBonus;
     // Consequence engine: ability escape bonus (e.g. Escape Artist)
     const abilityEscapeBonus = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'chase_escape') : 0;
     if (abilityEscapeBonus > 0) escapeChance += abilityEscapeBonus / 100;
@@ -4005,7 +4154,23 @@ function resolveCourtCase(state) {
     }
 
     // Prison time — scaled by charge severity
-    const prisonMod = state.courtCase.worstPrisonMod || 1.0;
+    let prisonMod = state.courtCase.worstPrisonMod || 1.0;
+    // Character flag: onProbation = double sentence (Ex-Con penalty)
+    if (typeof hasCharacterFlag === 'function' && hasCharacterFlag(state, 'onProbation')) {
+      prisonMod *= 2.0;
+    }
+    // Character flag: prisonRecord = +25% sentence (repeat offender)
+    if (typeof hasCharacterFlag === 'function' && hasCharacterFlag(state, 'prisonRecord') && state.investigation && state.investigation.timesArrested > 1) {
+      prisonMod *= 1.25;
+    }
+    // Character flag: cleanRecord = -30% first offense (Dropout/Cleanskin benefit)
+    if (typeof hasCharacterFlag === 'function' && hasCharacterFlag(state, 'cleanRecord') && state.investigation && state.investigation.timesArrested <= 1) {
+      prisonMod *= 0.7;
+    }
+    // Character flag: legitimateCover = -20% sentence (Cleanskin has cover story)
+    if (typeof hasCharacterFlag === 'function' && hasCharacterFlag(state, 'legitimateCover')) {
+      prisonMod *= 0.8;
+    }
     const basePrison = sentence.prisonDays[0] + Math.floor(Math.random() * (sentence.prisonDays[1] - sentence.prisonDays[0]));
     const prisonDays = Math.round(basePrison * prisonMod);
     state.day += prisonDays;

@@ -1509,6 +1509,17 @@ function completeMission(state, index) {
     awardXP(state, 'complete_mission', missionXP);
   }
 
+  // Faction standing boost for completing missions in gang territory
+  if (typeof adjustFactionStanding === 'function' && typeof TERRITORY_GANGS !== 'undefined') {
+    const gangData = TERRITORY_GANGS[state.currentLocation];
+    if (gangData && gangData.factionId) {
+      const factionId = gangData.factionId;
+      // Completing missions on their turf earns respect
+      const standingGain = 3 + Math.min(template.tier, 3); // 4-6 standing based on tier
+      adjustFactionStanding(state, factionId, standingGain);
+    }
+  }
+
   // Bonus skill point every 10 missions completed
   if (ms.totalMissionsCompleted % 10 === 0 && ms.totalMissionsCompleted > 0) {
     state.skillPoints = (state.skillPoints || 0) + 1;
