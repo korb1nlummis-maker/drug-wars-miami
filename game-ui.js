@@ -1500,6 +1500,51 @@ function renderGame() {
           return tradeTip ? `<span class="badge" style="background:rgba(255,136,0,0.15);color:${ls.color};border:1px solid ${ls.color};font-size:0.6rem">${ls.emoji} ${ls.label}: ${tradeTip}</span>` : '';
         })()}
       </div>
+      ${(() => {
+        // Show player assets at this location
+        var assets = [];
+        var locId = loc.id;
+        // Businesses here
+        if (gameState.frontBusinesses) {
+          var bizHere = gameState.frontBusinesses.filter(function(b) { return b.location === locId; });
+          if (bizHere.length > 0) assets.push('🏢 ' + bizHere.length + ' business' + (bizHere.length > 1 ? 'es' : ''));
+        }
+        // Crew assigned here
+        if (gameState.henchmen) {
+          var crewHere = gameState.henchmen.filter(function(h) { return h.assignedTo === 'territory_guard' && !h.injured; }).length;
+          if (crewHere > 0 && isTerritory(gameState, locId)) assets.push('👥 ' + crewHere + ' guard' + (crewHere > 1 ? 's' : ''));
+        }
+        // Stash here
+        if (gameState.stashes && gameState.stashes[locId]) {
+          var stashCount = 0;
+          for (var sid in gameState.stashes[locId]) stashCount += gameState.stashes[locId][sid] || 0;
+          if (stashCount > 0) assets.push('📦 ' + stashCount + ' units stashed');
+        }
+        // Properties here
+        if (gameState.properties) {
+          var propsHere = Object.values(gameState.properties).filter(function(p) { return p.locationId === locId; }).length;
+          if (propsHere > 0) assets.push('🏠 ' + propsHere + ' propert' + (propsHere > 1 ? 'ies' : 'y'));
+        }
+        // Distribution network
+        if (gameState.distribution && gameState.distribution[locId] && gameState.distribution[locId].active) {
+          var dealers = gameState.distribution[locId].dealers ? gameState.distribution[locId].dealers.length : 0;
+          assets.push('💊 ' + dealers + ' dealer' + (dealers > 1 ? 's' : '') + ' active');
+        }
+        // Known prices freshness
+        if (gameState.knownPrices && gameState.knownPrices[locId]) {
+          var pAge = (gameState.day || 1) - (gameState.knownPrices[locId]._day || 0);
+          if (pAge === 0) assets.push('📊 Prices: current');
+          else if (pAge <= 3) assets.push('📊 Prices: ' + pAge + 'd old');
+        }
+        // Market reputation
+        var trades = gameState.locationTrades ? (gameState.locationTrades[locId] || 0) : 0;
+        if (trades >= 20) assets.push('⭐ Regular (8% discount)');
+        else if (trades >= 5) assets.push('⭐ Known (3% discount)');
+        if (assets.length === 0) return '';
+        return '<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem;font-size:0.7rem;">' +
+          assets.map(function(a) { return '<span style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);padding:1px 6px;border-radius:3px;color:var(--neon-green)">' + a + '</span>'; }).join('') +
+        '</div>';
+      })()}
     </div>
   `;
 
@@ -5861,6 +5906,27 @@ function renderStats() {
         ${gameState.scars && gameState.scars.length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;color:#888">Scars: ' + gameState.scars.map(function(s) { return '🩹 ' + s.type + ' (day ' + s.day + ')'; }).join(', ') + '</div>' : ''}
         ${gameState.playerTraits && Object.keys(gameState.playerTraits).length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;"><span style="color:var(--neon-purple);">Traits:</span> ' + Object.entries(gameState.playerTraits).map(function(e) { return '<span style="background:rgba(180,0,255,0.15);padding:1px 6px;border-radius:3px;margin:1px;">' + e[0].replace(/_/g,' ') + (e[1] > 1 ? ' x' + e[1] : '') + '</span>'; }).join(' ') + '</div>' : ''}
         ${gameState.playerAbilities && Object.keys(gameState.playerAbilities).length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;"><span style="color:var(--neon-green);">Abilities:</span> ' + Object.keys(gameState.playerAbilities).map(function(a) { return '<span style="background:rgba(0,255,100,0.1);padding:1px 6px;border-radius:3px;margin:1px;">' + a.replace(/_/g,' ') + '</span>'; }).join(' ') + '</div>' : ''}
+        ${typeof getTraitBonuses === 'function' ? (() => {
+          var tb = getTraitBonuses(gameState);
+          var bonusList = [];
+          if (tb.buyDiscount) bonusList.push('🛒 Buy -' + Math.round(tb.buyDiscount * 100) + '%');
+          if (tb.sellBonus) bonusList.push('💰 Sell +' + Math.round(tb.sellBonus * 100) + '%');
+          if (tb.combatDamage) bonusList.push('⚔️ Damage +' + Math.round(tb.combatDamage * 100) + '%');
+          if (tb.combatAccuracy) bonusList.push('🎯 Accuracy +' + Math.round(tb.combatAccuracy * 100) + '%');
+          if (tb.escapeChance) bonusList.push('💨 Escape +' + Math.round(tb.escapeChance * 100) + '%');
+          if (tb.heatReduction) bonusList.push('❄️ Heat -' + Math.round(tb.heatReduction * 100) + '%/day');
+          if (tb.crewSlots) bonusList.push('👥 +' + tb.crewSlots + ' crew slots');
+          if (tb.crewMorale) bonusList.push('❤️ +' + tb.crewMorale + ' morale/day');
+          if (tb.intimidation) bonusList.push('😤 +' + tb.intimidation + ' intimidation');
+          if (tb.factionGain) bonusList.push('🤝 +' + Math.round(tb.factionGain * 100) + '% faction gains');
+          if (tb.heistSuccess) bonusList.push('🎯 +' + Math.round(tb.heistSuccess * 100) + '% heist success');
+          if (tb.communityProtection) bonusList.push('🛡️ Community protection');
+          if (tb.ambushAvoidance) bonusList.push('👁️ -' + Math.round(tb.ambushAvoidance * 100) + '% ambush');
+          if (tb.courtBonus) bonusList.push('⚖️ +' + Math.round(tb.courtBonus * 100) + '% court success');
+          if (tb.bribeCostReduction) bonusList.push('💵 -' + Math.round(tb.bribeCostReduction * 100) + '% bribe cost');
+          if (bonusList.length === 0) return '';
+          return '<div style="margin-top:0.5rem;padding:0.4rem;background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.15);border-radius:6px;"><div style="font-size:0.75rem;color:var(--neon-yellow);font-weight:bold;margin-bottom:0.3rem">⭐ ACTIVE TRAIT BONUSES</div><div style="display:flex;flex-wrap:wrap;gap:0.3rem;font-size:0.7rem">' + bonusList.map(function(b) { return '<span style="background:rgba(255,200,0,0.1);padding:2px 6px;border-radius:3px">' + b + '</span>'; }).join('') + '</div></div>';
+        })() : ''}
       </div>
 
       <!-- Net Worth Chart -->
