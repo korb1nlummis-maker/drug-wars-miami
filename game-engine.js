@@ -1959,6 +1959,18 @@ function generatePrices(state) {
       price *= getFactionTradeDiscount(state, state.currentLocation);
     }
 
+    // Weather effects on prices (hurricanes spike prices, heatwaves increase demand)
+    if (typeof getWeatherEffects === 'function') {
+      var wx = getWeatherEffects(state);
+      // Demand modifier affects price directly
+      if (wx.demandMod && wx.demandMod !== 1.0) price *= wx.demandMod;
+      // Volatility makes price swing more extreme
+      if (wx.priceVolatility && wx.priceVolatility > 1.0) {
+        var deviance = price - midPrice * location.priceModifier;
+        price = midPrice * location.priceModifier + deviance * wx.priceVolatility;
+      }
+    }
+
     // Processed drug quality bonus (selling premium product)
     if (typeof getProcessedDrugPriceMod === 'function') {
       price *= getProcessedDrugPriceMod(state, drug.id);
@@ -2599,6 +2611,13 @@ function buyDrug(state, drugId, amount) {
   }
   // Character passive: transport discount (Immigrant -25% on transport)
   // (applied in travel cost, not buy price)
+  // Time of day: evening deals 5% cheaper, night 10% cheaper (but more dangerous)
+  if (typeof getTimePeriod === 'function') {
+    var tp = getTimePeriod(state);
+    if (tp && tp.effects && tp.effects.dealDiscount > 0) {
+      price = Math.round(price * (1 - tp.effects.dealDiscount));
+    }
+  }
   // Bulk discount: buying 10+ units gets 5% discount
   if (amount >= 10) price = Math.round(price * 0.95);
   // Market reputation: frequent trading at a location gives better prices
@@ -2939,6 +2958,15 @@ function travel(state, destinationId, transportId) {
   if (!transport) return { success: false, msg: 'Transport not available for this route.' };
   if (!transport.canAfford) return { success: false, msg: 'Can\'t afford this transport.' };
   if (!transport.canCarry) return { success: false, msg: `${transport.name} can only carry ${transport.inventoryLimit} units. You have ${getInventoryCount(state)}.` };
+
+  // Weather blocks travel during hurricanes
+  if (typeof getWeatherEffects === 'function') {
+    var wx = getWeatherEffects(state);
+    if (wx.allTravelBlocked) return { success: false, msg: '🌀 Hurricane! All travel blocked. Wait for the storm to pass.' };
+    if (wx.waterRoutesBlocked && (transport.type === 'boat' || transport.type === 'ship')) {
+      return { success: false, msg: '⛈️ Tropical storm! Water routes are blocked.' };
+    }
+  }
 
   // Perk: connections reduces transport costs
   let transportCost = transport.cost;

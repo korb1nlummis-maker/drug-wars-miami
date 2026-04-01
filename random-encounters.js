@@ -39,9 +39,24 @@ function processEncountersDaily(state) {
     if (enc.encounterCooldowns[key] <= 0) delete enc.encounterCooldowns[key];
   }
 
-  // Check if encounter triggers (35% base chance per day)
+  // Check if encounter triggers (35% base chance, modified by weather/lookouts)
   if (enc.activeEncounter) return msgs;
-  if (Math.random() > 0.35) {
+  var encounterChance = 0.35;
+  // Weather: stealth bonus and patrol chance affect encounters
+  if (typeof getWeatherEffects === 'function') {
+    var wx = getWeatherEffects(state);
+    if (wx.stealthBonus) encounterChance *= (1 - wx.stealthBonus); // Rain/fog = fewer encounters
+    if (wx.patrolChance && wx.patrolChance < 1) encounterChance *= (0.7 + wx.patrolChance * 0.3); // Low patrols = fewer encounters
+  }
+  // Lookout crew bonus
+  if (state._lookoutBonus) encounterChance *= (1 - state._lookoutBonus);
+  // Time of day: night = fewer police encounters but more danger
+  if (typeof getTimePeriod === 'function') {
+    var tp = getTimePeriod(state);
+    if (tp && tp.id === 'night') encounterChance *= 0.8; // Fewer encounters at night
+    else if (tp && tp.id === 'evening') encounterChance *= 1.1; // More at evening
+  }
+  if (Math.random() > encounterChance) {
     enc.stats.streakDaysWithout++;
     return msgs;
   }
