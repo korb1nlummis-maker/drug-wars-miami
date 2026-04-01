@@ -6929,32 +6929,37 @@ function getAssignedCrew(state, businessId) {
 // ============================================================
 // Feature unlock metadata: maps feature keys to display info and requirements
 const FEATURE_UNLOCK_INFO = {
-  stash:      { name: 'Stash Houses',       emoji: '📦', desc: 'Store drugs safely across cities.',            reqLevel: 2, reqDay: 3 },
-  crew:       { name: 'Crew Management',     emoji: '👥', desc: 'Hire muscle to protect your empire.',         reqLevel: 2, reqDay: 5 },
-  fronts:     { name: 'Front Businesses',    emoji: '🏢', desc: 'Launder money through legitimate fronts.',    reqLevel: 3, reqDay: 10 },
-  territory:  { name: 'Territory Control',   emoji: '🏴', desc: 'Claim turf and earn passive income.',         reqLevel: 3, reqDay: 8 },
-  processing: { name: 'Drug Lab',            emoji: '⚗️', desc: 'Process raw product for higher margins.',     reqLevel: 4, reqDay: 15 },
-  heists:     { name: 'Heists',              emoji: '🎯', desc: 'Plan and execute high-risk jobs.',            reqLevel: 4, reqDay: 12 },
-  skills:     { name: 'Skill Tree',          emoji: '🌳', desc: 'Specialize your criminal talents.',           reqLevel: 4, reqDay: 10 },
-  shipping:   { name: 'Shipping Network',    emoji: '🚛', desc: 'Move product across your empire.',            reqLevel: 5, reqDay: 20 },
-  factions:   { name: 'Factions',            emoji: '⚔️', desc: 'Ally or war with powerful organizations.',    reqLevel: 5, reqDay: 15 },
-  politics:   { name: 'Politics',            emoji: '🏛️', desc: 'Corrupt officials and bend the law.',         reqLevel: 5, reqDay: 20 },
-  worldMap:   { name: 'World Map',           emoji: '🌍', desc: 'Expand operations globally.',                 reqLevel: 7, reqDay: 30 },
-  futures:    { name: 'Futures Trading',     emoji: '📊', desc: 'Speculate on drug price movements.',          reqLevel: 7, reqDay: 25 },
-  mafiaOps:   { name: 'Mafia Operations',    emoji: '🏢', desc: 'Run large-scale organized crime operations.', reqLevel: 10, reqDay: 40 },
-  romance:    { name: 'Romance',             emoji: '💕', desc: 'Find love in the criminal underworld.',       reqLevel: 1, reqDay: 5 },
-  nightlife:  { name: 'Nightlife',           emoji: '🌙', desc: 'Hit the clubs and make connections.',         reqLevel: 1, reqDay: 7 },
-  rivals:     { name: 'Rival Dealers',       emoji: '🏴', desc: 'Compete with rival drug empires.',            reqLevel: 3, reqDay: 8 },
-  defense:    { name: 'Territory Defense',   emoji: '🏰', desc: 'Defend your turf from attacks.',              reqLevel: 3, reqDay: 8 },
-  bodies:     { name: 'Body Disposal',       emoji: '☠️', desc: 'Clean up after messy business.',              reqLevel: 3, reqDay: 10 },
-  properties: { name: 'Properties',          emoji: '🏠', desc: 'Invest in real estate.',                      reqLevel: 2, reqDay: 5 },
-  businesses: { name: 'Businesses',          emoji: '🏢', desc: 'Own and operate legitimate businesses.',      reqLevel: 3, reqDay: 8 },
-  imports:    { name: 'Import/Export',        emoji: '🌍', desc: 'Trade goods across borders.',                 reqLevel: 5, reqDay: 20 },
-  vehicles:   { name: 'Vehicles',            emoji: '🚗', desc: 'Build your vehicle collection.',              reqLevel: 3, reqDay: 8 },
-  safehouse:  { name: 'Safe House',          emoji: '🏠', desc: 'Establish a secure base of operations.',      reqLevel: 2, reqDay: 5 },
-  security:   { name: 'Security',            emoji: '🛡️', desc: 'Protect against raids and investigations.',   reqLevel: 3, reqDay: 8 },
-  distribution: { name: 'Distribution',      emoji: '📡', desc: 'Set up drug distribution networks.',          reqLevel: 4, reqDay: 12 },
-  lifestyle:  { name: 'Lifestyle',           emoji: '🏠', desc: 'Manage stress and live large.',               reqLevel: 2, reqDay: 5 },
+  // TIER 1: Early game (day 1-100) - basics
+  stash:      { name: 'Stash Houses',       emoji: '📦', desc: 'Store drugs safely across cities.',            reqLevel: 2, reqDay: 15 },
+  crew:       { name: 'Crew Management',     emoji: '👥', desc: 'Hire muscle to protect your empire.',         reqLevel: 2, reqDay: 30 },
+  properties: { name: 'Properties',          emoji: '🏠', desc: 'Invest in real estate.',                      reqLevel: 2, reqDay: 25 },
+  safehouse:  { name: 'Safe House',          emoji: '🏠', desc: 'Establish a secure base of operations.',      reqLevel: 2, reqDay: 20 },
+  lifestyle:  { name: 'Lifestyle',           emoji: '🏠', desc: 'Manage stress and live large.',               reqLevel: 2, reqDay: 25 },
+  // TIER 2: Establishing (day 50-250) - building infrastructure
+  fronts:     { name: 'Front Businesses',    emoji: '🏢', desc: 'Launder money through legitimate fronts.',    reqLevel: 3, reqDay: 60 },
+  territory:  { name: 'Territory Control',   emoji: '🏴', desc: 'Claim turf and earn passive income.',         reqLevel: 3, reqDay: 50 },
+  vehicles:   { name: 'Vehicles',            emoji: '🚗', desc: 'Build your vehicle collection.',              reqLevel: 3, reqDay: 45 },
+  rivals:     { name: 'Rival Dealers',       emoji: '🏴', desc: 'Compete with rival drug empires.',            reqLevel: 3, reqDay: 75 },
+  defense:    { name: 'Territory Defense',   emoji: '🏰', desc: 'Defend your turf from attacks.',              reqLevel: 3, reqDay: 80 },
+  bodies:     { name: 'Body Disposal',       emoji: '☠️', desc: 'Clean up after messy business.',              reqLevel: 3, reqDay: 60 },
+  businesses: { name: 'Businesses',          emoji: '🏢', desc: 'Own and operate legitimate businesses.',      reqLevel: 3, reqDay: 70 },
+  security:   { name: 'Security',            emoji: '🛡️', desc: 'Protect against raids and investigations.',   reqLevel: 3, reqDay: 55 },
+  skills:     { name: 'Skill Tree',          emoji: '🌳', desc: 'Specialize your criminal talents.',           reqLevel: 3, reqDay: 40 },
+  // TIER 3: Empire building (day 100-500) - serious operations
+  processing: { name: 'Drug Lab',            emoji: '⚗️', desc: 'Process raw product for higher margins.',     reqLevel: 4, reqDay: 120 },
+  heists:     { name: 'Heists',              emoji: '🎯', desc: 'Plan and execute high-risk jobs.',            reqLevel: 4, reqDay: 150 },
+  distribution: { name: 'Distribution',      emoji: '📡', desc: 'Set up drug distribution networks.',          reqLevel: 4, reqDay: 100 },
+  factions:   { name: 'Factions',            emoji: '⚔️', desc: 'Ally or war with powerful organizations.',    reqLevel: 5, reqDay: 200 },
+  shipping:   { name: 'Shipping Network',    emoji: '🚛', desc: 'Move product across your empire.',            reqLevel: 5, reqDay: 250 },
+  imports:    { name: 'Import/Export',        emoji: '🌍', desc: 'Trade goods across borders.',                 reqLevel: 5, reqDay: 300 },
+  // TIER 4: Power player (day 250-1000) - high-level operations
+  politics:   { name: 'Politics',            emoji: '🏛️', desc: 'Corrupt officials and bend the law.',         reqLevel: 6, reqDay: 400 },
+  worldMap:   { name: 'World Map',           emoji: '🌍', desc: 'Expand operations globally.',                 reqLevel: 7, reqDay: 500 },
+  futures:    { name: 'Futures Trading',     emoji: '📊', desc: 'Speculate on drug price movements.',          reqLevel: 7, reqDay: 450 },
+  mafiaOps:   { name: 'Mafia Operations',    emoji: '🏢', desc: 'Run large-scale organized crime operations.', reqLevel: 10, reqDay: 750 },
+  // Social (unlocks early but gated by day)
+  romance:    { name: 'Romance',             emoji: '💕', desc: 'Find love in the criminal underworld.',       reqLevel: 1, reqDay: 30 },
+  nightlife:  { name: 'Nightlife',           emoji: '🌙', desc: 'Hit the clubs and make connections.',         reqLevel: 1, reqDay: 40 },
 };
 
 function getUnlockedFeatures(state) {
@@ -6971,45 +6976,41 @@ function getUnlockedFeatures(state) {
     stats: true,
     achievements: true,
 
-    // Level 2+ (after first few deals)
-    stash: level >= 2 || day >= 3,
-    crew: level >= 2 || day >= 5,
-    properties: level >= 2 || day >= 5,
-    safehouse: level >= 2 || day >= 5,
-    lifestyle: level >= 2 || day >= 5,
+    // TIER 1: Early game (day 1-50) - basics
+    stash: level >= 2 || day >= 15,
+    crew: level >= 2 || day >= 30,
+    properties: level >= 2 || day >= 25,
+    safehouse: level >= 2 || day >= 20,
+    lifestyle: level >= 2 || day >= 25,
+    skills: level >= 3 || day >= 40,
 
-    // Level 3+
-    fronts: level >= 3 || day >= 10,
-    territory: level >= 3 || day >= 8,
-    rivals: level >= 3 || day >= 8,
-    defense: level >= 3 || day >= 8,
-    bodies: level >= 3 || day >= 10,
-    businesses: level >= 3 || day >= 8,
-    vehicles: level >= 3 || day >= 8,
-    security: level >= 3 || day >= 8,
+    // TIER 2: Establishing (day 50-250)
+    fronts: level >= 3 || day >= 60,
+    territory: level >= 3 || day >= 50,
+    vehicles: level >= 3 || day >= 45,
+    rivals: level >= 3 || day >= 75,
+    defense: level >= 3 || day >= 80,
+    bodies: level >= 3 || day >= 60,
+    businesses: level >= 3 || day >= 70,
+    security: level >= 3 || day >= 55,
 
-    // Level 4+
-    processing: level >= 4 || day >= 15,
-    heists: level >= 4 || day >= 12,
-    skills: level >= 4 || day >= 10,
-    distribution: level >= 4 || day >= 12,
+    // TIER 3: Empire building (day 100-500)
+    processing: level >= 4 || day >= 120,
+    heists: level >= 4 || day >= 150,
+    distribution: level >= 4 || day >= 100,
+    factions: level >= 5 || day >= 200,
+    shipping: level >= 5 || day >= 250,
+    imports: level >= 5 || day >= 300,
 
-    // Level 5+
-    shipping: level >= 5 || day >= 20,
-    factions: level >= 5 || day >= 15,
-    politics: level >= 5 || day >= 20,
-    imports: level >= 5 || day >= 20,
+    // TIER 4: Power player (day 250-1000)
+    politics: level >= 6 || day >= 400,
+    worldMap: level >= 7 || day >= 500,
+    futures: level >= 7 || day >= 450,
+    mafiaOps: level >= 10 || day >= 750,
 
-    // Level 7+
-    worldMap: level >= 7 || day >= 30,
-    futures: level >= 7 || day >= 25,
-
-    // Level 10+
-    mafiaOps: level >= 10 || day >= 40,
-
-    // Special
-    romance: day >= 5,
-    nightlife: day >= 7,
+    // Social
+    romance: level >= 1 || day >= 30,
+    nightlife: level >= 1 || day >= 40,
   };
 }
 
