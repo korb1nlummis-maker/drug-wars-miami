@@ -441,12 +441,13 @@ function processBusinessesDaily(state) {
     }
   }
 
-  // Apply income
+  // Apply income (front business income is CLEAN - it's legitimate)
   biz.dailyIncome = dailyTotal;
   biz.totalIncomeAllTime += dailyTotal;
   biz.totalLaundered += dailyLaundered;
   if (typeof state.cash === 'number') {
     state.cash += dailyTotal;
+    state.cleanMoney = (state.cleanMoney || 0) + dailyTotal; // Legitimate income
   }
 
   // Apply laundering to heat if applicable

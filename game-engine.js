@@ -4753,6 +4753,72 @@ function processCrewDaily(state) {
     }
   }
 
+  // === CREW PERSONAL STORIES ===
+  // Crew members develop over time based on traits and days served
+  for (var ci2 = 0; ci2 < state.henchmen.length; ci2++) {
+    var cm = state.henchmen[ci2];
+    if (cm.injured) continue;
+    cm.daysServed = (cm.daysServed || 0) + 1;
+
+    // Loyalty-based events (2% daily chance for long-serving crew)
+    if (cm.daysServed > 30 && Math.random() < 0.02) {
+      var storyRoll = Math.random();
+
+      if (cm.loyalty > 80 && storyRoll < 0.15) {
+        // Loyal crew member brings intel
+        messages.push('💡 ' + cm.name + ' overheard something useful: "Boss, I got a tip on a big score." +$' + (1000 + Math.floor(Math.random() * 3000)).toLocaleString());
+        state.cash += 1000 + Math.floor(Math.random() * 3000);
+      } else if (cm.loyalty > 70 && storyRoll < 0.25) {
+        // Crew member asks for raise
+        var raise = 50 + Math.floor(Math.random() * 150);
+        messages.push('💬 ' + cm.name + ' wants a raise: "I\'ve been loyal. I deserve more." Daily pay +$' + raise);
+        cm.dailyPay = (cm.dailyPay || 100) + raise;
+        cm.loyalty = Math.min(100, cm.loyalty + 5);
+      } else if (storyRoll < 0.35) {
+        // Crew member has a birthday/personal moment
+        messages.push('🎂 ' + cm.name + ' had a personal milestone. They appreciate being part of the crew. +3 loyalty.');
+        cm.loyalty = Math.min(100, cm.loyalty + 3);
+      } else if (cm.loyalty < 40 && storyRoll < 0.5) {
+        // Low loyalty crew member starts skimming
+        var skimmed = Math.min(state.cash, 200 + Math.floor(Math.random() * 800));
+        state.cash = Math.max(0, state.cash - skimmed);
+        messages.push('⚠️ ' + cm.name + ' has been skimming money. -$' + skimmed.toLocaleString() + '. Confront them or let it slide.');
+        cm.betrayalRisk = Math.min(100, (cm.betrayalRisk || 0) + 10);
+      } else if (cm.daysServed > 90 && storyRoll < 0.6) {
+        // Veteran crew member shares war story
+        messages.push('📖 ' + cm.name + ' tells the crew about the old days. Morale boost. All crew +1 loyalty.');
+        for (var cj = 0; cj < state.henchmen.length; cj++) {
+          state.henchmen[cj].loyalty = Math.min(100, (state.henchmen[cj].loyalty || 50) + 1);
+        }
+      } else if (storyRoll < 0.7) {
+        // Crew member gets in trouble outside work
+        messages.push('🚨 ' + cm.name + ' got into trouble on their own time. Bar fight. They\'re bruised but okay. +2 heat.');
+        state.heat = Math.min(100, (state.heat || 0) + 2);
+      } else if (storyRoll < 0.8 && cm.daysServed > 60) {
+        // Crew member wants to go legit
+        messages.push('🌅 ' + cm.name + ': "Boss, I\'ve been thinking about getting out. My kid is growing up without me." They may leave soon unless you convince them to stay.');
+        cm._wantsOut = true;
+      } else if (cm._wantsOut && storyRoll < 0.9) {
+        // Crew member leaves peacefully
+        messages.push('👋 ' + cm.name + ' left the crew to go straight. "No hard feelings, boss. Thanks for everything."');
+        state.henchmen.splice(ci2, 1);
+        ci2--;
+        continue;
+      }
+    }
+
+    // Trait development: long-serving crew members develop new traits
+    if (cm.daysServed === 60 && (!cm.traits || cm.traits.length < 3)) {
+      var newTraits = ['loyal', 'experienced', 'streetwise', 'connected', 'tough', 'resourceful'];
+      var trait = newTraits[Math.floor(Math.random() * newTraits.length)];
+      if (!cm.traits) cm.traits = [];
+      if (!cm.traits.includes(trait)) {
+        cm.traits.push(trait);
+        messages.push('⭐ ' + cm.name + ' developed a new trait: ' + trait + '!');
+      }
+    }
+  }
+
   // === CREW JOB ASSIGNMENT EFFECTS ===
   var bodyDisposers = 0, territoryGuards = 0, frontWorkers = 0, drugRunners = 0;
   var lookouts = 0, labWorkers = 0, enforcers = 0, drivers = 0, recruiters = 0;
