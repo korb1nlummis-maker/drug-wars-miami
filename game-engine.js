@@ -3218,9 +3218,30 @@ function travel(state, destinationId, transportId) {
     endGame(state);
   }
 
+  // Generate arrival flavor text based on destination
+  var arrivalFlavor = '';
+  var gang = getTerritoryGang(destinationId);
+  var isOwned = isTerritory(state, destinationId);
+  var weatherDisp = typeof getWeatherDisplay === 'function' ? getWeatherDisplay(state) : null;
+  if (isOwned) {
+    arrivalFlavor = ' Your crew nods as you step out. This is your turf.';
+  } else if (gang) {
+    arrivalFlavor = ' ' + gang.name + ' eyes watch you from the corners.';
+  } else {
+    var flavorPool = [
+      ' The streets are alive with opportunity.',
+      ' Neon signs flicker in the humid air.',
+      ' A new district, new faces, new deals to make.',
+      ' The smell of salt water and exhaust fills the air.',
+      ' Palm trees sway above the concrete jungle.',
+    ];
+    arrivalFlavor = flavorPool[Math.floor(Math.random() * flavorPool.length)];
+  }
+  if (weatherDisp && weatherDisp.name !== 'Clear') arrivalFlavor += ' ' + weatherDisp.emoji + ' ' + weatherDisp.name + '.';
+
   return {
     success: true,
-    msg: `Traveled to ${destination.name} via ${transport.name}. (${daysUsed} day${daysUsed > 1 ? 's' : ''}, $${transport.cost.toLocaleString()})`,
+    msg: `Traveled to ${destination.name} via ${transport.name}. (${daysUsed} day${daysUsed > 1 ? 's' : ''}, $${transportCost.toLocaleString()})${arrivalFlavor}`,
     priceEvents,
     travelEvents,
     daysUsed,

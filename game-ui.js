@@ -2071,6 +2071,34 @@ function renderTradeModal() {
         <p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>
         <p>You have: ${owned} units | Cash: $${gameState.cash.toLocaleString()} | Space: ${getFreeSpace(gameState)}</p>
         ${tradeMode === 'sell' ? `<p style="font-size:0.75rem;color:var(--neon-red);">⚠️ Drug sales produce <b>dirty money</b>. Launder through front businesses to avoid investigation.</p>` : ''}
+        ${(() => {
+          // Show price comparison from known locations
+          if (!gameState.knownPrices || !selectedDrug) return '';
+          var comparisons = [];
+          for (var locId in gameState.knownPrices) {
+            if (locId === gameState.currentLocation) continue;
+            var kp = gameState.knownPrices[locId];
+            if (kp[selectedDrug] && kp[selectedDrug] > 0) {
+              var age = (gameState.day || 1) - (kp._day || 0);
+              var locName = typeof LOCATIONS !== 'undefined' ? (LOCATIONS.find(function(l) { return l.id === locId; }) || {}).name || locId : locId;
+              var diff = kp[selectedDrug] - price;
+              var pctDiff = price > 0 ? Math.round(diff / price * 100) : 0;
+              if (age <= 5) {
+                comparisons.push({ name: locName, price: kp[selectedDrug], diff: diff, pct: pctDiff, age: age });
+              }
+            }
+          }
+          if (comparisons.length === 0) return '';
+          comparisons.sort(function(a, b) { return tradeMode === 'buy' ? a.price - b.price : b.price - a.price; });
+          var top3 = comparisons.slice(0, 3);
+          return '<div style="font-size:0.65rem;color:var(--text-dim);margin:0.2rem 0;padding:0.25rem 0.4rem;background:rgba(100,100,255,0.05);border-radius:3px;border:1px solid rgba(100,100,255,0.1)">' +
+            '<span style="color:var(--neon-cyan)">📊 Price Intel:</span> ' +
+            top3.map(function(c) {
+              var color = (tradeMode === 'buy' && c.diff < 0) || (tradeMode === 'sell' && c.diff > 0) ? '#39ff14' : '#ff4444';
+              return c.name + ': $' + c.price.toLocaleString() + ' <span style="color:' + color + '">(' + (c.diff > 0 ? '+' : '') + c.pct + '%)</span>';
+            }).join(' · ') +
+          '</div>';
+        })()}
         <div style="font-size:0.7rem;color:var(--text-dim);margin:0.3rem 0;padding:0.3rem 0.5rem;background:rgba(0,255,255,0.03);border-radius:4px;border:1px solid var(--border-color);">
           <span style="margin-right:0.8rem;">📦 ${_bulkNote}</span>
           ${_repLabel ? '<span style="color:var(--neon-yellow);">⭐ ' + _repLabel + ' (' + _repBonus + ')</span>' : '<span>🏪 Trade here more for rep discounts (' + Math.max(0, 5 - _ltCount) + ' more trades)</span>'}
