@@ -4009,6 +4009,31 @@ function initCourtCase(state) {
   // Check for available fall guys
   const fallGuyIndex = state.henchmen.findIndex(h => h.type === 'fall_guy' && !h.injured);
 
+  // Build evidence strength based on investigation level and player history
+  var evidenceStrength = 0;
+  evidenceStrength += state.investigation.level * 15; // 0-75 from investigation
+  evidenceStrength += Math.min(20, totalUnits * 0.5); // caught with drugs
+  if (state.copsKilled > 0) evidenceStrength += 20;
+  if (state.heatSystem && state.heatSystem.wiretaps && state.heatSystem.wiretaps.length > 0) evidenceStrength += 15; // wiretap evidence
+  if (state.bodies_state && state.bodies_state.discoveredBodies > 0) evidenceStrength += state.bodies_state.discoveredBodies * 5;
+  evidenceStrength = Math.min(100, evidenceStrength);
+
+  // Generate witnesses based on evidence
+  var witnesses = [];
+  if (state.investigation.level >= 2) witnesses.push({ name: 'Undercover Agent Martinez', type: 'undercover', strength: 20 });
+  if (state.investigation.level >= 3) witnesses.push({ name: 'Confidential Informant', type: 'informant', strength: 15 });
+  if (state.copsKilled > 0) witnesses.push({ name: 'Officer body cam footage', type: 'forensic', strength: 25 });
+  if (state.bodies_state && state.bodies_state.discoveredBodies > 0) witnesses.push({ name: 'Forensic evidence from crime scenes', type: 'forensic', strength: 15 });
+  if (hasPremium) witnesses.push({ name: 'Lab analysis of seized substances', type: 'forensic', strength: 10 });
+  // Random civilian witness (30% chance)
+  if (Math.random() < 0.3) witnesses.push({ name: 'Anonymous civilian eyewitness', type: 'civilian', strength: 10 });
+  // Disloyal crew member might testify (check for low loyalty)
+  var potentialSnitch = state.henchmen.find(function(h) { return h.loyalty < 30 && !h.injured; });
+  if (potentialSnitch) {
+    witnesses.push({ name: potentialSnitch.name + ' (your own crew)', type: 'insider', strength: 25 });
+    evidenceStrength = Math.min(100, evidenceStrength + 15);
+  }
+
   state.courtCase = {
     charges,
     chargeSeverity,
@@ -4022,6 +4047,13 @@ function initCourtCase(state) {
     resolved: false,
     verdict: null,
     sentence: null,
+    // NEW: evidence and witness system
+    evidenceStrength: evidenceStrength,
+    witnesses: witnesses,
+    witnessesIntimidated: [],
+    pleaDealOffered: evidenceStrength > 50, // DA offers plea if case is strong
+    pleaDealAccepted: false,
+    pleaDealReduction: 0.4 + Math.random() * 0.2, // 40-60% sentence reduction
   };
 
   // Confiscate inventory on arrest
@@ -4134,11 +4166,120 @@ function useFallGuy(state) {
   };
 }
 
+function acceptPleaDeal(state) {
+  if (!state.courtCase || !state.courtCase.pleaDealOffered || state.courtCase.pleaDealAccepted) {
+    return { success: false, msg: 'No plea deal available.' };
+  }
+
+  state.courtCase.pleaDealAccepted = true;
+  state.courtCase.resolved = true;
+  state.courtCase.verdict = 'plea_deal';
+  state.investigation.timesArrested++;
+
+  // Reduced sentence
+  var offenseNum = Math.min(state.investigation.timesArrested, 4);
+  var sentence = COURT_SENTENCES[offenseNum];
+  var basePrison = sentence.prisonDays[0] + Math.floor(Math.random() * (sentence.prisonDays[1] - sentence.prisonDays[0]));
+  var prisonDays = Math.round(basePrison * state.courtCase.worstPrisonMod * state.courtCase.pleaDealReduction);
+  prisonDays = Math.max(5, prisonDays); // Minimum 5 days
+
+  // Reduced asset forfeiture
+  var baseForfeit = sentence.assetForfeiture[0];
+  var forfeitRate = Math.min(0.5, baseForfeit * state.courtCase.worstForfeitMod * 0.5); // Half the forfeiture
+  var cashLost = Math.round(state.cash * forfeitRate);
+  var bankLost = Math.round(state.bank * forfeitRate);
+  state.cash = Math.max(0, state.cash - cashLost);
+  state.bank = Math.max(0, state.bank - bankLost);
+
+  // Must cooperate - provide intel on one faction
+  if (typeof adjustRep === 'function') adjustRep(state, 'trust', -15);
+  if (typeof adjustRep === 'function') adjustRep(state, 'streetCred', -10);
+
+  // Serve time
+  state.day += prisonDays;
+  for (var i = 0; i < prisonDays; i++) {
+    state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+  }
+
+  // Mark as snitch if faction intel given
+  if (typeof applyConsequences === 'function') {
+    applyConsequences(state, {
+      traits: { snitch: 1, police_cooperator: true },
+      removeTraits: ['trusted_by_cops'],
+      message: 'Word got out that you took a deal. The streets remember.'
+    }, 'plea_deal', 'accepted');
+  }
+
+  var penalties = [];
+  penalties.push(prisonDays + ' days (plea deal, reduced from ' + Math.round(basePrison * state.courtCase.worstPrisonMod) + ')');
+  penalties.push('$' + (cashLost + bankLost).toLocaleString() + ' seized (' + Math.round(forfeitRate * 100) + '%)');
+  penalties.push('Reputation damaged — known cooperator');
+
+  state.courtCase.sentence = penalties.join('. ') + '.';
+  state.courtCase.penalties = penalties;
+
+  return {
+    success: true,
+    verdict: 'plea_deal',
+    msg: 'PLEA DEAL ACCEPTED. Reduced sentence: ' + prisonDays + ' days. But the streets know you talked.',
+    prisonDays: prisonDays,
+    penalties: penalties
+  };
+}
+
+function intimidateWitness(state, witnessIndex) {
+  if (!state.courtCase || !state.courtCase.witnesses[witnessIndex]) {
+    return { success: false, msg: 'Invalid witness.' };
+  }
+  var witness = state.courtCase.witnesses[witnessIndex];
+  if (state.courtCase.witnessesIntimidated.includes(witnessIndex)) {
+    return { success: false, msg: 'Already dealt with this witness.' };
+  }
+
+  // Requires enforcer or assassin crew
+  var hasEnforcer = state.henchmen.some(function(h) { return (h.type === 'enforcer' || h.type === 'assassin') && !h.injured; });
+  if (!hasEnforcer) {
+    return { success: false, msg: 'Need an enforcer or assassin to intimidate witnesses.' };
+  }
+
+  // Success chance based on witness type
+  var chance = 0.6;
+  if (witness.type === 'forensic') chance = 0.3; // Can't intimidate lab results
+  if (witness.type === 'insider') chance = 0.8; // Your own crew is easier
+  if (witness.type === 'undercover') chance = 0.4;
+
+  // Fear reputation helps
+  if (state.rep && state.rep.fear > 40) chance += 0.15;
+
+  var success = Math.random() < chance;
+  state.courtCase.witnessesIntimidated.push(witnessIndex);
+
+  if (success) {
+    state.courtCase.evidenceStrength = Math.max(0, state.courtCase.evidenceStrength - witness.strength);
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+    if (typeof adjustRep === 'function') adjustRep(state, 'fear', 3);
+    return {
+      success: true,
+      msg: witness.name + ' has been... persuaded to reconsider their testimony. Evidence weakened.',
+      evidenceReduction: witness.strength
+    };
+  } else {
+    state.heat = Math.min(100, (state.heat || 0) + 10);
+    state.courtCase.evidenceStrength = Math.min(100, state.courtCase.evidenceStrength + 5); // Backfires
+    return {
+      success: false,
+      msg: 'Attempt to intimidate ' + witness.name + ' FAILED. They reported it to the DA. Case just got stronger.'
+    };
+  }
+}
+
 function resolveCourtCase(state) {
   if (!state.courtCase) return { verdict: 'error', msg: 'No active case.' };
 
   const roll = Math.random();
-  const chance = state.courtCase.totalSuccessChance;
+  // Evidence strength reduces your success chance
+  var evidencePenalty = (state.courtCase.evidenceStrength || 0) / 200; // 0-0.5 penalty
+  const chance = Math.max(0.02, state.courtCase.totalSuccessChance - evidencePenalty);
   const notGuilty = roll < chance;
 
   state.investigation.timesArrested++;
@@ -4228,11 +4369,40 @@ function resolveCourtCase(state) {
       state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
     }
 
+    // Business/property seizure on conviction (RICO charges = lose fronts)
+    var businessesSeized = 0;
+    if (state.courtCase.chargeSeverity.includes('rico') && state.frontBusinesses) {
+      // RICO: feds seize ALL front businesses
+      businessesSeized = state.frontBusinesses.length;
+      state.frontBusinesses = [];
+    } else if (forfeitRate > 0.5 && state.frontBusinesses && state.frontBusinesses.length > 0) {
+      // High forfeiture: lose some businesses
+      var bizToLose = Math.ceil(state.frontBusinesses.length * forfeitRate * 0.5);
+      for (var bi = 0; bi < bizToLose && state.frontBusinesses.length > 0; bi++) {
+        state.frontBusinesses.pop();
+        businessesSeized++;
+      }
+    }
+
+    // Territory lost while in prison (rivals move in)
+    var territoriesLost = 0;
+    if (state.territory && prisonDays > 30) {
+      var terrKeys = Object.keys(state.territory).filter(function(k) { return state.territory[k].controlled; });
+      var terrToLose = Math.min(terrKeys.length, Math.floor(prisonDays / 60)); // Lose 1 per 60 days
+      for (var ti = 0; ti < terrToLose; ti++) {
+        var lostTerr = terrKeys[ti];
+        state.territory[lostTerr].controlled = false;
+        territoriesLost++;
+      }
+    }
+
     // Build detailed sentence breakdown
     const penalties = [];
     penalties.push(`${prisonDays} days in federal prison`);
     penalties.push(`$${(cashLost + bankLost).toLocaleString()} in assets seized (${Math.round(forfeitRate * 100)}%)`);
     if (crewLost > 0) penalties.push(`${crewLost} crew member${crewLost > 1 ? 's' : ''} scattered`);
+    if (businessesSeized > 0) penalties.push(`${businessesSeized} front business${businessesSeized > 1 ? 'es' : ''} seized by feds`);
+    if (territoriesLost > 0) penalties.push(`${territoriesLost} territor${territoriesLost > 1 ? 'ies' : 'y'} lost to rivals`);
     if (state.courtCase.totalUnitsConfiscated > 0) penalties.push(`${state.courtCase.totalUnitsConfiscated} units of drugs confiscated`);
 
     const sentenceText = penalties.join('. ') + '.';
