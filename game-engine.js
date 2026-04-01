@@ -2600,6 +2600,109 @@ function waitDay(state) {
     }
   }
 
+  // === ACT 2 CHARACTER STORIES (Day 500-1500) ===
+  if (charId && day >= 500 && day <= 1500 && bt) {
+    // ALL: Transition to Act 2
+    if (day >= 500 && !bt.act2_begins) {
+      bt.act2_begins = true;
+      msgs.push('📖 ACT 2: BUILDING THE EMPIRE. The streets know your name. Now the question is: how big can you get before someone takes it all away?');
+    }
+
+    // DROPOUT: Act 2 - From cook to kingpin chemist
+    if (charId === 'dropout' && day >= 550 && !bt.dropout_a2_superlab) {
+      bt.dropout_a2_superlab = true;
+      msgs.push('⚗️ You\'ve outgrown bathtubs and motel rooms. You need a REAL lab. Industrial equipment. Ventilation. The chemistry is scaling up. Time to build a superlab.');
+    }
+    if (charId === 'dropout' && day >= 700 && state.cash > 200000 && !bt.dropout_a2_formula) {
+      bt.dropout_a2_formula = true;
+      msgs.push('🧪 You\'ve perfected a formula no one else can replicate. 98% purity. Dealers call it "College" on the streets. Your brand is becoming legendary.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { master_chemist: 1 }, ability: 'purity_master' }, 'backstory', 'dropout_a2_formula');
+    }
+    if (charId === 'dropout' && day >= 900 && !bt.dropout_a2_rival_cook) {
+      bt.dropout_a2_rival_cook = true;
+      msgs.push('⚠️ A rival cook is producing something similar. Not as pure, but cheaper. "College" is being undercut. Your monopoly is threatened. Do you innovate or eliminate?');
+    }
+    if (charId === 'dropout' && day >= 1100 && !bt.dropout_a2_documentary) {
+      bt.dropout_a2_documentary = true;
+      msgs.push('📺 A journalist is making a documentary about Miami\'s "designer drug epidemic." Your formula is the star, even if they don\'t know your name... yet.');
+      state.heat = Math.min(100, (state.heat || 0) + 8);
+    }
+    if (charId === 'dropout' && day >= 1300 && !bt.dropout_a2_professor_dead) {
+      bt.dropout_a2_professor_dead = true;
+      msgs.push('💀 Professor Herrera was found dead. Overdose — on YOUR product. The man who taught you chemistry died from what you created. This weight doesn\'t wash off.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { creator_guilt: 1, haunted: 1 }, stats: { stress: 15 } }, 'backstory', 'dropout_a2_professor');
+    }
+
+    // CORNER KID: Act 2 - Block boss to district king
+    if (charId === 'corner_kid' && day >= 550 && !bt.corner_a2_rival_gang) {
+      bt.corner_a2_rival_gang = true;
+      msgs.push('⚔️ The rival crew from day one? They\'re back. Bigger. More armed. They want your blocks AND your connect. This isn\'t corner beef anymore. This is war.');
+    }
+    if (charId === 'corner_kid' && day >= 700 && !bt.corner_a2_rico_shot) {
+      bt.corner_a2_rico_shot = true;
+      msgs.push('🔫 Lil Rico took a bullet protecting your stash house. He\'s alive but changed. "I almost died for you, boss. I need to know this was worth it."');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { tested_loyalty: 1 } }, 'backstory', 'corner_a2_rico');
+    }
+    if (charId === 'corner_kid' && day >= 900 && state.cash > 100000 && !bt.corner_a2_mama_house) {
+      bt.corner_a2_mama_house = true;
+      msgs.push('🏠 You bought Mama a house. She cried. She didn\'t ask where the money came from. Maybe she\'s accepted it. Or maybe she\'s just tired of asking.');
+      state.cash -= 50000;
+      if (typeof adjustRep === 'function') adjustRep(state, 'publicImage', 5);
+    }
+    if (charId === 'corner_kid' && day >= 1100 && !bt.corner_a2_og_dies) {
+      bt.corner_a2_og_dies = true;
+      msgs.push('💀 Another OG from the block gone. Not from violence — from diabetes. The streets kill you slow too. You went to the funeral. The whole block showed up.');
+    }
+    if (charId === 'corner_kid' && day >= 1400 && !bt.corner_a2_little_bro_trouble) {
+      bt.corner_a2_little_bro_trouble = true;
+      msgs.push('🚔 Your little brother got arrested. Selling on a corner you TOLD him to stay away from. $5,000 bail. He\'s doing exactly what you did. And you can\'t stop him.');
+      state.cash = Math.max(0, state.cash - 5000);
+    }
+
+    // EX-CON: Act 2 - The institutional man builds an institution
+    if (charId === 'ex_con' && day >= 550 && !bt.excon_a2_prison_network) {
+      bt.excon_a2_prison_network = true;
+      msgs.push('🔗 Your prison network is your greatest asset. Guys getting released every month, all looking for work, all loyal. You\'re building an army of men who owe you.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { institutional: 1 } }, 'backstory', 'excon_a2_network');
+    }
+    if (charId === 'ex_con' && day >= 750 && !bt.excon_a2_old_case) {
+      bt.excon_a2_old_case = true;
+      msgs.push('📋 A reporter dug up your old case. "Former convict now suspected of running major drug operation." The story ran in the Metro section. Page 3. But still...');
+      state.heat = Math.min(100, (state.heat || 0) + 10);
+    }
+    if (charId === 'ex_con' && day >= 1000 && !bt.excon_a2_warden_deal) {
+      bt.excon_a2_warden_deal = true;
+      msgs.push('🏢 The warden who locked you up is retiring. He wants money. "I can lose evidence files. Witness statements. For the right price." Corruption goes all the way up.');
+    }
+    if (charId === 'ex_con' && day >= 1250 && !bt.excon_a2_darnell_betrayal) {
+      bt.excon_a2_darnell_betrayal = true;
+      msgs.push('🐀 Darnell — your old cellmate — was seen talking to feds. "He was in there two hours, man. That ain\'t a parking ticket." Your most trusted man might be flipping.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { betrayed: 1, paranoid: 1 } }, 'backstory', 'excon_a2_darnell');
+    }
+
+    // HUSTLER: Act 2 - The con man becomes the corporation
+    if (charId === 'hustler' && day >= 600 && !bt.hustler_a2_shell_companies) {
+      bt.hustler_a2_shell_companies = true;
+      msgs.push('🏢 You set up a network of shell companies. LLCs inside LLCs. Money flows through like water through a sieve. The hustler is becoming a businessman. The IRS will never untangle this.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { corporate_criminal: 1 }, ability: 'shell_network' }, 'backstory', 'hustler_a2_shell');
+    }
+    if (charId === 'hustler' && day >= 850 && !bt.hustler_a2_miami_society) {
+      bt.hustler_a2_miami_society = true;
+      msgs.push('🥂 You\'re invited to a charity gala in South Beach. Rubbing elbows with politicians, real estate moguls, and... other people like you. Miami society is just a higher-stakes con.');
+      if (typeof adjustRep === 'function') adjustRep(state, 'publicImage', 8);
+    }
+    if (charId === 'hustler' && day >= 1100 && !bt.hustler_a2_fbi_interest) {
+      bt.hustler_a2_fbi_interest = true;
+      msgs.push('🕵️ FBI white-collar crimes division opened a preliminary inquiry. Your shell companies are too clean. Ironically, being TOO good at laundering made them suspicious.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 10);
+    }
+    if (charId === 'hustler' && day >= 1350 && !bt.hustler_a2_bookie_debt) {
+      bt.hustler_a2_bookie_debt = true;
+      msgs.push('💀 The bookie sent a clearer message this time. A dead cat on your doorstep with a note: "You\'re next." The past doesn\'t stay buried in Miami.');
+      state.heat = Math.min(100, (state.heat || 0) + 5);
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
