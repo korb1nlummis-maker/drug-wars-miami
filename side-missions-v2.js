@@ -73,7 +73,7 @@ function checkChainCondition(state, cond) {
   if (cond.minDay && (state.day || 0) < cond.minDay) return false;
   if (cond.minCash && (state.cash || 0) < cond.minCash) return false;
   if (cond.minHeat && (state.heat || 0) < cond.minHeat) return false;
-  if (cond.minCrew && (state.crew || []).length < cond.minCrew) return false;
+  if (cond.minCrew && (state.henchmen || []).length < cond.minCrew) return false;
   if (cond.minAct) {
     const act = typeof getCurrentAct === 'function' ? getCurrentAct(state) : 1;
     if (act < cond.minAct) return false;
@@ -126,6 +126,29 @@ function resolveChainChapter(state, chainId, outcomeIndex) {
   if (fx.publicImage) { if (typeof adjustRep === 'function') adjustRep(state, 'publicImage', fx.publicImage); }
   if (fx.communityRep) { if (typeof adjustRep === 'function') adjustRep(state, 'communityRep', fx.communityRep); }
   if (fx.stress) state.stress = Math.max(0, (state.stress || 0) + fx.stress);
+
+  // Wire into consequence engine for trait tracking
+  if (typeof applyConsequences === 'function') {
+    var conseq = {};
+    if (fx.consequences) {
+      conseq = fx.consequences;
+    } else {
+      // Infer consequences from effects
+      if (fx.fear && fx.fear > 0) conseq.traits = { feared: 1 };
+      if (fx.trust && fx.trust > 5) conseq.traits = Object.assign(conseq.traits || {}, { trustworthy: 1 });
+      if (fx.cash && fx.cash > 10000) conseq.traits = Object.assign(conseq.traits || {}, { wealthy: 1 });
+      if (fx.heat && fx.heat > 10) conseq.traits = Object.assign(conseq.traits || {}, { reckless: 1 });
+      if (fx.communityRep && fx.communityRep > 0) conseq.traits = Object.assign(conseq.traits || {}, { community_minded: 1 });
+    }
+    if (Object.keys(conseq).length > 0) {
+      applyConsequences(state, conseq, 'sidemission_' + chainId, outcome.id || 'ch' + active.currentChapter);
+    }
+  }
+
+  // XP reward for completing a chapter
+  if (typeof awardXP === 'function') {
+    awardXP(state, 'complete_side_mission', 50 + active.currentChapter * 25);
+  }
 
   // Store choice in data
   active.data['ch' + active.currentChapter] = outcome.id || outcomeIndex;

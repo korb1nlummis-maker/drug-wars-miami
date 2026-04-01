@@ -2135,6 +2135,104 @@ function waitDay(state) {
     }
   }
 
+  // === CHARACTER BACKSTORY MILESTONES ===
+  // Story events that trigger at specific points based on your character
+  if (state.characterId && !state._backstoryTriggered) state._backstoryTriggered = {};
+  var bt = state._backstoryTriggered || {};
+  var charId = state.characterId;
+  var day = state.day || 1;
+
+  // DROPOUT: Professor reaches out
+  if (charId === 'dropout' && day >= 15 && !bt.dropout_professor) {
+    bt.dropout_professor = true;
+    msgs.push('📞 Professor Herrera called. "I heard about your... career change. I can teach you advanced synthesis. Meet me at the old lab." (+Chemistry contact unlocked)');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { ability: 'chemist_knowledge', message: 'Professor Herrera teaches you advanced synthesis techniques.' }, 'backstory', 'dropout_professor');
+  }
+  // DROPOUT: University sends investigators
+  if (charId === 'dropout' && day >= 60 && state.cash > 50000 && !bt.dropout_uni) {
+    bt.dropout_uni = true;
+    msgs.push('📋 University of Miami alumni office called. "We noticed you\'re doing well... would you like to make a donation?" They\'re fishing for info.');
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+  }
+
+  // CORNER KID: Mentor calls in favor
+  if (charId === 'corner_kid' && day >= 20 && !bt.corner_mentor) {
+    bt.corner_mentor = true;
+    msgs.push('📞 Your OG mentor called. "Remember who fronted you that first package, youngblood. Time to pay back. I need a favor..." New mission available.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { loyal: 1 }, message: 'Your mentor from the block needs you.' }, 'backstory', 'corner_mentor');
+  }
+
+  // EX-CON: Prison contact offers inside job
+  if (charId === 'ex_con' && day >= 25 && !bt.excon_contact) {
+    bt.excon_contact = true;
+    msgs.push('📞 Big Mike\'s cousin from inside called. "There\'s a guard who can be bought. Prison smuggling route available — big money." Import route unlocked.');
+    state.cash += 2000;
+  }
+  // EX-CON: Probation officer checks in
+  if (charId === 'ex_con' && day >= 10 && day % 30 === 0 && !bt['excon_po_' + day]) {
+    bt['excon_po_' + day] = true;
+    if (state.heat > 30) {
+      msgs.push('👮 Probation officer visited. "You\'re associating with known criminals. One more violation and you\'re going back." Heat draws extra attention on probation.');
+      state.heat = Math.min(100, (state.heat || 0) + 8);
+    } else {
+      msgs.push('👮 Probation officer visited. "Keeping your nose clean? Good. Keep it that way."');
+    }
+  }
+
+  // HUSTLER: Old mark recognizes you
+  if (charId === 'hustler' && day >= 30 && !bt.hustler_mark) {
+    bt.hustler_mark = true;
+    msgs.push('⚠️ Someone from your hustling days spotted you at the market. "Hey, that\'s the guy who sold me a fake Rolex!" Your cover story needs work. +5 heat.');
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+  }
+  // HUSTLER: Bookie offers partnership
+  if (charId === 'hustler' && day >= 45 && state.cash > 20000 && !bt.hustler_bookie) {
+    bt.hustler_bookie = true;
+    msgs.push('🎰 Your old bookie wants back in. "You got cash now. Let me run a gambling operation under your protection." New operation available.');
+  }
+
+  // CONNECTED KID: Cartel demands tribute
+  if (charId === 'connected_kid' && day >= 20 && !bt.connected_tribute) {
+    bt.connected_tribute = true;
+    var tribute = Math.min(state.cash, 5000);
+    state.cash = Math.max(0, state.cash - tribute);
+    msgs.push('💀 The cartel sent a message. "Your father owed us. Now YOU owe us." They took $' + tribute.toLocaleString() + '. The debt is far from settled.');
+  }
+  // CONNECTED KID: Father's old lieutenant offers alliance
+  if (charId === 'connected_kid' && day >= 50 && !bt.connected_lt) {
+    bt.connected_lt = true;
+    msgs.push('🤝 Your father\'s former lieutenant found you. "I served your father for 15 years. I\'ll serve you — if you prove yourself worthy." Potential crew upgrade.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { heir: 1, connected: 1 }, message: 'Your father\'s legacy opens doors.' }, 'backstory', 'connected_lt');
+  }
+
+  // CLEANSKIN: IRS audit
+  if (charId === 'cleanskin' && day >= 40 && state.dirtyMoney > 10000 && !bt.cleanskin_irs) {
+    bt.cleanskin_irs = true;
+    msgs.push('📋 IRS audit notice arrived. Your legitimate background makes discrepancies MORE suspicious, not less. They\'re looking at your tax returns.');
+    if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 8);
+  }
+
+  // VETERAN: Old enemy resurfaces
+  if (charId === 'veteran' && day >= 35 && !bt.veteran_enemy) {
+    bt.veteran_enemy = true;
+    msgs.push('⚠️ You got a message: "I found you, old man. Remember the job in \'72? I never forgot your face." An old enemy is hunting you. Watch your back.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { delay: { days: 7, event: 'veteran_ambush' }, traits: { hunted: true }, message: 'An old enemy from your enforcer days is coming for you.' }, 'backstory', 'veteran_enemy');
+  }
+
+  // IMMIGRANT: ICE raid scare
+  if (charId === 'immigrant' && day >= 30 && state.heat > 20 && !bt.immigrant_ice) {
+    bt.immigrant_ice = true;
+    msgs.push('🚨 ICE agents were spotted in your neighborhood. Your documentation won\'t survive scrutiny. Lay low for a while. +10 heat.');
+    state.heat = Math.min(100, (state.heat || 0) + 10);
+  }
+  // IMMIGRANT: Community becomes your shield
+  if (charId === 'immigrant' && day >= 60 && (state.rep && state.rep.trust > 30) && !bt.immigrant_community) {
+    bt.immigrant_community = true;
+    msgs.push('🤝 The community has your back. Local shop owners, families, church — they all vouch for you. "He\'s one of us." Community protection activated. -5 heat.');
+    state.heat = Math.max(0, (state.heat || 0) - 5);
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { community_protected: true }, ability: 'community_shield', message: 'Your community protects you from scrutiny.' }, 'backstory', 'immigrant_community');
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
