@@ -738,12 +738,43 @@ function resolveHeistAftermath(state, success, allResults) {
 
   state.heat = (state.heat || 0) + aftermath.heatGained;
 
+  // Heist loot is dirty money
+  if (aftermath.loot > 0) {
+    state.dirtyMoney = (state.dirtyMoney || 0) + aftermath.loot;
+  }
+
+  // Faction standing impact from heist
+  if (aftermath.factionDamage > 0 && typeof adjustFactionStanding === 'function') {
+    // Heist damages the faction that controls the target area
+    var targetFactions = typeof getFactionAtLocation === 'function' ? getFactionAtLocation(state, state.currentLocation) : null;
+    if (targetFactions) {
+      adjustFactionStanding(state, targetFactions, -aftermath.factionDamage);
+    }
+  }
+
+  // Consequence engine: heist traits
+  if (typeof applyConsequences === 'function') {
+    var heistConseq = { traits: {} };
+    if (success) {
+      heistConseq.traits.heist_master = 1;
+      if (aftermath.loot > 50000) heistConseq.traits.big_score = 1;
+      if (aftermath.casualtiesTotal === 0) heistConseq.traits.clean_operator = 1;
+      heistConseq.message = 'Heist successful: ' + heistType.name + '. Loot: $' + aftermath.loot.toLocaleString();
+    } else {
+      heistConseq.traits.reckless = 1;
+      if (aftermath.casualtiesTotal > 0) heistConseq.traits.costly_failure = 1;
+      heistConseq.message = 'Heist failed: ' + heistType.name + '. Heat gained.';
+    }
+    applyConsequences(state, heistConseq, 'heist_' + heist.heistId, success ? 'success' : 'failure');
+  }
+
   // Apply crew casualties back to main roster
-  if (state.crew) {
+  var crewRoster = state.henchmen || state.crew || [];
+  if (crewRoster.length > 0) {
     for (const assigned of heist.assignedCrew) {
       if (assigned.injured && assigned.originalIndex !== undefined) {
-        if (state.crew[assigned.originalIndex]) {
-          state.crew[assigned.originalIndex].injured = true;
+        if (crewRoster[assigned.originalIndex]) {
+          crewRoster[assigned.originalIndex].injured = true;
         }
       }
     }

@@ -888,10 +888,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'One of your crew members is having a birthday. The rest of the team is looking at you expectantly.',
     outcomes: [
-      { label: 'Throw a party ($5K)', effects: { cash: -5000, trust: 5, stress: -3 }, result: 'The party is legendary. Music, food, drinks. Crew morale skyrockets. Everyone feels like family.' },
-      { label: 'Buy a gift ($1K)', effects: { cash: -1000, trust: 2 }, result: 'A thoughtful gift. The birthday crew member is touched. Good leadership moment.' },
-      { label: 'Ignore it', effects: { trust: -2 }, result: 'You forgot. Or didn\'t care. Either way, the crew notices.' },
-      { label: 'Cash bonus to everyone ($500 each)', effects: { cash: -2000, trust: 3 }, result: 'Everyone gets $500. Professional and appreciated. "Boss always takes care of us."' }
+      { label: 'Throw a party ($5K)', effects: { cash: -5000, trust: 5, stress: -3, consequences: { traits: { generous: 1, leader: 1 }, message: 'You threw a legendary party for your crew. They see you as family, not just a boss.' } }, result: 'The party is legendary. Music, food, drinks. Crew morale skyrockets. Everyone feels like family.' },
+      { label: 'Buy a gift ($1K)', effects: { cash: -1000, trust: 2, consequences: { traits: { generous: 1, compassionate: 1 }, message: 'A thoughtful gesture that shows you care about the people who work for you.' } }, result: 'A thoughtful gift. The birthday crew member is touched. Good leadership moment.' },
+      { label: 'Ignore it', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'Forgetting a birthday seems small, but your crew reads it as indifference.' } }, result: 'You forgot. Or didn\'t care. Either way, the crew notices.' },
+      { label: 'Cash bonus to everyone ($500 each)', effects: { cash: -2000, trust: 3, consequences: { traits: { generous: 1, leader: 1 }, message: 'Cash speaks louder than cake. Your crew knows you take care of your people.' } }, result: 'Everyone gets $500. Professional and appreciated. "Boss always takes care of us."' }
     ]
   },
   {
@@ -899,10 +899,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 2 },
     description: 'Two of your crew members are secretly dating. It\'s not a secret anymore. The crew is gossiping.',
     outcomes: [
-      { label: 'Support it', effects: { trust: 2, stress: -1 }, result: 'Love blooms in the underworld. The couple is grateful. Paired loyalty bonus.' },
-      { label: 'Separate them (different shifts)', effects: { trust: -1 }, result: 'Professional boundaries restored. They\'re unhappy but the operation runs cleaner.' },
-      { label: 'Ignore it', effects: {}, result: 'You don\'t comment. What they do off the clock is their business.' },
-      { label: 'Use it as leverage', effects: { trust: -3, fear: 2 }, result: '"I know about you two. Don\'t give me reason to make it a problem." Cold but effective control.' }
+      { label: 'Support it', effects: { trust: 2, stress: -1, consequences: { traits: { compassionate: 1, leader: 1 }, message: 'Supporting your crew\'s personal lives builds deeper bonds than money ever could.' } }, result: 'Love blooms in the underworld. The couple is grateful. Paired loyalty bonus.' },
+      { label: 'Separate them (different shifts)', effects: { trust: -1, consequences: { traits: { disciplinarian: 1 }, message: 'Professional boundaries enforced. The operation comes first.' } }, result: 'Professional boundaries restored. They\'re unhappy but the operation runs cleaner.' },
+      { label: 'Ignore it', effects: { consequences: { traits: { cold: 1 }, message: 'You stayed out of it. Some call it wisdom, others call it indifference.' } }, result: 'You don\'t comment. What they do off the clock is their business.' },
+      { label: 'Use it as leverage', effects: { trust: -3, fear: 2, consequences: { traits: { manipulative: 1, ruthless: 1 }, message: 'Using love as a weapon. Effective control, but people remember being used.' } }, result: '"I know about you two. Don\'t give me reason to make it a problem." Cold but effective control.' }
     ]
   },
   {
@@ -910,10 +910,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member\'s parent is dying in the hospital. They\'re asking for time off during a critical operation.',
     outcomes: [
-      { label: 'Grant time off', effects: { trust: 5 }, result: 'They rush to the hospital. You\'re short-handed for a week but loyalty is permanent.' },
-      { label: 'Offer money for medical bills ($10K)', effects: { cash: -10000, trust: 8 }, result: 'The best doctors money can buy. The parent survives. Your crew member would die for you now.' },
-      { label: 'Refuse — business first', effects: { trust: -5, stress: 3 }, result: '"We have a job to finish." They stay but something breaks inside. Resentment festers.' },
-      { label: 'Handle their problem personally', effects: { cash: -5000, trust: 10, stress: 3 }, result: 'You visit the hospital yourself, pay the bills, comfort the family. This is how empires earn unshakeable loyalty.' }
+      { label: 'Grant time off', effects: { trust: 5, consequences: { traits: { compassionate: 1, loyal: 1 }, message: 'You put a human life above the operation. Your crew will remember this forever.' } }, result: 'They rush to the hospital. You\'re short-handed for a week but loyalty is permanent.' },
+      { label: 'Offer money for medical bills ($10K)', effects: { cash: -10000, trust: 8, consequences: { traits: { generous: 1, protector: 1, loyal: 1 }, message: 'Paying for a crew member\'s family medical bills — this is how unbreakable loyalty is forged.' } }, result: 'The best doctors money can buy. The parent survives. Your crew member would die for you now.' },
+      { label: 'Refuse — business first', effects: { trust: -5, stress: 3, consequences: { traits: { cold: 1, ruthless: 1 }, message: 'Business over family. Your crew sees what you really prioritize.' } }, result: '"We have a job to finish." They stay but something breaks inside. Resentment festers.' },
+      { label: 'Handle their problem personally', effects: { cash: -5000, trust: 10, stress: 3, consequences: { traits: { loyal: 1, compassionate: 1, leader: 1 }, message: 'You showed up in person. That means more than any amount of money.' } }, result: 'You visit the hospital yourself, pay the bills, comfort the family. This is how empires earn unshakeable loyalty.' }
     ]
   },
   {
@@ -921,10 +921,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member is in deep with loan sharks. $15K owed. They\'re scared and it\'s affecting their work.',
     outcomes: [
-      { label: 'Pay their debt ($15K)', effects: { cash: -15000, trust: 8 }, result: 'Debt cleared. They owe you now — not with money, but with absolute loyalty.' },
-      { label: 'Let them handle it', effects: { trust: -2 }, result: 'They scrape by, but they start skimming from your operation to pay it off. Trust eroded.' },
-      { label: 'Use it as leverage', effects: { fear: 3 }, result: '"I could pay it off... or I could tell them where you live." Their loyalty becomes obligation.' },
-      { label: 'Intimidate the loan sharks', effects: { fear: 2, trust: 5 }, result: 'You visit the sharks personally. "Their debt is cancelled." Nobody argues. Problem solved, respect earned.' }
+      { label: 'Pay their debt ($15K)', effects: { cash: -15000, trust: 8, consequences: { traits: { generous: 1, protector: 1 }, message: 'You cleared a crew member\'s debt. They owe you their life now — and they know it.' } }, result: 'Debt cleared. They owe you now — not with money, but with absolute loyalty.' },
+      { label: 'Let them handle it', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'You left your crew member to the sharks. They\'ll remember who didn\'t help.' } }, result: 'They scrape by, but they start skimming from your operation to pay it off. Trust eroded.' },
+      { label: 'Use it as leverage', effects: { fear: 3, consequences: { traits: { manipulative: 1, ruthless: 1 }, message: 'Their desperation became your tool. Fear-based loyalty has an expiration date.' } }, result: '"I could pay it off... or I could tell them where you live." Their loyalty becomes obligation.' },
+      { label: 'Intimidate the loan sharks', effects: { fear: 2, trust: 5, consequences: { traits: { protector: 1, feared: 1 }, message: 'You personally confronted dangerous men for your crew. That\'s the loyalty of a protector.' } }, result: 'You visit the sharks personally. "Their debt is cancelled." Nobody argues. Problem solved, respect earned.' }
     ]
   },
   {
@@ -932,10 +932,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A low-rank crew member reveals a hidden skill: they speak four languages, have medical training, or can hack systems.',
     outcomes: [
-      { label: 'Promote them immediately', effects: { trust: 3, streetCred: 1 }, result: 'They move up. Their talent transforms your operation. Never underestimate the quiet ones.' },
-      { label: 'Test them first', effects: { trust: 1 }, result: 'You assign them a challenge matching their skill. They excel. Earned promotion follows.' },
-      { label: 'Keep them in current role', effects: { trust: -2 }, result: 'Wasted talent. They grow frustrated. Someone else will appreciate them eventually.' },
-      { label: 'Send them for advanced training ($2K)', effects: { cash: -2000, trust: 4 }, result: 'You invest in their development. They come back twice as valuable. Smart leadership.' }
+      { label: 'Promote them immediately', effects: { trust: 3, streetCred: 1, consequences: { traits: { leader: 1, generous: 1 }, message: 'You recognized hidden talent and rewarded it. Your crew sees a boss who values them.' } }, result: 'They move up. Their talent transforms your operation. Never underestimate the quiet ones.' },
+      { label: 'Test them first', effects: { trust: 1, consequences: { traits: { leader: 1, disciplinarian: 1 }, message: 'Trust but verify. A measured leader who demands proof before promotion.' } }, result: 'You assign them a challenge matching their skill. They excel. Earned promotion follows.' },
+      { label: 'Keep them in current role', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'You ignored talent sitting right in front of you. Wasted potential breeds resentment.' } }, result: 'Wasted talent. They grow frustrated. Someone else will appreciate them eventually.' },
+      { label: 'Send them for advanced training ($2K)', effects: { cash: -2000, trust: 4, consequences: { traits: { leader: 1, generous: 1 }, message: 'Investing in your crew\'s development — that\'s how you build an empire that lasts.' } }, result: 'You invest in their development. They come back twice as valuable. Smart leadership.' }
     ]
   },
   {
@@ -943,10 +943,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 2 },
     description: 'Two crew members\' personal beef has escalated to the point of violence. The whole team is choosing sides.',
     outcomes: [
-      { label: 'Mediate personally', effects: { trust: 3, streetCred: 1 }, result: 'You sit them both down. Hard truths spoken. They shake hands. Your authority is reinforced.' },
-      { label: 'Let them fight it out', effects: { trust: -1, fear: 2, health: -5 }, result: 'Boxing ring rules. The winner gets bragging rights. One ends up in the hospital. Morale is... complicated.' },
-      { label: 'Pick a side', effects: { trust: 2, fear: 1 }, result: 'You back one of them publicly. The other falls in line or leaves. Decisive leadership.' },
-      { label: 'Fire them both', effects: { trust: -2, fear: 3 }, result: 'Zero tolerance for drama. Both are gone by sundown. The crew gets the message.' }
+      { label: 'Mediate personally', effects: { trust: 3, streetCred: 1, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You resolved conflict with words, not fists. A true leader\'s approach.' } }, result: 'You sit them both down. Hard truths spoken. They shake hands. Your authority is reinforced.' },
+      { label: 'Let them fight it out', effects: { trust: -1, fear: 2, health: -5, consequences: { traits: { ruthless: 1 }, message: 'Letting your crew beat each other — brutal conflict resolution.' } }, result: 'Boxing ring rules. The winner gets bragging rights. One ends up in the hospital. Morale is... complicated.' },
+      { label: 'Pick a side', effects: { trust: 2, fear: 1, consequences: { traits: { leader: 1 }, message: 'Decisive leadership. You picked a winner and the loser knows where they stand.' } }, result: 'You back one of them publicly. The other falls in line or leaves. Decisive leadership.' },
+      { label: 'Fire them both', effects: { trust: -2, fear: 3, consequences: { traits: { disciplinarian: 1, ruthless: 1 }, message: 'Zero tolerance. Your crew knows drama has a price — their jobs.' } }, result: 'Zero tolerance for drama. Both are gone by sundown. The crew gets the message.' }
     ]
   },
   {
@@ -954,10 +954,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1, minDay: 25 },
     description: 'A crew member\'s past catches up: old warrant, old enemy, or a witness from a previous job looking for payback.',
     outcomes: [
-      { label: 'Help them (side mission)', effects: { cash: -3000, trust: 8 }, result: 'You handle their problem. The warrant disappears, the witness recants. Your crew member is free.' },
-      { label: 'Cut them loose', effects: { trust: -5, heat: -3 }, result: 'Too much baggage. They understand but they\'re gone. One less liability.' },
-      { label: 'Hide them', effects: { cash: -1000, trust: 5 }, result: 'New identity, new safehouse. They\'re ghost. Expensive but they\'re invaluable now.' },
-      { label: 'Use the situation', effects: { fear: 2, trust: -1 }, result: '"I know about your past. Let\'s make sure it stays in the past." Another lever of control.' }
+      { label: 'Help them (side mission)', effects: { cash: -3000, trust: 8, consequences: { traits: { loyal: 1, protector: 1 }, message: 'You went on a mission to protect your crew member\'s past. That kind of loyalty is rare.' } }, result: 'You handle their problem. The warrant disappears, the witness recants. Your crew member is free.' },
+      { label: 'Cut them loose', effects: { trust: -5, heat: -3, consequences: { traits: { cold: 1, disciplinarian: 1 }, message: 'You cut a liability loose without hesitation. Pragmatic but harsh.' } }, result: 'Too much baggage. They understand but they\'re gone. One less liability.' },
+      { label: 'Hide them', effects: { cash: -1000, trust: 5, consequences: { traits: { protector: 1, loyal: 1 }, message: 'You hid a crew member from their past. They\'re a ghost now — and forever grateful.' } }, result: 'New identity, new safehouse. They\'re ghost. Expensive but they\'re invaluable now.' },
+      { label: 'Use the situation', effects: { fear: 2, trust: -1, consequences: { traits: { manipulative: 1 }, message: 'Their vulnerability became your leverage. Another puppet string in your collection.' } }, result: '"I know about your past. Let\'s make sure it stays in the past." Another lever of control.' }
     ]
   },
   {
@@ -965,10 +965,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1, minDay: 20 },
     description: 'A crew member is developing a serious substance problem. Their work is slipping. Others have noticed.',
     outcomes: [
-      { label: 'Intervention + rehab ($5K)', effects: { cash: -5000, trust: 6 }, result: 'You fund their recovery. Thirty days later they\'re back, clean, and more loyal than ever.' },
-      { label: 'Ignore it', effects: { trust: -2 }, result: 'Their performance degrades. They start stealing product. A slow-motion disaster.' },
-      { label: 'Enable them (keep them productive)', effects: { trust: 1 }, result: 'You supply their habit to keep them functional. Short-term fix, long-term destruction.' },
-      { label: 'Fire them', effects: { trust: -1, fear: 1 }, result: 'You let them go. Harsh but the operation can\'t carry dead weight. They might become an informant risk.' }
+      { label: 'Intervention + rehab ($5K)', effects: { cash: -5000, trust: 6, consequences: { traits: { compassionate: 1, loyal: 1 }, message: 'You funded recovery instead of replacement. Your crew sees a boss who invests in people.' } }, result: 'You fund their recovery. Thirty days later they\'re back, clean, and more loyal than ever.' },
+      { label: 'Ignore it', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'You watched someone spiral and did nothing. The crew takes note of your indifference.' } }, result: 'Their performance degrades. They start stealing product. A slow-motion disaster.' },
+      { label: 'Enable them (keep them productive)', effects: { trust: 1, consequences: { traits: { manipulative: 1 }, message: 'Feeding an addiction to maintain productivity. A dark form of control.' } }, result: 'You supply their habit to keep them functional. Short-term fix, long-term destruction.' },
+      { label: 'Fire them', effects: { trust: -1, fear: 1, consequences: { traits: { disciplinarian: 1 }, message: 'No room for weakness in your operation. Harsh but the message is clear.' } }, result: 'You let them go. Harsh but the operation can\'t carry dead weight. They might become an informant risk.' }
     ]
   },
   {
@@ -976,10 +976,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Someone walks into your spot wanting to join. They look capable but you know nothing about them.',
     outcomes: [
-      { label: 'Background check ($500, 2 days)', effects: { cash: -500 }, result: 'Check comes back clean. Above-average skills. A solid addition to the crew.' },
-      { label: 'Hire immediately', effects: { streetCred: 1 }, result: 'You take a chance. They could be a cop, a spy, or the best soldier you ever hired. Time will tell.' },
-      { label: 'Test them first (dangerous job)', effects: {}, result: 'You send them on a risky run. They handle it perfectly. Earned their spot.' },
-      { label: 'Turn them away', effects: {}, result: 'Not taking chances with strangers. They leave. Might end up working for your rival.' }
+      { label: 'Background check ($500, 2 days)', effects: { cash: -500, consequences: { traits: { leader: 1 }, message: 'Due diligence before trust. A careful leader builds a reliable crew.' } }, result: 'Check comes back clean. Above-average skills. A solid addition to the crew.' },
+      { label: 'Hire immediately', effects: { streetCred: 1, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You trusted your gut and gave a stranger a shot. Bold leadership.' } }, result: 'You take a chance. They could be a cop, a spy, or the best soldier you ever hired. Time will tell.' },
+      { label: 'Test them first (dangerous job)', effects: { consequences: { traits: { disciplinarian: 1 }, message: 'Trust is earned through trial by fire. A tough but fair approach.' } }, result: 'You send them on a risky run. They handle it perfectly. Earned their spot.' },
+      { label: 'Turn them away', effects: { consequences: { traits: { cold: 1 }, message: 'You turned away potential talent. Caution or paranoia — the line is thin.' } }, result: 'Not taking chances with strangers. They leave. Might end up working for your rival.' }
     ]
   },
   {
@@ -987,10 +987,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'You discover a crew member is running their own small drug operation without your knowledge or permission.',
     outcomes: [
-      { label: 'Tax them (30% cut)', effects: { cash: 500, streetCred: 1 }, result: 'You formalize their side hustle. 30% flows to you. Entrepreneurship rewarded, authority maintained.' },
-      { label: 'Shut it down', effects: { trust: -3, fear: 2 }, result: 'You kill their operation. They\'re resentful but compliant. Your territory, your rules.' },
-      { label: 'Promote them', effects: { trust: 5, streetCred: 1 }, result: 'You acknowledge their initiative and expand their role. They run a whole new district for you.' },
-      { label: 'Confront and warn', effects: { trust: -1, fear: 1 }, result: '"Ask permission next time." They nod. The message is clear without being destructive.' }
+      { label: 'Tax them (30% cut)', effects: { cash: 500, streetCred: 1, consequences: { traits: { leader: 1 }, message: 'You turned insubordination into revenue. Smart leadership over raw punishment.' } }, result: 'You formalize their side hustle. 30% flows to you. Entrepreneurship rewarded, authority maintained.' },
+      { label: 'Shut it down', effects: { trust: -3, fear: 2, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You crushed initiative to maintain control. Authority preserved through force.' } }, result: 'You kill their operation. They\'re resentful but compliant. Your territory, your rules.' },
+      { label: 'Promote them', effects: { trust: 5, streetCred: 1, consequences: { traits: { leader: 1, generous: 1 }, message: 'You rewarded initiative instead of punishing it. Your crew sees a path upward.' } }, result: 'You acknowledge their initiative and expand their role. They run a whole new district for you.' },
+      { label: 'Confront and warn', effects: { trust: -1, fear: 1, consequences: { traits: { disciplinarian: 1 }, message: 'A measured warning. Firm but not destructive. The line is drawn.' } }, result: '"Ask permission next time." They nod. The message is clear without being destructive.' }
     ]
   },
   {
@@ -998,10 +998,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member just did something exceptional — saved your life, closed a huge deal, or defended territory solo.',
     outcomes: [
-      { label: 'Bonus + promotion', effects: { cash: -5000, trust: 8, streetCred: 1 }, result: '$5K bonus and a step up. The whole crew sees that excellence is rewarded.' },
-      { label: 'Public acknowledgment', effects: { trust: 5 }, result: 'You toast them in front of everyone. Their chest swells with pride. Morale boost across the board.' },
-      { label: 'Take the credit yourself', effects: { trust: -5, streetCred: 2 }, result: 'You spin the story to highlight your leadership. They know the truth. Resentment builds.' },
-      { label: 'Say nothing', effects: { trust: -3 }, result: 'Their achievement goes unrecognized. They start wondering if loyalty is worth it.' }
+      { label: 'Bonus + promotion', effects: { cash: -5000, trust: 8, streetCred: 1, consequences: { traits: { generous: 1, leader: 1 }, message: 'You rewarded exceptional performance with cash and rank. Excellence has a clear payoff in your crew.' } }, result: '$5K bonus and a step up. The whole crew sees that excellence is rewarded.' },
+      { label: 'Public acknowledgment', effects: { trust: 5, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'Public praise costs nothing but means everything. You know how to build morale.' } }, result: 'You toast them in front of everyone. Their chest swells with pride. Morale boost across the board.' },
+      { label: 'Take the credit yourself', effects: { trust: -5, streetCred: 2, consequences: { traits: { manipulative: 1 }, message: 'You stole someone else\'s glory. Your crew sees through it even if the streets don\'t.' } }, result: 'You spin the story to highlight your leadership. They know the truth. Resentment builds.' },
+      { label: 'Say nothing', effects: { trust: -3, consequences: { traits: { cold: 1 }, message: 'Silence when praise is due. Your crew is learning that loyalty goes unrewarded.' } }, result: 'Their achievement goes unrecognized. They start wondering if loyalty is worth it.' }
     ]
   },
   {
@@ -1009,10 +1009,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 2, minDay: 30 },
     description: 'You planted false info and it leaked. One of your crew talked to outsiders. Was it innocent or betrayal?',
     outcomes: [
-      { label: 'Investigate quietly (3 days)', effects: { stress: 3 }, result: 'Surveillance reveals it was casual bar talk, not intentional. Warning issued privately.' },
-      { label: 'Confront everyone', effects: { fear: 3, trust: -2 }, result: 'You call a meeting and demand answers. The guilty party sweats. Trust is shaken but the leak is plugged.' },
-      { label: 'Set a second trap', effects: { streetCred: 2 }, result: 'You feed different false info to each suspect. When police act on one version, you know exactly who talked.' },
-      { label: 'Let it go', effects: { trust: -1 }, result: 'Maybe it was nothing. You move on. But the doubt lingers.' }
+      { label: 'Investigate quietly (3 days)', effects: { stress: 3, consequences: { traits: { cunning: 1, leader: 1 }, message: 'Patient investigation over knee-jerk reaction. You found the truth without breaking trust.' } }, result: 'Surveillance reveals it was casual bar talk, not intentional. Warning issued privately.' },
+      { label: 'Confront everyone', effects: { fear: 3, trust: -2, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'A public confrontation. The leak is plugged but paranoia spreads through the ranks.' } }, result: 'You call a meeting and demand answers. The guilty party sweats. Trust is shaken but the leak is plugged.' },
+      { label: 'Set a second trap', effects: { streetCred: 2, consequences: { traits: { cunning: 1 }, message: 'Counter-intelligence at its finest. You played the chess game three moves ahead.' } }, result: 'You feed different false info to each suspect. When police act on one version, you know exactly who talked.' },
+      { label: 'Let it go', effects: { trust: -1, consequences: { traits: { cold: 1 }, message: 'You let a potential leak slide. The doubt will eat at you — and your crew knows you noticed.' } }, result: 'Maybe it was nothing. You move on. But the doubt lingers.' }
     ]
   },
   {
@@ -1020,10 +1020,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1, minDay: 40 },
     description: 'A loyal crew member confides they want out. Open a restaurant, go back to school — leave the life.',
     outcomes: [
-      { label: 'Support their dream ($10K)', effects: { cash: -10000, trust: 10, publicImage: 1 }, result: 'You fund their exit. They leave with tears and gratitude. A contact in the legit world forever.' },
-      { label: 'Discourage them', effects: { trust: -3 }, result: '"You think the straight world wants you?" They stay but the light goes out of their eyes.' },
-      { label: 'Force them to stay', effects: { fear: 5, trust: -8 }, result: '"Nobody leaves." They comply. But they\'ll look for the first chance to betray or escape.' },
-      { label: 'Let them go clean', effects: { trust: 5 }, result: 'No strings, no debts. They walk. One less soldier but zero resentment. Clean separation.' }
+      { label: 'Support their dream ($10K)', effects: { cash: -10000, trust: 10, publicImage: 1, consequences: { traits: { generous: 1, compassionate: 1 }, message: 'You funded someone\'s dream of a better life. A rare act of genuine kindness in this world.' } }, result: 'You fund their exit. They leave with tears and gratitude. A contact in the legit world forever.' },
+      { label: 'Discourage them', effects: { trust: -3, consequences: { traits: { cold: 1, manipulative: 1 }, message: 'You crushed someone\'s hope to keep them under your thumb. Control through despair.' } }, result: '"You think the straight world wants you?" They stay but the light goes out of their eyes.' },
+      { label: 'Force them to stay', effects: { fear: 5, trust: -8, consequences: { traits: { ruthless: 1, feared: 1 }, message: '"Nobody leaves." You run a prison, not a crew. Fear replaces loyalty.' } }, result: '"Nobody leaves." They comply. But they\'ll look for the first chance to betray or escape.' },
+      { label: 'Let them go clean', effects: { trust: 5, consequences: { traits: { compassionate: 1, loyal: 1 }, message: 'You let someone walk away freely. Respect without chains — that takes real strength.' } }, result: 'No strings, no debts. They walk. One less soldier but zero resentment. Clean separation.' }
     ]
   },
   {
@@ -1031,9 +1031,9 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'The crew organizes a movie night at the safehouse. Scarface is on the TV. Someone ordered pizza.',
     outcomes: [
-      { label: 'Join in', effects: { stress: -3, trust: 2 }, result: 'You sit down with your crew. For one night, you\'re just people watching a movie. Everyone needs this.' },
-      { label: 'Stay in your office', effects: { stress: 1 }, result: 'Work doesn\'t stop. You hear laughter through the door. Sometimes leadership is lonely.' },
-      { label: 'Upgrade to home theater ($3K)', effects: { cash: -3000, trust: 4, stress: -5 }, result: 'You drop $3K on a massive screen and sound system. Movie nights become a weekly tradition. Morale soars.' }
+      { label: 'Join in', effects: { stress: -3, trust: 2, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You sat with your crew as an equal. These moments build the bonds that hold empires together.' } }, result: 'You sit down with your crew. For one night, you\'re just people watching a movie. Everyone needs this.' },
+      { label: 'Stay in your office', effects: { stress: 1, consequences: { traits: { cold: 1 }, message: 'You chose work over your crew. The laughter on the other side of the door says what you\'re missing.' } }, result: 'Work doesn\'t stop. You hear laughter through the door. Sometimes leadership is lonely.' },
+      { label: 'Upgrade to home theater ($3K)', effects: { cash: -3000, trust: 4, stress: -5, consequences: { traits: { generous: 1, leader: 1 }, message: 'You invested in crew morale. Movie nights become sacred — and your crew feels valued.' } }, result: 'You drop $3K on a massive screen and sound system. Movie nights become a weekly tradition. Morale soars.' }
     ]
   },
   {
@@ -1041,10 +1041,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1, minCash: 2000 },
     description: 'A retired special forces instructor offers to train your crew. One week, intensive program.',
     outcomes: [
-      { label: 'Combat training ($2K/person)', effects: { cash: -4000, fear: 2 }, result: 'Seven days of hell. Your crew comes out tougher, meaner, and more disciplined.' },
-      { label: 'Stealth training ($2K/person)', effects: { cash: -4000, streetCred: 1 }, result: 'Infiltration, surveillance, counter-surveillance. Your crew operates like shadows now.' },
-      { label: 'Leadership training ($2K/person)', effects: { cash: -4000, trust: 3 }, result: 'Communication, teamwork, chain of command. Your operation runs 30% smoother.' },
-      { label: 'Skip it', effects: {}, result: 'Street knowledge is the only training they need. Or so you tell yourself.' }
+      { label: 'Combat training ($2K/person)', effects: { cash: -4000, fear: 2, consequences: { traits: { leader: 1, protector: 1 }, message: 'You invested in making your crew dangerous. A well-trained crew is a protected crew.' } }, result: 'Seven days of hell. Your crew comes out tougher, meaner, and more disciplined.' },
+      { label: 'Stealth training ($2K/person)', effects: { cash: -4000, streetCred: 1, consequences: { traits: { leader: 1, cunning: 1 }, message: 'Your crew moves like ghosts now. Knowledge is the best weapon you can give them.' } }, result: 'Infiltration, surveillance, counter-surveillance. Your crew operates like shadows now.' },
+      { label: 'Leadership training ($2K/person)', effects: { cash: -4000, trust: 3, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You built leaders within your crew. A chain of command that runs itself.' } }, result: 'Communication, teamwork, chain of command. Your operation runs 30% smoother.' },
+      { label: 'Skip it', effects: { consequences: { traits: { cold: 1 }, message: 'You passed on training your crew. The streets are the teacher now — and they\'re unforgiving.' } }, result: 'Street knowledge is the only training they need. Or so you tell yourself.' }
     ]
   },
   {
@@ -1052,10 +1052,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member invites you to their cultural celebration — Haitian Fet Gede, Cuban Nochebuena, Jamaican Independence.',
     outcomes: [
-      { label: 'Attend', effects: { trust: 3, communityRep: 2, stress: -2 }, result: 'You show up and show respect. New contacts from the community. Cultural bonds strengthen loyalty.' },
-      { label: 'Fund the celebration ($5K)', effects: { cash: -5000, communityRep: 8, trust: 5 }, result: 'You bankroll the whole event. The community celebrates you as a patron. Deep cultural ties established.' },
-      { label: 'Decline politely', effects: { trust: -1 }, result: 'You bow out. They understand. But a small opportunity for connection is lost.' },
-      { label: 'Send a gift instead', effects: { cash: -500, trust: 1 }, result: 'A respectful contribution without the time commitment. Adequate but not memorable.' }
+      { label: 'Attend', effects: { trust: 3, communityRep: 2, stress: -2, consequences: { traits: { loyal: 1, compassionate: 1 }, message: 'You showed respect for your crew\'s culture. Bonds forged through understanding last longest.' } }, result: 'You show up and show respect. New contacts from the community. Cultural bonds strengthen loyalty.' },
+      { label: 'Fund the celebration ($5K)', effects: { cash: -5000, communityRep: 8, trust: 5, consequences: { traits: { generous: 1, leader: 1 }, message: 'You bankrolled a cultural celebration. Patron of the community, not just its kingpin.' } }, result: 'You bankroll the whole event. The community celebrates you as a patron. Deep cultural ties established.' },
+      { label: 'Decline politely', effects: { trust: -1, consequences: { traits: { cold: 1 }, message: 'You declined a personal invitation. Sometimes absence speaks louder than presence.' } }, result: 'You bow out. They understand. But a small opportunity for connection is lost.' },
+      { label: 'Send a gift instead', effects: { cash: -500, trust: 1, consequences: { traits: { generous: 1 }, message: 'A gesture of respect, even if distant. Better than nothing, less than enough.' } }, result: 'A respectful contribution without the time commitment. Adequate but not memorable.' }
     ]
   },
   {
@@ -1063,10 +1063,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member has been painting in their downtime. Turns out they\'re genuinely talented. Gallery-level work.',
     outcomes: [
-      { label: 'Fund their art ($5K)', effects: { cash: -5000, trust: 5, publicImage: 2 }, result: 'You sponsor a gallery showing. The art world buzzes. Money laundering through art sales begins.' },
-      { label: 'Encourage as hobby', effects: { trust: 2, stress: -1 }, result: 'You hang their work in the safehouse. A reminder that beauty exists even in this life.' },
-      { label: 'Mock it', effects: { trust: -4, stress: 1 }, result: '"We\'re not running an art school." The brushes go in the trash. Something dies inside them.' },
-      { label: 'Use for forgery operation', effects: { cash: 3000, streetCred: 1 }, result: 'Their talent pivots to counterfeiting documents and forging signatures. Profitable but they wanted more.' }
+      { label: 'Fund their art ($5K)', effects: { cash: -5000, trust: 5, publicImage: 2, consequences: { traits: { generous: 1, compassionate: 1 }, message: 'You invested in a crew member\'s passion. Art and ambition — you nurture both.' } }, result: 'You sponsor a gallery showing. The art world buzzes. Money laundering through art sales begins.' },
+      { label: 'Encourage as hobby', effects: { trust: 2, stress: -1, consequences: { traits: { compassionate: 1 }, message: 'You encouraged creativity in a world that usually crushes it. Small kindness, big impact.' } }, result: 'You hang their work in the safehouse. A reminder that beauty exists even in this life.' },
+      { label: 'Mock it', effects: { trust: -4, stress: 1, consequences: { traits: { ruthless: 1, cold: 1 }, message: 'You crushed a crew member\'s soul for no reason. Cruelty without purpose.' } }, result: '"We\'re not running an art school." The brushes go in the trash. Something dies inside them.' },
+      { label: 'Use for forgery operation', effects: { cash: 3000, streetCred: 1, consequences: { traits: { manipulative: 1 }, message: 'You redirected their dream into your profit machine. Talent exploited, not celebrated.' } }, result: 'Their talent pivots to counterfeiting documents and forging signatures. Profitable but they wanted more.' }
     ]
   },
   {
@@ -1074,10 +1074,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 2, minDay: 20 },
     description: 'A rival faction is actively trying to recruit one of your best crew members. Better pay, better position.',
     outcomes: [
-      { label: 'Counter-offer (raise)', effects: { cash: -3000, trust: 4 }, result: 'You match and beat the rival\'s offer. They stay. Loyalty reinforced through investment.' },
-      { label: 'Let them go', effects: { trust: -1 }, result: 'They leave peacefully. You lose talent but avoid conflict. They might share intel about you though.' },
-      { label: 'Confront the rival', effects: { heat: 5, fear: 3 }, result: 'You visit the rival boss. "Poach my crew again and we have a war." They back off.' },
-      { label: 'Make an example', effects: { fear: 8, trust: -5 }, result: 'The crew member who considered leaving is punished publicly. Nobody else will think about defecting.' }
+      { label: 'Counter-offer (raise)', effects: { cash: -3000, trust: 4, consequences: { traits: { generous: 1, leader: 1 }, message: 'You fought for your crew with money, not threats. Loyalty earned through investment.' } }, result: 'You match and beat the rival\'s offer. They stay. Loyalty reinforced through investment.' },
+      { label: 'Let them go', effects: { trust: -1, consequences: { traits: { cold: 1 }, message: 'You let talent walk without a fight. Pragmatic or indifferent — your crew wonders which.' } }, result: 'They leave peacefully. You lose talent but avoid conflict. They might share intel about you though.' },
+      { label: 'Confront the rival', effects: { heat: 5, fear: 3, consequences: { traits: { protector: 1, feared: 1 }, message: 'You personally confronted a rival boss over your crew. A protector who inspires fear.' } }, result: 'You visit the rival boss. "Poach my crew again and we have a war." They back off.' },
+      { label: 'Make an example', effects: { fear: 8, trust: -5, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'A brutal public punishment. Nobody will think about leaving — or trusting you — again.' } }, result: 'The crew member who considered leaving is punished publicly. Nobody else will think about defecting.' }
     ]
   },
   {
@@ -1085,10 +1085,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'After a recent loss — a death, a bust, territory taken — your crew\'s morale has bottomed out.',
     outcomes: [
-      { label: 'Throw a rally party ($5K)', effects: { cash: -5000, trust: 4, stress: -3 }, result: 'Food, drinks, music. You remind them why they chose this life. Spirits lift.' },
-      { label: 'Cash bonuses ($1K each)', effects: { cash: -4000, trust: 3 }, result: 'Money talks. Everyone gets a stack. The sting of loss fades behind fresh bills.' },
-      { label: 'Inspiring speech', effects: { trust: 5, streetCred: 1 }, result: 'You gather everyone. Raw honesty about the situation. A vision of what comes next. They believe in you again.' },
-      { label: 'Do nothing', effects: { trust: -3 }, result: 'Morale continues to sink. Two crew members stop showing up. One starts drinking on the job.' }
+      { label: 'Throw a rally party ($5K)', effects: { cash: -5000, trust: 4, stress: -3, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You rallied your crew when they were at their lowest. Morale rebuilt from the ashes.' } }, result: 'Food, drinks, music. You remind them why they chose this life. Spirits lift.' },
+      { label: 'Cash bonuses ($1K each)', effects: { cash: -4000, trust: 3, consequences: { traits: { generous: 1, leader: 1 }, message: 'Money as medicine for morale. Your crew knows you share the wealth, especially in dark times.' } }, result: 'Money talks. Everyone gets a stack. The sting of loss fades behind fresh bills.' },
+      { label: 'Inspiring speech', effects: { trust: 5, streetCred: 1, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'Your words lifted broken spirits. A true leader speaks and people believe again.' } }, result: 'You gather everyone. Raw honesty about the situation. A vision of what comes next. They believe in you again.' },
+      { label: 'Do nothing', effects: { trust: -3, consequences: { traits: { cold: 1 }, message: 'Your crew needed you and you gave them silence. Morale doesn\'t fix itself.' } }, result: 'Morale continues to sink. Two crew members stop showing up. One starts drinking on the job.' }
     ]
   },
   {
@@ -1096,10 +1096,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 2, minDay: 40 },
     description: 'Irrefutable evidence: one of your crew members is feeding information to the police. A rat in the house.',
     outcomes: [
-      { label: 'Turn them into a double agent', effects: { streetCred: 5, heat: -10 }, result: 'You feed false info through them. The police chase ghosts. Masterful counter-intelligence.' },
-      { label: 'Exile them', effects: { fear: 2, trust: -1 }, result: 'You cut them loose with a warning. They may inform more, but at least they\'re not inside anymore.' },
-      { label: 'Confront publicly', effects: { fear: 5, trust: -3 }, result: 'You expose them in front of everyone. The message is clear. Snitches face consequences.' },
-      { label: 'Handle it quietly', effects: { fear: 3, heat: -5 }, result: 'They disappear. No announcement. The crew doesn\'t know specifics but they sense what happened.' }
+      { label: 'Turn them into a double agent', effects: { streetCred: 5, heat: -10, consequences: { traits: { cunning: 1, leader: 1 }, message: 'You turned a threat into an asset. Counter-intelligence mastery — feeding cops false trails.' } }, result: 'You feed false info through them. The police chase ghosts. Masterful counter-intelligence.' },
+      { label: 'Exile them', effects: { fear: 2, trust: -1, consequences: { traits: { disciplinarian: 1 }, message: 'You removed the rat but showed mercy. A measured response to betrayal.' } }, result: 'You cut them loose with a warning. They may inform more, but at least they\'re not inside anymore.' },
+      { label: 'Confront publicly', effects: { fear: 5, trust: -3, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'A public execution of trust. Every crew member now knows the price of snitching.' } }, result: 'You expose them in front of everyone. The message is clear. Snitches face consequences.' },
+      { label: 'Handle it quietly', effects: { fear: 3, heat: -5, consequences: { traits: { ruthless: 1 }, message: 'Silent justice. The rat vanished and nobody asks questions. That silence speaks volumes.' } }, result: 'They disappear. No announcement. The crew doesn\'t know specifics but they sense what happened.' }
     ]
   },
   {
@@ -1107,10 +1107,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member just inherited serious money. Suddenly they don\'t need this life anymore.',
     outcomes: [
-      { label: 'Congratulate and let them choose', effects: { trust: 3 }, result: 'They decide to invest half in your operation and keep working. Loyalty by choice is the strongest kind.' },
-      { label: 'Ask them to invest in the operation', effects: { cash: 10000, trust: 1 }, result: 'They put $10K into your business. Willing investment, shared profits. Partnership strengthened.' },
-      { label: 'Try to keep them around', effects: { trust: -1 }, result: 'They stay but their heart isn\'t in it. Rich people don\'t take the same risks.' },
-      { label: 'Celebrate with the whole crew', effects: { trust: 5, stress: -2 }, result: 'You throw a party for their good fortune. No jealousy, just joy. Rare moments of genuine happiness.' }
+      { label: 'Congratulate and let them choose', effects: { trust: 3, consequences: { traits: { compassionate: 1, leader: 1 }, message: 'You respected their freedom to choose. Loyalty given freely is the strongest kind.' } }, result: 'They decide to invest half in your operation and keep working. Loyalty by choice is the strongest kind.' },
+      { label: 'Ask them to invest in the operation', effects: { cash: 10000, trust: 1, consequences: { traits: { leader: 1 }, message: 'You turned their windfall into a business opportunity. Shared investment, shared future.' } }, result: 'They put $10K into your business. Willing investment, shared profits. Partnership strengthened.' },
+      { label: 'Try to keep them around', effects: { trust: -1, consequences: { traits: { manipulative: 1 }, message: 'You tried to hold onto someone who no longer needs you. Possessiveness disguised as loyalty.' } }, result: 'They stay but their heart isn\'t in it. Rich people don\'t take the same risks.' },
+      { label: 'Celebrate with the whole crew', effects: { trust: 5, stress: -2, consequences: { traits: { leader: 1, charismatic: 1 }, message: 'You celebrated someone else\'s good fortune. No jealousy, just joy — rare in this world.' } }, result: 'You throw a party for their good fortune. No jealousy, just joy. Rare moments of genuine happiness.' }
     ]
   },
   {
@@ -1118,10 +1118,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1, minDay: 20 },
     description: 'Your crew member\'s teenage kid got arrested for shoplifting. They\'re asking you for help.',
     outcomes: [
-      { label: 'Get the kid a lawyer ($3K)', effects: { cash: -3000, trust: 8 }, result: 'Charges dropped. The crew member is forever grateful. "You looked out for my family."' },
-      { label: 'Bail the kid out ($500)', effects: { cash: -500, trust: 4 }, result: 'Quick bail, minimal drama. The kid gets a scare. Your crew member owes you.' },
-      { label: 'Stay out of it', effects: { trust: -2 }, result: 'Not your problem. But your crew member expected family support from their family. Disappointment sets in.' },
-      { label: 'Talk to the kid personally', effects: { trust: 6, communityRep: 1 }, result: 'You sit the kid down and scare them straight. No cost, maximum impact. The parent is deeply moved.' }
+      { label: 'Get the kid a lawyer ($3K)', effects: { cash: -3000, trust: 8, consequences: { traits: { protector: 1, loyal: 1 }, message: 'You protected your crew member\'s family. That kind of loyalty extends beyond the job.' } }, result: 'Charges dropped. The crew member is forever grateful. "You looked out for my family."' },
+      { label: 'Bail the kid out ($500)', effects: { cash: -500, trust: 4, consequences: { traits: { loyal: 1, compassionate: 1 }, message: 'A quick and practical solution. You helped without making a big deal of it.' } }, result: 'Quick bail, minimal drama. The kid gets a scare. Your crew member owes you.' },
+      { label: 'Stay out of it', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'Your crew member asked for help with their family. You said no. They won\'t forget.' } }, result: 'Not your problem. But your crew member expected family support from their family. Disappointment sets in.' },
+      { label: 'Talk to the kid personally', effects: { trust: 6, communityRep: 1, consequences: { traits: { leader: 1, compassionate: 1 }, message: 'You took time to personally mentor a crew member\'s kid. Leadership beyond the operation.' } }, result: 'You sit the kid down and scare them straight. No cost, maximum impact. The parent is deeply moved.' }
     ]
   },
   {
@@ -1129,10 +1129,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'Someone outside your organization is spreading ugly rumors about one of your crew members.',
     outcomes: [
-      { label: 'Protect your crew member', effects: { trust: 5, fear: 2 }, result: 'You find the source and shut them down. Your crew sees you have their back. Loyalty deepens.' },
-      { label: 'Use the information', effects: { trust: -3, fear: 1 }, result: 'You leverage the rumor for your own purposes. Effective but your crew member feels betrayed.' },
-      { label: 'Ignore it', effects: { trust: -2, stress: 1 }, result: 'The rumors spread. Your crew member\'s morale tanks. They needed you and you weren\'t there.' },
-      { label: 'Investigate the truth', effects: { trust: 1 }, result: 'You look into it. Turns out the rumor is half-true. Now you have a full picture before deciding.' }
+      { label: 'Protect your crew member', effects: { trust: 5, fear: 2, consequences: { traits: { protector: 1, loyal: 1 }, message: 'You defended your crew member against outside attacks. The crew sees a boss who has their back.' } }, result: 'You find the source and shut them down. Your crew sees you have their back. Loyalty deepens.' },
+      { label: 'Use the information', effects: { trust: -3, fear: 1, consequences: { traits: { manipulative: 1 }, message: 'You weaponized gossip about your own crew member. Effective but deeply treacherous.' } }, result: 'You leverage the rumor for your own purposes. Effective but your crew member feels betrayed.' },
+      { label: 'Ignore it', effects: { trust: -2, stress: 1, consequences: { traits: { cold: 1 }, message: 'Your crew member was under attack and you did nothing. Loyalty is a two-way street.' } }, result: 'The rumors spread. Your crew member\'s morale tanks. They needed you and you weren\'t there.' },
+      { label: 'Investigate the truth', effects: { trust: 1, consequences: { traits: { cunning: 1, leader: 1 }, message: 'You sought truth before action. A measured and intelligent response.' } }, result: 'You look into it. Turns out the rumor is half-true. Now you have a full picture before deciding.' }
     ]
   },
   {
@@ -1140,10 +1140,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'A former associate from your early days shows up. They\'ve been in prison for three years. They look different.',
     outcomes: [
-      { label: 'Rehire them', effects: { trust: 3, streetCred: 1 }, result: 'Old loyalty, new determination. They know the streets and they owe you for the welcome back.' },
-      { label: 'Hear them out', effects: {}, result: 'They have intel from prison about other operations. Valuable information regardless of whether you rehire.' },
-      { label: 'Turn them away', effects: { trust: -2 }, result: 'Prison changes people. You can\'t trust who they are now. They leave bitter.' },
-      { label: 'Set them up in a legitimate job', effects: { cash: -2000, communityRep: 2 }, result: 'You fund their fresh start. They become a bridge to the legitimate world for you.' }
+      { label: 'Rehire them', effects: { trust: 3, streetCred: 1, consequences: { traits: { loyal: 1, leader: 1 }, message: 'You welcomed back an old friend. Loyalty rewarded, even after years apart.' } }, result: 'Old loyalty, new determination. They know the streets and they owe you for the welcome back.' },
+      { label: 'Hear them out', effects: { consequences: { traits: { cunning: 1 }, message: 'You gathered intel without commitment. Careful and calculating as always.' } }, result: 'They have intel from prison about other operations. Valuable information regardless of whether you rehire.' },
+      { label: 'Turn them away', effects: { trust: -2, consequences: { traits: { cold: 1 }, message: 'You turned away someone from your past. Prison changes people — but so does rejection.' } }, result: 'Prison changes people. You can\'t trust who they are now. They leave bitter.' },
+      { label: 'Set them up in a legitimate job', effects: { cash: -2000, communityRep: 2, consequences: { traits: { compassionate: 1, generous: 1 }, message: 'You gave someone a second chance at a clean life. Generosity with no strings attached.' } }, result: 'You fund their fresh start. They become a bridge to the legitimate world for you.' }
     ]
   },
 
@@ -1155,10 +1155,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Someone approaches wanting to buy. They\'re asking all the right questions but something feels off.',
     outcomes: [
-      { label: 'Sell to them', effects: { cash: 500 }, result: 'They pay and leave. Turns out they were just a nervous first-timer. Lucky.' },
-      { label: 'Refuse the sale', effects: {}, result: 'You turn them down. They leave disappointed. Later, you see them flash a badge to someone else. Close call.' },
-      { label: 'Test them first', effects: { streetCred: 2 }, result: 'You ask them to hold product first. A real buyer would, a cop won\'t. They hesitate and walk away. Confirmed.' },
-      { label: 'Feed them bad intel', effects: { streetCred: 1, heat: -3 }, result: 'You sell them garbage product and a fake supplier name. Let the cops chase ghosts.' }
+      { label: 'Sell to them', effects: { cash: 500, consequences: { traits: { bold: 1 }, message: 'You sold to a stranger without checking. Bold or reckless — luck decided this time.' } }, result: 'They pay and leave. Turns out they were just a nervous first-timer. Lucky.' },
+      { label: 'Refuse the sale', effects: { consequences: { traits: { cunning: 1, elusive: 1 }, message: 'Your instincts told you something was off and you listened. Avoiding traps is a survival skill.' } }, result: 'You turn them down. They leave disappointed. Later, you see them flash a badge to someone else. Close call.' },
+      { label: 'Test them first', effects: { streetCred: 2, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You tested a suspected undercover and exposed them. Street-smart counter-intelligence.' } }, result: 'You ask them to hold product first. A real buyer would, a cop won\'t. They hesitate and walk away. Confirmed.' },
+      { label: 'Feed them bad intel', effects: { streetCred: 1, heat: -3, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You fed garbage to a potential cop. Misdirection is an art form.' } }, result: 'You sell them garbage product and a fake supplier name. Let the cops chase ghosts.' }
     ]
   },
   {
@@ -1166,10 +1166,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'A beat cop pulls you aside. "$500 a week and I never see what happens on this corner. Deal?"',
     outcomes: [
-      { label: 'Accept ($500/week)', effects: { cash: -500, heat: -10 }, result: 'A handshake deal. They patrol your block like nothing\'s there. Worth every penny.' },
-      { label: 'Negotiate to $300/week', effects: { cash: -300, heat: -7 }, result: 'They take the lower rate. Cheaper protection but they might not try as hard.' },
-      { label: 'Decline', effects: {}, result: 'You don\'t trust dirty cops. They shrug and walk away. Business as usual.' },
-      { label: 'Report to Internal Affairs', effects: { heat: -15, trust: -5 }, result: 'You tip off IA anonymously. The cop gets investigated. Major heat reduction but you\'re flirting with snitch territory.' }
+      { label: 'Accept ($500/week)', effects: { cash: -500, heat: -10, consequences: { traits: { corruptor: 1 }, message: 'You put a cop on payroll. Corruption is a tool, and you just bought protection.' } }, result: 'A handshake deal. They patrol your block like nothing\'s there. Worth every penny.' },
+      { label: 'Negotiate to $300/week', effects: { cash: -300, heat: -7, consequences: { traits: { corruptor: 1, cunning: 1 }, message: 'You bribed a cop AND negotiated a discount. Corruption on a budget.' } }, result: 'They take the lower rate. Cheaper protection but they might not try as hard.' },
+      { label: 'Decline', effects: { consequences: { traits: { defiant: 1 }, message: 'You turned down a dirty cop\'s offer. Independence from corruption — or just paranoia.' } }, result: 'You don\'t trust dirty cops. They shrug and walk away. Business as usual.' },
+      { label: 'Report to Internal Affairs', effects: { heat: -15, trust: -5, consequences: { traits: { snitch: 1, cooperator: 1 }, message: 'You reported a corrupt cop to IA. Effective but dangerously close to snitch territory.' } }, result: 'You tip off IA anonymously. The cop gets investigated. Major heat reduction but you\'re flirting with snitch territory.' }
     ]
   },
   {
@@ -1177,10 +1177,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 10, minHeat: 10 },
     description: 'A civilian saw one of your operations. They haven\'t gone to police yet but they\'re nervous and talking to neighbors.',
     outcomes: [
-      { label: 'Bribe them ($5K)', effects: { cash: -5000, heat: -5 }, result: 'Money buys silence. They take the cash and suddenly remember nothing.' },
-      { label: 'Intimidate', effects: { fear: 3, publicImage: -3, heat: -3 }, result: 'A visit from your crew. No words needed. They won\'t talk. But the neighborhood notices.' },
-      { label: 'Befriend them over time', effects: { trust: 2, publicImage: 1 }, result: 'You become a helpful neighbor. Fix their car, check on their kids. They decide you\'re "not so bad."' },
-      { label: 'Ignore and hope', effects: { heat: 5 }, result: 'You gamble on their silence. They talk. Heat goes up.' }
+      { label: 'Bribe them ($5K)', effects: { cash: -5000, heat: -5, consequences: { traits: { corruptor: 1 }, message: 'Money buys silence. Another witness neutralized through cash.' } }, result: 'Money buys silence. They take the cash and suddenly remember nothing.' },
+      { label: 'Intimidate', effects: { fear: 3, publicImage: -3, heat: -3, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'You terrorized a civilian into silence. Fear is your weapon of choice.' } }, result: 'A visit from your crew. No words needed. They won\'t talk. But the neighborhood notices.' },
+      { label: 'Befriend them over time', effects: { trust: 2, publicImage: 1, consequences: { traits: { cunning: 1, charismatic: 1 }, message: 'You turned a potential witness into a friendly neighbor. Charm over force.' } }, result: 'You become a helpful neighbor. Fix their car, check on their kids. They decide you\'re "not so bad."' },
+      { label: 'Ignore and hope', effects: { heat: 5, consequences: { traits: { fugitive: 1 }, message: 'You gambled on silence and lost. Sometimes inaction is the worst decision.' } }, result: 'You gamble on their silence. They talk. Heat goes up.' }
     ]
   },
   {
@@ -1188,10 +1188,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 30 },
     description: 'Police arrive at your property with a warrant. Sirens, badges, the whole show. They\'re going through everything.',
     outcomes: [
-      { label: 'You had advance warning', effects: { heat: -5 }, result: 'Your corrupt cop tipped you off. The stash was moved last night. They find nothing.' },
-      { label: 'Hidden room saves you', effects: {}, result: 'The construction investment pays off. They tear the place apart but miss the hidden compartment.' },
-      { label: 'They find something small', effects: { heat: 10, cash: -5000 }, result: 'A small amount they missed. Misdemeanor charge, $5K in legal fees. Could have been much worse.' },
-      { label: 'Major bust', effects: { heat: 25, cash: -20000 }, result: 'They find the motherload. Arrest, booking, bail. $20K in product and legal fees. Devastating setback.' }
+      { label: 'You had advance warning', effects: { heat: -5, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'Your corrupt network paid off — cops found nothing. Always one step ahead.' } }, result: 'Your corrupt cop tipped you off. The stash was moved last night. They find nothing.' },
+      { label: 'Hidden room saves you', effects: { consequences: { traits: { cunning: 1, elusive: 1 }, message: 'Your preparation paid off. The hidden room was worth every penny of construction.' } }, result: 'The construction investment pays off. They tear the place apart but miss the hidden compartment.' },
+      { label: 'They find something small', effects: { heat: 10, cash: -5000, consequences: { traits: { strategic: 1 }, message: 'A small loss from a big search. Your lawyer kept the damage to a minimum.' } }, result: 'A small amount they missed. Misdemeanor charge, $5K in legal fees. Could have been much worse.' },
+      { label: 'Major bust', effects: { heat: 25, cash: -20000, consequences: { traits: { fugitive: 1 }, message: 'A devastating raid. The law caught up with you today. Rebuilding from the wreckage.' } }, result: 'They find the motherload. Arrest, booking, bail. $20K in product and legal fees. Devastating setback.' }
     ]
   },
   {
@@ -1199,10 +1199,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'Internal Affairs is investigating your corrupt police contact. They\'re getting close. Your cop is sweating.',
     outcomes: [
-      { label: 'Cut ties immediately', effects: { heat: 5 }, result: 'You sever all contact. Safe but you lose your inside man.' },
-      { label: 'Warn the cop', effects: { trust: 3, heat: 3 }, result: 'You tip them off. They cover their tracks. Your relationship strengthens but IA is still sniffing around.' },
-      { label: 'Frame someone else', effects: { heat: -5, streetCred: 2 }, result: 'You plant evidence pointing IA at another corrupt cop. Your guy walks clean.' },
-      { label: 'Let it play out', effects: { stress: 5 }, result: 'You do nothing. Fifty-fifty whether your cop survives the investigation. Stressful waiting game.' }
+      { label: 'Cut ties immediately', effects: { heat: 5, consequences: { traits: { cunning: 1 }, message: 'You severed a compromised connection before it could burn you. Self-preservation first.' } }, result: 'You sever all contact. Safe but you lose your inside man.' },
+      { label: 'Warn the cop', effects: { trust: 3, heat: 3, consequences: { traits: { corruptor: 1, loyal: 1 }, message: 'You protected your corrupt cop from IA. Loyalty to your assets, even dirty ones.' } }, result: 'You tip them off. They cover their tracks. Your relationship strengthens but IA is still sniffing around.' },
+      { label: 'Frame someone else', effects: { heat: -5, streetCred: 2, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You redirected an investigation onto an innocent target. Masterful misdirection.' } }, result: 'You plant evidence pointing IA at another corrupt cop. Your guy walks clean.' },
+      { label: 'Let it play out', effects: { stress: 5, consequences: { traits: { cautious: 1 }, message: 'You gambled on inaction. Sometimes the best move is no move — sometimes it isn\'t.' } }, result: 'You do nothing. Fifty-fifty whether your cop survives the investigation. Stressful waiting game.' }
     ]
   },
   {
@@ -1210,10 +1210,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 40 },
     description: 'Miami PD gets a new police chief. The entire department\'s priorities are about to shift.',
     outcomes: [
-      { label: 'Research the new chief', effects: {}, result: 'Aggressive anti-drug crusader. Heat generation increases 25% for the next 30 days. Adjust accordingly.' },
-      { label: 'Reach out through intermediary', effects: { cash: -10000, heat: -10 }, result: 'The new chief has expensive tastes. $10K establishes a line of communication.' },
-      { label: 'Lay low for a month', effects: { cash: -2000, heat: -5 }, result: 'You reduce operations temporarily. Revenue drops but so does your profile.' },
-      { label: 'Business as usual', effects: { heat: 10 }, result: 'The new chief is running a media campaign. Anyone who doesn\'t adjust gets made an example. Heat rises.' }
+      { label: 'Research the new chief', effects: { consequences: { traits: { cunning: 1 }, message: 'Information is power. You know your enemy before they know you.' } }, result: 'Aggressive anti-drug crusader. Heat generation increases 25% for the next 30 days. Adjust accordingly.' },
+      { label: 'Reach out through intermediary', effects: { cash: -10000, heat: -10, consequences: { traits: { corruptor: 1 }, message: 'You reached out to corrupt the new police chief. No one is above your payroll.' } }, result: 'The new chief has expensive tastes. $10K establishes a line of communication.' },
+      { label: 'Lay low for a month', effects: { cash: -2000, heat: -5, consequences: { traits: { elusive: 1 }, message: 'You went quiet while the new chief settled in. Patience is the mark of a survivor.' } }, result: 'You reduce operations temporarily. Revenue drops but so does your profile.' },
+      { label: 'Business as usual', effects: { heat: 10, consequences: { traits: { defiant: 1, brave: 1 }, message: 'You refused to change for anyone. Defiance in the face of a crackdown.' } }, result: 'The new chief is running a media campaign. Anyone who doesn\'t adjust gets made an example. Heat rises.' }
     ]
   },
   {
@@ -1221,10 +1221,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 40 },
     description: 'Police announce a $50K reward for information on your operation. Every crew member just became a potential traitor.',
     outcomes: [
-      { label: 'Increase crew pay', effects: { cash: -5000, trust: 3 }, result: 'You raise everyone\'s cut. Loyalty through prosperity. Nobody\'s tempted by snitch money.' },
-      { label: 'Make a public statement', effects: { fear: 5, streetCred: 3 }, result: 'You send a message through the grapevine about what happens to snitches. Crystal clear.' },
-      { label: 'Internal security sweep', effects: { cash: -2000, trust: -1, heat: -3 }, result: 'You sweep for bugs, check phones, monitor behavior. Professional paranoia. Effective.' },
-      { label: 'Ignore it', effects: { trust: -3, heat: 5 }, result: 'You shrug it off. But $50K is $50K, and someone in your crew is doing the math.' }
+      { label: 'Increase crew pay', effects: { cash: -5000, trust: 3, consequences: { traits: { leader: 1, generous: 1 }, message: 'You outbid the police bounty with loyalty pay. Your crew stays bought — by you.' } }, result: 'You raise everyone\'s cut. Loyalty through prosperity. Nobody\'s tempted by snitch money.' },
+      { label: 'Make a public statement', effects: { fear: 5, streetCred: 3, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'Your message about snitches echoed through the streets. Fear keeps mouths shut.' } }, result: 'You send a message through the grapevine about what happens to snitches. Crystal clear.' },
+      { label: 'Internal security sweep', effects: { cash: -2000, trust: -1, heat: -3, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'Professional counter-surveillance. You swept the operation clean of compromises.' } }, result: 'You sweep for bugs, check phones, monitor behavior. Professional paranoia. Effective.' },
+      { label: 'Ignore it', effects: { trust: -3, heat: 5, consequences: { traits: { cold: 1 }, message: 'You ignored a bounty on your own head. Overconfidence or indifference — neither is good.' } }, result: 'You shrug it off. But $50K is $50K, and someone in your crew is doing the math.' }
     ]
   },
   {
@@ -1232,10 +1232,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 30, minDay: 25 },
     description: 'A media outlet publishes leaked police evidence. Your photo is on the evening news. Everyone knows your face now.',
     outcomes: [
-      { label: 'Disguise and lay low', effects: { heat: 15, cash: -2000 }, result: 'New appearance, limited movement. You watch yourself on the news from a motel room.' },
-      { label: 'Control the narrative (journalist contact)', effects: { cash: -10000, publicImage: 5, heat: 5 }, result: 'Your media contact runs a counter-story: community leader, philanthropist. The narrative shifts.' },
-      { label: 'Leave town temporarily', effects: { cash: -5000, heat: -10 }, result: 'Two weeks in another city. Things cool down. When you return, new news has taken over.' },
-      { label: 'Embrace the fame', effects: { fear: 5, streetCred: 5, heat: 20 }, result: 'You lean into it. Notoriety has its own currency. The streets worship you. The police hate you more.' }
+      { label: 'Disguise and lay low', effects: { heat: 15, cash: -2000, consequences: { traits: { elusive: 1, fugitive: 1 }, message: 'You went underground when your face hit the news. A fugitive in plain sight.' } }, result: 'New appearance, limited movement. You watch yourself on the news from a motel room.' },
+      { label: 'Control the narrative (journalist contact)', effects: { cash: -10000, publicImage: 5, heat: 5, consequences: { traits: { cunning: 1, charismatic: 1 }, message: 'You controlled the media narrative. The truth is whatever you pay for it to be.' } }, result: 'Your media contact runs a counter-story: community leader, philanthropist. The narrative shifts.' },
+      { label: 'Leave town temporarily', effects: { cash: -5000, heat: -10, consequences: { traits: { fugitive: 1, elusive: 1 }, message: 'You fled the city when heat got too high. Strategic retreat or running scared — depends who you ask.' } }, result: 'Two weeks in another city. Things cool down. When you return, new news has taken over.' },
+      { label: 'Embrace the fame', effects: { fear: 5, streetCred: 5, heat: 20, consequences: { traits: { defiant: 1, brave: 1 }, message: 'You embraced notoriety. The police know your face, and you don\'t care. Legendary defiance.' } }, result: 'You lean into it. Notoriety has its own currency. The streets worship you. The police hate you more.' }
     ]
   },
   {
@@ -1243,10 +1243,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'Police raid your biggest rival\'s operation. Their dealers are scattering, customers are stranded, territory is up for grabs.',
     outcomes: [
-      { label: 'Grab their territory', effects: { streetCred: 3, heat: 5 }, result: 'You move fast. Their corners are yours by nightfall. Expansion during chaos.' },
-      { label: 'Recruit their fleeing crew', effects: { trust: 1 }, result: 'You offer shelter and jobs to their best people. Instant talent acquisition.' },
-      { label: 'Buy their product cheap', effects: { cash: -2000 }, result: 'Panicking dealers sell at 30 cents on the dollar. You stockpile at incredible prices.' },
-      { label: 'Stay away — cops are active', effects: {}, result: 'Smart. Heavy police presence means anyone in the area gets extra scrutiny.' }
+      { label: 'Grab their territory', effects: { streetCred: 3, heat: 5, consequences: { traits: { cunning: 1, bold: 1 }, message: 'You seized territory during a rival\'s bust. Opportunistic expansion while cops are distracted.' } }, result: 'You move fast. Their corners are yours by nightfall. Expansion during chaos.' },
+      { label: 'Recruit their fleeing crew', effects: { trust: 1, consequences: { traits: { leader: 1 }, message: 'You offered shelter to scattered dealers. Building your army from another\'s ruins.' } }, result: 'You offer shelter and jobs to their best people. Instant talent acquisition.' },
+      { label: 'Buy their product cheap', effects: { cash: -2000, consequences: { traits: { cunning: 1 }, message: 'You bought product at fire-sale prices during the chaos. Opportunistic and smart.' } }, result: 'Panicking dealers sell at 30 cents on the dollar. You stockpile at incredible prices.' },
+      { label: 'Stay away — cops are active', effects: { consequences: { traits: { elusive: 1 }, message: 'You avoided a hot zone swarming with police. Patience over greed.' } }, result: 'Smart. Heavy police presence means anyone in the area gets extra scrutiny.' }
     ]
   },
   {
@@ -1254,10 +1254,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'Police are investigating you for a crime you didn\'t commit. Someone else\'s mess is landing on your doorstep.',
     outcomes: [
-      { label: 'Provide an alibi', effects: { heat: -5 }, result: 'Your alibi checks out. Investigation dropped. But you had to reveal your actual location that night.' },
-      { label: 'Let them investigate (wastes their time)', effects: { heat: 3 }, result: 'They chase a dead end. Resources wasted on you means less pressure elsewhere.' },
-      { label: 'Frame the real perpetrator', effects: { heat: -10, streetCred: 2 }, result: 'You point the cops at the actual criminal. Justice served, ironically by you.' },
-      { label: 'Lawyer up ($5K)', effects: { cash: -5000, heat: -8 }, result: 'Your attorney makes the case disappear through legal procedure. Clean and professional.' }
+      { label: 'Provide an alibi', effects: { heat: -5, consequences: { traits: { cunning: 1 }, message: 'Your alibi held up. You navigated a false accusation with careful planning.' } }, result: 'Your alibi checks out. Investigation dropped. But you had to reveal your actual location that night.' },
+      { label: 'Let them investigate (wastes their time)', effects: { heat: 3, consequences: { traits: { defiant: 1 }, message: 'You let the cops waste their time chasing a dead end. Passive defiance.' } }, result: 'They chase a dead end. Resources wasted on you means less pressure elsewhere.' },
+      { label: 'Frame the real perpetrator', effects: { heat: -10, streetCred: 2, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You pointed cops at the real criminal to save yourself. Justice by proxy.' } }, result: 'You point the cops at the actual criminal. Justice served, ironically by you.' },
+      { label: 'Lawyer up ($5K)', effects: { cash: -5000, heat: -8, consequences: { traits: { strategic: 1 }, message: 'Your lawyer made it all go away. The legal system works great when you can afford it.' } }, result: 'Your attorney makes the case disappear through legal procedure. Clean and professional.' }
     ]
   },
   {
@@ -1265,10 +1265,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 40, minDay: 30 },
     description: 'After a minor charge, the court slaps an ankle monitor on you. 30 days of restricted movement.',
     outcomes: [
-      { label: 'Comply (limited operations)', effects: { heat: -15, cash: -3000 }, result: 'You run things by phone for a month. Revenue drops but you stay clean.' },
-      { label: 'Tamper with it (risky)', effects: { heat: 10, streetCred: 3 }, result: 'A tech guy disables the GPS for hours at a time. You operate normally but if caught, it\'s prison.' },
-      { label: 'Bribe probation officer ($5K)', effects: { cash: -5000, heat: -5 }, result: 'Your PO develops convenient blindness. Business as usual behind closed doors.' },
-      { label: 'Delegate everything', effects: { trust: 3, cash: -1000 }, result: 'Your top lieutenant runs the show. Good test of their capability. You coach from the couch.' }
+      { label: 'Comply (limited operations)', effects: { heat: -15, cash: -3000, consequences: { traits: { cooperator: 1 }, message: 'You complied with the court order. Playing by the rules — for now.' } }, result: 'You run things by phone for a month. Revenue drops but you stay clean.' },
+      { label: 'Tamper with it (risky)', effects: { heat: 10, streetCred: 3, consequences: { traits: { defiant: 1, fugitive: 1 }, message: 'You hacked your ankle monitor. Defying the court with technology — brazen and dangerous.' } }, result: 'A tech guy disables the GPS for hours at a time. You operate normally but if caught, it\'s prison.' },
+      { label: 'Bribe probation officer ($5K)', effects: { cash: -5000, heat: -5, consequences: { traits: { corruptor: 1 }, message: 'Another official on your payroll. Your probation officer now works for you.' } }, result: 'Your PO develops convenient blindness. Business as usual behind closed doors.' },
+      { label: 'Delegate everything', effects: { trust: 3, cash: -1000, consequences: { traits: { strategic: 1, leader: 1 }, message: 'You delegated during confinement. A good leader builds systems that run without them.' } }, result: 'Your top lieutenant runs the show. Good test of their capability. You coach from the couch.' }
     ]
   },
   {
@@ -1276,10 +1276,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 25 },
     description: 'You spot a plain white van with dark windows parked near your property. It\'s been there for three days.',
     outcomes: [
-      { label: 'Move operations immediately', effects: { cash: -3000, heat: -5 }, result: 'Relocate everything to backup locations. Expensive but you deny them any useful footage.' },
-      { label: 'Sweep for bugs', effects: { cash: -1000, heat: -3 }, result: 'Professional sweep finds two listening devices. Destroyed. Your conversations are private again.' },
-      { label: 'Feed disinformation', effects: { streetCred: 2 }, result: 'You stage fake conversations and activities. Let them waste months on false leads.' },
-      { label: 'Confront them', effects: { fear: 1, heat: 5 }, result: 'You knock on the van. "Nice day for a stakeout, officers." They deny everything but they know you know.' }
+      { label: 'Move operations immediately', effects: { cash: -3000, heat: -5, consequences: { traits: { elusive: 1 }, message: 'You relocated under surveillance pressure. They got nothing. Ghost protocol.' } }, result: 'Relocate everything to backup locations. Expensive but you deny them any useful footage.' },
+      { label: 'Sweep for bugs', effects: { cash: -1000, heat: -3, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You found and destroyed listening devices. Counter-surveillance mastery.' } }, result: 'Professional sweep finds two listening devices. Destroyed. Your conversations are private again.' },
+      { label: 'Feed disinformation', effects: { streetCred: 2, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You fed false intel to the surveillance team. Let them waste months chasing ghosts.' } }, result: 'You stage fake conversations and activities. Let them waste months on false leads.' },
+      { label: 'Confront them', effects: { fear: 1, heat: 5, consequences: { traits: { defiant: 1, brave: 1 }, message: 'You knocked on a police surveillance van. Brazen defiance that borders on reckless.' } }, result: 'You knock on the van. "Nice day for a stakeout, officers." They deny everything but they know you know.' }
     ]
   },
   {
@@ -1287,10 +1287,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 50, minCash: 20000 },
     description: 'Federal agents freeze your bank account and seize a property. Civil asset forfeiture. They don\'t even need a conviction.',
     outcomes: [
-      { label: 'Fight it legally ($30K)', effects: { cash: -30000, heat: -5 }, result: 'Your lawyer battles for 60 days. You recover 60% of the assets. Expensive but partially successful.' },
-      { label: 'Accept the loss', effects: { cash: -20000, stress: 5 }, result: 'You write it off. $20K gone. But fighting would have cost more and drawn more attention.' },
-      { label: 'Hide remaining assets fast', effects: { cash: -5000, streetCred: 1 }, result: 'You scramble to move everything into untraceable accounts. Some loss but most is preserved.' },
-      { label: 'Negotiate through contacts', effects: { cash: -15000 }, result: 'Your political connections intervene quietly. A portion is returned. The rest is the cost of doing business.' }
+      { label: 'Fight it legally ($30K)', effects: { cash: -30000, heat: -5, consequences: { traits: { strategic: 1 }, message: 'You fought asset forfeiture through the courts. Expensive but principled legal defense.' } }, result: 'Your lawyer battles for 60 days. You recover 60% of the assets. Expensive but partially successful.' },
+      { label: 'Accept the loss', effects: { cash: -20000, stress: 5, consequences: { traits: { cautious: 1 }, message: 'You accepted the loss rather than draw more attention. Sometimes retreat is strategy.' } }, result: 'You write it off. $20K gone. But fighting would have cost more and drawn more attention.' },
+      { label: 'Hide remaining assets fast', effects: { cash: -5000, streetCred: 1, consequences: { traits: { elusive: 1, cunning: 1 }, message: 'You scrambled to hide assets before the feds could grab more. Fast thinking under pressure.' } }, result: 'You scramble to move everything into untraceable accounts. Some loss but most is preserved.' },
+      { label: 'Negotiate through contacts', effects: { cash: -15000, consequences: { traits: { corruptor: 1 }, message: 'Political connections recovered your seized assets. Corruption reaches every level.' } }, result: 'Your political connections intervene quietly. A portion is returned. The rest is the cost of doing business.' }
     ]
   },
   {
@@ -1298,10 +1298,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'During a recent arrest of your crew member, the cops made a procedural mistake. Your lawyer spotted it immediately.',
     outcomes: [
-      { label: 'Exploit the error (lawyer)', effects: { cash: -5000, heat: -10 }, result: 'Case dismissed. Your crew member walks. The prosecution is furious but powerless.' },
-      { label: 'Negotiate reduced charges', effects: { cash: -3000, heat: -5 }, result: 'Your lawyer leverages the error into a plea deal. Minimal consequences.' },
-      { label: 'File a complaint', effects: { publicImage: 2, heat: -3 }, result: 'You file a formal complaint about police misconduct. Good PR and a slap on their wrist.' },
-      { label: 'Save it for later leverage', effects: {}, result: 'You document everything but don\'t act yet. This card might be more valuable played later.' }
+      { label: 'Exploit the error (lawyer)', effects: { cash: -5000, heat: -10, consequences: { traits: { strategic: 1 }, message: 'Your lawyer exploited a police procedural error. The system\'s own rules set you free.' } }, result: 'Case dismissed. Your crew member walks. The prosecution is furious but powerless.' },
+      { label: 'Negotiate reduced charges', effects: { cash: -3000, heat: -5, consequences: { traits: { strategic: 1, cunning: 1 }, message: 'You leveraged a police mistake into a favorable plea. Legal chess at its finest.' } }, result: 'Your lawyer leverages the error into a plea deal. Minimal consequences.' },
+      { label: 'File a complaint', effects: { publicImage: 2, heat: -3, consequences: { traits: { defiant: 1 }, message: 'You filed a complaint against the police. Fighting the system with its own paperwork.' } }, result: 'You file a formal complaint about police misconduct. Good PR and a slap on their wrist.' },
+      { label: 'Save it for later leverage', effects: { consequences: { traits: { cunning: 1 }, message: 'You banked a police error for future use. Patience and planning — a card held is a card of power.' } }, result: 'You document everything but don\'t act yet. This card might be more valuable played later.' }
     ]
   },
   {
@@ -1309,10 +1309,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'A journalist is doing an investigative series on Miami\'s drug trade. They\'re asking questions in your neighborhood.',
     outcomes: [
-      { label: 'Recruit them as contact', effects: { cash: -5000, streetCred: 2 }, result: 'For $5K they become your media insider. Plant stories, suppress stories, gather intel.' },
-      { label: 'Feed them rival intel', effects: { heat: -5, streetCred: 1 }, result: 'Anonymous tips about your competitors. The article exposes THEM. Your operation stays in the shadows.' },
-      { label: 'Intimidate them away', effects: { fear: 2, publicImage: -2 }, result: 'A threatening message and they drop the story. Free press has limits when confronted with fear.' },
-      { label: 'Ignore them', effects: { heat: 5 }, result: 'They keep digging. Some of what they find points to you. Heat from media attention.' }
+      { label: 'Recruit them as contact', effects: { cash: -5000, streetCred: 2, consequences: { traits: { corruptor: 1, cunning: 1 }, message: 'You bought a journalist. The pen is mightier than the sword — when you own the pen.' } }, result: 'For $5K they become your media insider. Plant stories, suppress stories, gather intel.' },
+      { label: 'Feed them rival intel', effects: { heat: -5, streetCred: 1, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You weaponized journalism against your rivals. The spotlight lands on them, not you.' } }, result: 'Anonymous tips about your competitors. The article exposes THEM. Your operation stays in the shadows.' },
+      { label: 'Intimidate them away', effects: { fear: 2, publicImage: -2, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'You threatened a journalist into silence. Press freedom ends where your power begins.' } }, result: 'A threatening message and they drop the story. Free press has limits when confronted with fear.' },
+      { label: 'Ignore them', effects: { heat: 5, consequences: { traits: { cold: 1 }, message: 'You ignored an investigative reporter. Their story will write itself — with you in it.' } }, result: 'They keep digging. Some of what they find points to you. Heat from media attention.' }
     ]
   },
   {
@@ -1320,10 +1320,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'A new community policing initiative launches in your district. More foot patrols, town halls, neighborhood watch.',
     outcomes: [
-      { label: 'Attend meetings (blend in)', effects: { publicImage: 2, heat: -3 }, result: 'You attend as a "concerned citizen." Perfect intel on police plans. Plus good PR.' },
-      { label: 'Bribe community organizers', effects: { cash: -3000, heat: -5 }, result: 'Key organizers get quiet payments. The initiative loses steam in your area.' },
-      { label: 'Redirect attention elsewhere', effects: { cash: -2000, heat: -3 }, result: 'You fund complaints about crime in OTHER districts. Police resources shift away from yours.' },
-      { label: 'Reduce operations temporarily', effects: { cash: -2000, heat: -8 }, result: 'You scale back until the initiative loses funding (they always do). Patient play.' }
+      { label: 'Attend meetings (blend in)', effects: { publicImage: 2, heat: -3, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You infiltrated a community policing meeting as a citizen. Intel gathered from the inside.' } }, result: 'You attend as a "concerned citizen." Perfect intel on police plans. Plus good PR.' },
+      { label: 'Bribe community organizers', effects: { cash: -3000, heat: -5, consequences: { traits: { corruptor: 1 }, message: 'You bribed the community organizers. The anti-crime initiative dies quietly in your district.' } }, result: 'Key organizers get quiet payments. The initiative loses steam in your area.' },
+      { label: 'Redirect attention elsewhere', effects: { cash: -2000, heat: -3, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You redirected police resources away from your area. Misdirection on a civic level.' } }, result: 'You fund complaints about crime in OTHER districts. Police resources shift away from yours.' },
+      { label: 'Reduce operations temporarily', effects: { cash: -2000, heat: -8, consequences: { traits: { elusive: 1 }, message: 'You scaled back while cops saturated the area. Patience over profit — a survivor\'s instinct.' } }, result: 'You scale back until the initiative loses funding (they always do). Patient play.' }
     ]
   },
   {
@@ -1331,10 +1331,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'You get called for jury duty. Of all the ironic situations. The defendant looks familiar.',
     outcomes: [
-      { label: 'Attend (5 days lost)', effects: { stress: 3, publicImage: 1 }, result: 'You serve your civic duty. The irony isn\'t lost on you. Interesting view of the justice system from inside.' },
-      { label: 'Skip it (small fine)', effects: { cash: -500 }, result: 'You pay the fine and go about your business. $500 for freedom is a bargain.' },
-      { label: 'Attend — influence the verdict', effects: { trust: 5, streetCred: 3 }, result: 'The defendant IS your associate. You sway the jury. Not guilty. The ultimate inside job.' },
-      { label: 'Get excused legitimately', effects: {}, result: 'You claim a hardship and get dismissed. No fine, no time lost, no drama.' }
+      { label: 'Attend (5 days lost)', effects: { stress: 3, publicImage: 1, consequences: { traits: { cooperator: 1 }, message: 'You served on a jury as a law-abiding citizen. The irony was thick enough to cut.' } }, result: 'You serve your civic duty. The irony isn\'t lost on you. Interesting view of the justice system from inside.' },
+      { label: 'Skip it (small fine)', effects: { cash: -500, consequences: { traits: { defiant: 1 }, message: 'You paid a fine to skip jury duty. The system is just another obstacle to work around.' } }, result: 'You pay the fine and go about your business. $500 for freedom is a bargain.' },
+      { label: 'Attend — influence the verdict', effects: { trust: 5, streetCred: 3, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You manipulated a jury from the inside. The justice system became your personal tool.' } }, result: 'The defendant IS your associate. You sway the jury. Not guilty. The ultimate inside job.' },
+      { label: 'Get excused legitimately', effects: { consequences: { traits: { elusive: 1 }, message: 'You slipped out of jury duty cleanly. Even civic obligations can be evaded with finesse.' } }, result: 'You claim a hardship and get dismissed. No fine, no time lost, no drama.' }
     ]
   },
   {
@@ -1342,10 +1342,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 40, minHeat: 20 },
     description: 'Detectives reopen an old case from your early days. New forensic technology. Your DNA might be in the system.',
     outcomes: [
-      { label: 'Destroy old evidence', effects: { cash: -3000, heat: -5 }, result: 'You visit old locations and clean up traces. Professional crime scene sanitation.' },
-      { label: 'Lawyer up immediately ($10K)', effects: { cash: -10000, heat: -8 }, result: 'Your attorney intervenes early. Insufficient evidence. Case goes cold again.' },
-      { label: 'Contact old witnesses', effects: { cash: -5000, fear: 3 }, result: 'You visit people who might remember. Generous donations to their memory loss.' },
-      { label: 'Flee jurisdiction temporarily', effects: { cash: -8000, heat: -15 }, result: 'You disappear for three weeks. By the time you return, they\'ve moved on to other cases.' }
+      { label: 'Destroy old evidence', effects: { cash: -3000, heat: -5, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You sanitized old crime scenes before detectives could revisit them. Covering tracks like a professional.' } }, result: 'You visit old locations and clean up traces. Professional crime scene sanitation.' },
+      { label: 'Lawyer up immediately ($10K)', effects: { cash: -10000, heat: -8, consequences: { traits: { strategic: 1 }, message: 'Your lawyer killed a cold case before it could warm up. Legal defense at its finest.' } }, result: 'Your attorney intervenes early. Insufficient evidence. Case goes cold again.' },
+      { label: 'Contact old witnesses', effects: { cash: -5000, fear: 3, consequences: { traits: { feared: 1, corruptor: 1 }, message: 'You visited old witnesses with generous donations to their memory loss. Silence purchased.' } }, result: 'You visit people who might remember. Generous donations to their memory loss.' },
+      { label: 'Flee jurisdiction temporarily', effects: { cash: -8000, heat: -15, consequences: { traits: { fugitive: 1, elusive: 1 }, message: 'You fled the jurisdiction while a cold case heated up. Running is surviving.' } }, result: 'You disappear for three weeks. By the time you return, they\'ve moved on to other cases.' }
     ]
   },
   {
@@ -1353,10 +1353,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minHeat: 40 },
     description: 'The prosecutor offers a deal: reduced charges in exchange for information on your suppliers or allies.',
     outcomes: [
-      { label: 'Refuse completely', effects: { fear: 2, streetCred: 5 }, result: 'You shut your mouth. Word gets out that you\'re solid. Street legend status.' },
-      { label: 'Give them crumbs', effects: { heat: -10, trust: -3 }, result: 'You feed them outdated intel on small-time players. Enough to satisfy them, not enough to matter.' },
-      { label: 'Counter-offer through lawyer', effects: { cash: -5000, heat: -15 }, result: 'Your lawyer negotiates immunity for cooperation on an unrelated case. Masterful legal chess.' },
-      { label: 'Take the deal (betray)', effects: { heat: -30, trust: -20, streetCred: -10 }, result: 'You give them everything. You walk free but your reputation is destroyed. Former allies become enemies.' }
+      { label: 'Refuse completely', effects: { fear: 2, streetCred: 5, consequences: { traits: { defiant: 1, brave: 1 }, message: 'You refused a plea deal and kept your mouth shut. Solid as a rock. Street legend.' } }, result: 'You shut your mouth. Word gets out that you\'re solid. Street legend status.' },
+      { label: 'Give them crumbs', effects: { heat: -10, trust: -3, consequences: { traits: { cunning: 1, snitch: 1 }, message: 'You gave the cops just enough to satisfy them. Walking the thin line between cooperation and betrayal.' } }, result: 'You feed them outdated intel on small-time players. Enough to satisfy them, not enough to matter.' },
+      { label: 'Counter-offer through lawyer', effects: { cash: -5000, heat: -15, consequences: { traits: { strategic: 1, cunning: 1 }, message: 'Your lawyer turned a plea deal into an immunity deal. Legal chess, masterfully played.' } }, result: 'Your lawyer negotiates immunity for cooperation on an unrelated case. Masterful legal chess.' },
+      { label: 'Take the deal (betray)', effects: { heat: -30, trust: -20, streetCred: -10, consequences: { traits: { snitch: 1, cooperator: 1 }, message: 'You cooperated fully with the prosecution. Freedom at the cost of everything you built.' } }, result: 'You give them everything. You walk free but your reputation is destroyed. Former allies become enemies.' }
     ]
   },
   {
@@ -1364,10 +1364,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'A police officer was killed. If it was during one of your operations, the heat is about to be volcanic.',
     outcomes: [
-      { label: 'Lay low completely', effects: { heat: 15, cash: -3000 }, result: 'You shut everything down for two weeks. The investigation is intense but finds nothing.' },
-      { label: 'Attend the funeral (bold)', effects: { publicImage: 3, heat: 5 }, result: 'You show up in a suit. The audacity. Some see a respectful citizen. Cops see a suspect.' },
-      { label: 'Anonymous donation to family ($10K)', effects: { cash: -10000, heat: -5, publicImage: 5 }, result: 'A generous anonymous gift. The family is grateful. Even some cops soften toward the community.' },
-      { label: 'Use the distraction', effects: { cash: 5000, heat: 10 }, result: 'While the entire force mourns, your operation runs full speed. Profitable but cold.' }
+      { label: 'Lay low completely', effects: { heat: 15, cash: -3000, consequences: { traits: { elusive: 1 }, message: 'You went completely dark after a cop died. Survival instinct at maximum.' } }, result: 'You shut everything down for two weeks. The investigation is intense but finds nothing.' },
+      { label: 'Attend the funeral (bold)', effects: { publicImage: 3, heat: 5, consequences: { traits: { brave: 1, defiant: 1 }, message: 'You attended a police funeral in a suit. The audacity was either respectful or insane.' } }, result: 'You show up in a suit. The audacity. Some see a respectful citizen. Cops see a suspect.' },
+      { label: 'Anonymous donation to family ($10K)', effects: { cash: -10000, heat: -5, publicImage: 5, consequences: { traits: { compassionate: 1 }, message: 'You donated to a fallen officer\'s family. Genuine compassion or calculated PR — maybe both.' } }, result: 'A generous anonymous gift. The family is grateful. Even some cops soften toward the community.' },
+      { label: 'Use the distraction', effects: { cash: 5000, heat: 10, consequences: { traits: { ruthless: 1, cold: 1 }, message: 'You profited while the police mourned their dead. Cold-blooded opportunism at its worst.' } }, result: 'While the entire force mourns, your operation runs full speed. Profitable but cold.' }
     ]
   },
 
@@ -1379,10 +1379,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'A hostile faction sends an emissary with expensive gifts and a proposal to end the conflict.',
     outcomes: [
-      { label: 'Accept peace terms', effects: { trust: 3, streetCred: 1 }, result: 'The war ends. Trade routes open. Both sides profit from peace. For now.' },
-      { label: 'Counter-offer better terms', effects: { trust: 1, streetCred: 2, cash: 5000 }, result: 'You negotiate from strength. They agree to pay reparations plus a trade deal. Favorable peace.' },
-      { label: 'Refuse', effects: { fear: 2, streetCred: 2 }, result: 'You send the emissary back empty-handed. The war continues. Your resolve is noted.' },
-      { label: 'Kill the emissary', effects: { fear: 10, trust: -8, heat: 15 }, result: 'A shocking violation of protocol. Every faction in Miami takes notice. You are feared and hated.' }
+      { label: 'Accept peace terms', effects: { trust: 3, streetCred: 1, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You accepted a peace offering. Diplomacy over bloodshed — a sign of mature leadership.' } }, result: 'The war ends. Trade routes open. Both sides profit from peace. For now.' },
+      { label: 'Counter-offer better terms', effects: { trust: 1, streetCred: 2, cash: 5000, consequences: { traits: { cunning: 1, diplomatic: 1 }, message: 'You turned their peace offering into a profitable deal. Negotiation from a position of strength.' } }, result: 'You negotiate from strength. They agree to pay reparations plus a trade deal. Favorable peace.' },
+      { label: 'Refuse', effects: { fear: 2, streetCred: 2, consequences: { traits: { defiant: 1, ruthless: 1 }, message: 'You refused peace. The war continues and your reputation for resolve is cemented.' } }, result: 'You send the emissary back empty-handed. The war continues. Your resolve is noted.' },
+      { label: 'Kill the emissary', effects: { fear: 10, trust: -8, heat: 15, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You killed a peace emissary. A shocking act that brands you as the most dangerous player in the city.' } }, result: 'A shocking violation of protocol. Every faction in Miami takes notice. You are feared and hated.' }
     ]
   },
   {
@@ -1390,10 +1390,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 2 },
     description: 'Two factions propose creating a neutral trading zone. Safe dealing, reduced heat, but shared intelligence risk.',
     outcomes: [
-      { label: 'Agree to the zone', effects: { trust: 3, cash: 2000 }, result: 'Trade flourishes in the neutral zone. Revenue up, heat down. But rivals see your operations too.' },
-      { label: 'Propose your territory as host', effects: { cash: 5000, streetCred: 3 }, result: 'The zone operates on your turf. You control access and take a cut of everything. Home advantage.' },
-      { label: 'Refuse', effects: { streetCred: 1 }, result: 'You don\'t share. Your operation stays independent. Some call it stubborn, others call it smart.' },
-      { label: 'Agree then spy on everyone', effects: { streetCred: 2 }, result: 'You join the zone but plant informants. Intel flows while you appear cooperative.' }
+      { label: 'Agree to the zone', effects: { trust: 3, cash: 2000, consequences: { traits: { diplomatic: 1 }, message: 'You agreed to a shared trading zone. Cooperation for mutual profit.' } }, result: 'Trade flourishes in the neutral zone. Revenue up, heat down. But rivals see your operations too.' },
+      { label: 'Propose your territory as host', effects: { cash: 5000, streetCred: 3, consequences: { traits: { cunning: 1, leader: 1 }, message: 'You positioned yourself as the host of neutral ground. Home turf advantage in diplomacy.' } }, result: 'The zone operates on your turf. You control access and take a cut of everything. Home advantage.' },
+      { label: 'Refuse', effects: { streetCred: 1, consequences: { traits: { defiant: 1 }, message: 'You refused to share territory or intelligence. Independence above all.' } }, result: 'You don\'t share. Your operation stays independent. Some call it stubborn, others call it smart.' },
+      { label: 'Agree then spy on everyone', effects: { streetCred: 2, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You joined the zone to spy on everyone else. Cooperation as a mask for espionage.' } }, result: 'You join the zone but plant informants. Intel flows while you appear cooperative.' }
     ]
   },
   {
@@ -1401,10 +1401,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'You discover a major faction leader\'s dark secret — addiction, affair, financial ruin. Leverage is power.',
     outcomes: [
-      { label: 'Blackmail for services', effects: { cash: 5000, fear: 3 }, result: 'They do whatever you want. Free product, territory access, intel. The secret is your leash.' },
-      { label: 'Expose them publicly', effects: { streetCred: 5, trust: -3 }, result: 'You leak it all. Their faction implodes. Power vacuum creates opportunity but you\'re feared and distrusted.' },
-      { label: 'Keep quiet (they owe you)', effects: { trust: 5 }, result: 'You let them know you know, but say nothing. A favor in the bank worth more than immediate gain.' },
-      { label: 'Sell to their rival', effects: { cash: 10000, trust: -5 }, result: '$10K for the intel. Their rival destroys them with it. Profitable but you\'re seen as a mercenary.' }
+      { label: 'Blackmail for services', effects: { cash: 5000, fear: 3, consequences: { traits: { manipulative: 1, feared: 1 }, message: 'You blackmailed a faction leader with their darkest secret. Power through leverage.' } }, result: 'They do whatever you want. Free product, territory access, intel. The secret is your leash.' },
+      { label: 'Expose them publicly', effects: { streetCred: 5, trust: -3, consequences: { traits: { ruthless: 1 }, message: 'You destroyed a faction leader by exposing their secret. Brutal and irreversible.' } }, result: 'You leak it all. Their faction implodes. Power vacuum creates opportunity but you\'re feared and distrusted.' },
+      { label: 'Keep quiet (they owe you)', effects: { trust: 5, consequences: { traits: { cunning: 1, diplomatic: 1 }, message: 'You banked a secret instead of spending it. A favor owed is worth more than immediate destruction.' } }, result: 'You let them know you know, but say nothing. A favor in the bank worth more than immediate gain.' },
+      { label: 'Sell to their rival', effects: { cash: 10000, trust: -5, consequences: { traits: { manipulative: 1, cold: 1 }, message: 'You sold someone\'s secret to the highest bidder. Mercenary to the core.' } }, result: '$10K for the intel. Their rival destroys them with it. Profitable but you\'re seen as a mercenary.' }
     ]
   },
   {
@@ -1412,10 +1412,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Locals in your territory are organizing to replace your operation with a community center. Petitions, meetings, protests.',
     outcomes: [
-      { label: 'Donate to the cause ($10K)', effects: { cash: -10000, communityRep: 10, publicImage: 5 }, result: 'You fund their community center AND keep operating discreetly. Public hero, private criminal.' },
-      { label: 'Suppress the movement', effects: { fear: 5, communityRep: -10 }, result: 'Intimidation tactics. The organizers scatter. But the community remembers and resentment grows.' },
-      { label: 'Relocate discreetly', effects: { cash: -3000 }, result: 'You move to less visible spots. Operations continue, community gets their center. Win-win.' },
-      { label: 'Negotiate community benefits', effects: { cash: -5000, communityRep: 5 }, result: 'You fund youth programs and clean-up. The protests stop. Coexistence through investment.' }
+      { label: 'Donate to the cause ($10K)', effects: { cash: -10000, communityRep: 10, publicImage: 5, consequences: { traits: { generous: 1, charismatic: 1 }, message: 'You funded a community center while keeping your operation hidden. Public hero, private kingpin.' } }, result: 'You fund their community center AND keep operating discreetly. Public hero, private criminal.' },
+      { label: 'Suppress the movement', effects: { fear: 5, communityRep: -10, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You crushed a community uprising with intimidation. The neighborhood will remember this.' } }, result: 'Intimidation tactics. The organizers scatter. But the community remembers and resentment grows.' },
+      { label: 'Relocate discreetly', effects: { cash: -3000, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You relocated to avoid conflict with the community. Pragmatic adaptation.' } }, result: 'You move to less visible spots. Operations continue, community gets their center. Win-win.' },
+      { label: 'Negotiate community benefits', effects: { cash: -5000, communityRep: 5, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You negotiated coexistence with the community. Investment as diplomacy.' } }, result: 'You fund youth programs and clean-up. The protests stop. Coexistence through investment.' }
     ]
   },
   {
@@ -1423,10 +1423,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30, minAct: 2 },
     description: 'A major rival faction splits internally. Two lieutenants are fighting for control. Chaos and opportunity.',
     outcomes: [
-      { label: 'Support one side', effects: { cash: -5000, streetCred: 3 }, result: 'Your chosen side wins. They owe you. An ally born from their civil war.' },
-      { label: 'Support both secretly', effects: { cash: -10000, streetCred: 5 }, result: 'You fund both sides. The war drags on, weakening them. Machiavelli would be proud.' },
-      { label: 'Stay neutral', effects: {}, result: 'You watch from the sidelines. They weaken each other. You strengthen by comparison.' },
-      { label: 'Attack both', effects: { heat: 15, fear: 5, streetCred: 4, cash: 10000 }, result: 'While they fight each other, you take everything. Territory, product, crew. Ruthless expansion.' }
+      { label: 'Support one side', effects: { cash: -5000, streetCred: 3, consequences: { traits: { strategic: 1, diplomatic: 1 }, message: 'You picked a winner in a civil war and earned a powerful ally. Strategic alliance-building.' } }, result: 'Your chosen side wins. They owe you. An ally born from their civil war.' },
+      { label: 'Support both secretly', effects: { cash: -10000, streetCred: 5, consequences: { traits: { manipulative: 1, cunning: 1 }, message: 'You funded both sides of a war. Machiavellian manipulation at its most cynical.' } }, result: 'You fund both sides. The war drags on, weakening them. Machiavelli would be proud.' },
+      { label: 'Stay neutral', effects: { consequences: { traits: { cautious: 1 }, message: 'You stayed neutral during faction chaos. Patience while others bleed each other dry.' } }, result: 'You watch from the sidelines. They weaken each other. You strengthen by comparison.' },
+      { label: 'Attack both', effects: { heat: 15, fear: 5, streetCred: 4, cash: 10000, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You attacked both sides of a civil war simultaneously. Total ruthless domination.' } }, result: 'While they fight each other, you take everything. Territory, product, crew. Ruthless expansion.' }
     ]
   },
   {
@@ -1434,10 +1434,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'Your supply route passes through another faction\'s territory. They want a toll — $2K per shipment.',
     outcomes: [
-      { label: 'Pay the toll', effects: { cash: -2000 }, result: 'Cost of business. The route stays open and your shipments arrive safely.' },
-      { label: 'Negotiate a one-time payment ($10K)', effects: { cash: -10000, streetCred: 1 }, result: 'A lump sum buys permanent passage. No more per-shipment fees.' },
-      { label: 'Find an alternative route', effects: { cash: -1000, stress: 2 }, result: 'Longer and costlier but you answer to no one. Independence has its price.' },
-      { label: 'Fight for passage', effects: { heat: 10, fear: 3, streetCred: 3 }, result: 'You take the route by force. No more tolls. But now you have a blood feud on your hands.' }
+      { label: 'Pay the toll', effects: { cash: -2000, consequences: { traits: { diplomatic: 1 }, message: 'You paid the toll without protest. Business pragmatism over pride.' } }, result: 'Cost of business. The route stays open and your shipments arrive safely.' },
+      { label: 'Negotiate a one-time payment ($10K)', effects: { cash: -10000, streetCred: 1, consequences: { traits: { cunning: 1, diplomatic: 1 }, message: 'You negotiated a permanent deal. One big payment eliminates ongoing costs.' } }, result: 'A lump sum buys permanent passage. No more per-shipment fees.' },
+      { label: 'Find an alternative route', effects: { cash: -1000, stress: 2, consequences: { traits: { defiant: 1 }, message: 'You refused to pay tribute and found your own way. Independence at any cost.' } }, result: 'Longer and costlier but you answer to no one. Independence has its price.' },
+      { label: 'Fight for passage', effects: { heat: 10, fear: 3, streetCred: 3, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You took a trade route by force. No tolls, no negotiations — just blood and dominance.' } }, result: 'You take the route by force. No more tolls. But now you have a blood feud on your hands.' }
     ]
   },
   {
@@ -1445,10 +1445,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'A rival faction invites you to a celebration. Could be diplomacy, could be a trap. Your crew advises caution.',
     outcomes: [
-      { label: 'Attend', effects: { trust: 3, streetCred: 2, stress: 2 }, result: 'It\'s legitimate. Good food, good conversation, good intel. New connections forged over drinks.' },
-      { label: 'Attend with heavy security', effects: { trust: 1, fear: 2 }, result: 'You roll deep. The show of force is noted. They respect your caution and your power.' },
-      { label: 'Send a representative', effects: { trust: 1 }, result: 'Your second-in-command goes. They gather intel without risking your life. Smart play.' },
-      { label: 'Decline', effects: { trust: -1 }, result: 'You stay home. They\'re offended. An opportunity for diplomacy missed.' }
+      { label: 'Attend', effects: { trust: 3, streetCred: 2, stress: 2, consequences: { traits: { brave: 1, diplomatic: 1 }, message: 'You walked into potential enemy territory for diplomacy. Brave and politically savvy.' } }, result: 'It\'s legitimate. Good food, good conversation, good intel. New connections forged over drinks.' },
+      { label: 'Attend with heavy security', effects: { trust: 1, fear: 2, consequences: { traits: { cautious: 1, feared: 1 }, message: 'You showed up with a show of force. Diplomacy backed by visible power.' } }, result: 'You roll deep. The show of force is noted. They respect your caution and your power.' },
+      { label: 'Send a representative', effects: { trust: 1, consequences: { traits: { strategic: 1 }, message: 'You sent a proxy to gather intel without personal risk. Calculated leadership.' } }, result: 'Your second-in-command goes. They gather intel without risking your life. Smart play.' },
+      { label: 'Decline', effects: { trust: -1, consequences: { traits: { cold: 1 }, message: 'You snubbed a diplomatic invitation. Isolation has costs in the faction game.' } }, result: 'You stay home. They\'re offended. An opportunity for diplomacy missed.' }
     ]
   },
   {
@@ -1456,10 +1456,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'Gunfire on the border between your territory and a rival\'s. Nobody ordered it — street-level beef got hot.',
     outcomes: [
-      { label: 'De-escalate', effects: { trust: 2, streetCred: 1 }, result: 'You reach out to their boss. Both sides pull back. Discipline restored. Crisis averted.' },
-      { label: 'Punish your crew member', effects: { fear: 2, trust: -1 }, result: 'Public discipline sends a message: unauthorized violence has consequences. Control maintained.' },
-      { label: 'Escalate to full attack', effects: { heat: 20, fear: 5, streetCred: 3 }, result: 'You use the incident as justification for war. Territory is seized. But the cost is high.' },
-      { label: 'Demand compensation', effects: { cash: 3000, streetCred: 2 }, result: '"Your guys started it. Pay up." They grudgingly send $3K. Honor satisfied on both sides.' }
+      { label: 'De-escalate', effects: { trust: 2, streetCred: 1, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You de-escalated a border crisis through communication. Diplomacy saved lives.' } }, result: 'You reach out to their boss. Both sides pull back. Discipline restored. Crisis averted.' },
+      { label: 'Punish your crew member', effects: { fear: 2, trust: -1, consequences: { traits: { disciplinarian: 1 }, message: 'You punished your own crew for unauthorized violence. Discipline over loyalty.' } }, result: 'Public discipline sends a message: unauthorized violence has consequences. Control maintained.' },
+      { label: 'Escalate to full attack', effects: { heat: 20, fear: 5, streetCred: 3, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You used a skirmish as justification for total war. Escalation as strategy.' } }, result: 'You use the incident as justification for war. Territory is seized. But the cost is high.' },
+      { label: 'Demand compensation', effects: { cash: 3000, streetCred: 2, consequences: { traits: { cunning: 1 }, message: 'You turned a border incident into profit. Compensation extracted through diplomatic pressure.' } }, result: '"Your guys started it. Pay up." They grudgingly send $3K. Honor satisfied on both sides.' }
     ]
   },
   {
@@ -1467,10 +1467,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'Dealers from a collapsed faction are drifting into your area. Experienced but homeless. They need a crew to join.',
     outcomes: [
-      { label: 'Recruit all of them', effects: { streetCred: 2, trust: -1 }, result: 'Instant expansion. But their loyalty is to survival, not to you. Watch your back.' },
-      { label: 'Cherry-pick the best', effects: { streetCred: 1, trust: 1 }, result: 'You take the top talent and send the rest packing. Quality over quantity.' },
-      { label: 'Drive them out', effects: { fear: 3 }, result: 'You make it clear: no freelancers in your territory. They scatter to other districts.' },
-      { label: 'Set them up under your banner', effects: { cash: -2000, streetCred: 3 }, result: 'You give them a new district to run under your name. Loyal vassals born from desperation.' }
+      { label: 'Recruit all of them', effects: { streetCred: 2, trust: -1, consequences: { traits: { leader: 1, bold: 1 }, message: 'You absorbed an entire scattered faction. Rapid expansion with untested loyalty.' } }, result: 'Instant expansion. But their loyalty is to survival, not to you. Watch your back.' },
+      { label: 'Cherry-pick the best', effects: { streetCred: 1, trust: 1, consequences: { traits: { cunning: 1, leader: 1 }, message: 'You selected only the best from the refugees. Quality over quantity — smart recruitment.' } }, result: 'You take the top talent and send the rest packing. Quality over quantity.' },
+      { label: 'Drive them out', effects: { fear: 3, consequences: { traits: { feared: 1, ruthless: 1 }, message: 'You drove desperate people out of your territory. No mercy for the displaced.' } }, result: 'You make it clear: no freelancers in your territory. They scatter to other districts.' },
+      { label: 'Set them up under your banner', effects: { cash: -2000, streetCred: 3, consequences: { traits: { leader: 1, generous: 1 }, message: 'You gave displaced dealers a home under your flag. Vassals born from your generosity.' } }, result: 'You give them a new district to run under your name. Loyal vassals born from desperation.' }
     ]
   },
   {
@@ -1478,10 +1478,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'A rival faction\'s main revenue got busted. Their lab seized, leader arrested. They\'re desperate and drowning.',
     outcomes: [
-      { label: 'Offer a bailout (they owe you)', effects: { cash: -20000, trust: 5, streetCred: 3 }, result: 'You save them from extinction. They owe you everything. A satellite faction under your influence.' },
-      { label: 'Buy their territory cheap', effects: { cash: -10000, streetCred: 2 }, result: 'Fire sale on turf. You expand your empire at pennies on the dollar.' },
-      { label: 'Recruit their talent', effects: { trust: 1 }, result: 'Their best chemist, their best enforcer, their best driver. All wearing your colors now.' },
-      { label: 'Kick them while down', effects: { fear: 5, heat: 10, cash: 15000 }, result: 'You raid their remaining operations. Total destruction. Savage but your dominance is absolute.' }
+      { label: 'Offer a bailout (they owe you)', effects: { cash: -20000, trust: 5, streetCred: 3, consequences: { traits: { leader: 1, generous: 1 }, message: 'You bailed out a collapsing faction. They owe you everything — a satellite state under your control.' } }, result: 'You save them from extinction. They owe you everything. A satellite faction under your influence.' },
+      { label: 'Buy their territory cheap', effects: { cash: -10000, streetCred: 2, consequences: { traits: { cunning: 1 }, message: 'You bought territory at fire-sale prices from a desperate faction. Opportunistic expansion.' } }, result: 'Fire sale on turf. You expand your empire at pennies on the dollar.' },
+      { label: 'Recruit their talent', effects: { trust: 1, consequences: { traits: { leader: 1 }, message: 'You poached the best talent from a dying faction. Their loss is your gain.' } }, result: 'Their best chemist, their best enforcer, their best driver. All wearing your colors now.' },
+      { label: 'Kick them while down', effects: { fear: 5, heat: 10, cash: 15000, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You destroyed a faction at its most vulnerable. Total dominance through ruthless aggression.' } }, result: 'You raid their remaining operations. Total destruction. Savage but your dominance is absolute.' }
     ]
   },
   {
@@ -1489,10 +1489,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A historical site in your territory has cultural significance. Building there would be profitable but offensive to the community.',
     outcomes: [
-      { label: 'Respect and protect it', effects: { communityRep: 8, publicImage: 3 }, result: 'You declare the site protected. The community embraces you as a cultural guardian.' },
-      { label: 'Develop it anyway ($50K profit)', effects: { cash: 50000, communityRep: -15, publicImage: -5 }, result: 'Profit over heritage. The money is good but the community will never forgive you.' },
-      { label: 'Compromise (partial development)', effects: { cash: 20000, communityRep: -3 }, result: 'You develop around the site, preserving the core. Some grumbling but mostly acceptance.' },
-      { label: 'Use as neutral meeting ground', effects: { trust: 3, streetCred: 2 }, result: 'The sacred space becomes a place for faction meetings. Respected ground, respected rules.' }
+      { label: 'Respect and protect it', effects: { communityRep: 8, publicImage: 3, consequences: { traits: { compassionate: 1, diplomatic: 1 }, message: 'You protected sacred ground. The community sees you as a cultural guardian.' } }, result: 'You declare the site protected. The community embraces you as a cultural guardian.' },
+      { label: 'Develop it anyway ($50K profit)', effects: { cash: 50000, communityRep: -15, publicImage: -5, consequences: { traits: { ruthless: 1, cold: 1 }, message: 'You bulldozed sacred ground for profit. The community will never forgive this desecration.' } }, result: 'Profit over heritage. The money is good but the community will never forgive you.' },
+      { label: 'Compromise (partial development)', effects: { cash: 20000, communityRep: -3, consequences: { traits: { cunning: 1, diplomatic: 1 }, message: 'You found a middle ground between profit and heritage. Pragmatic compromise.' } }, result: 'You develop around the site, preserving the core. Some grumbling but mostly acceptance.' },
+      { label: 'Use as neutral meeting ground', effects: { trust: 3, streetCred: 2, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You turned sacred ground into neutral territory. Respected space for respected business.' } }, result: 'The sacred space becomes a place for faction meetings. Respected ground, respected rules.' }
     ]
   },
   {
@@ -1500,10 +1500,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 2 },
     description: 'Two outside factions want to fight their war in YOUR territory. They\'re already moving pieces onto your board.',
     outcomes: [
-      { label: 'Refuse both', effects: { fear: 2, streetCred: 3 }, result: 'You push both out. Your territory, your rules. They find another battlefield.' },
-      { label: 'Side with the stronger one', effects: { cash: 10000, trust: -2 }, result: 'You back the winner. Rewards flow. But the loser remembers your choice.' },
-      { label: 'Charge both for "battlefield rent"', effects: { cash: 15000, streetCred: 4 }, result: 'Mercenary genius. Both pay you to fight on your turf. You profit from their blood.' },
-      { label: 'Mediate for peace', effects: { trust: 5, streetCred: 5, publicImage: 3 }, result: 'You broker peace. Both sides owe you. Your reputation as a leader soars.' }
+      { label: 'Refuse both', effects: { fear: 2, streetCred: 3, consequences: { traits: { defiant: 1, feared: 1 }, message: 'You expelled two factions from your territory. Nobody fights on your turf without permission.' } }, result: 'You push both out. Your territory, your rules. They find another battlefield.' },
+      { label: 'Side with the stronger one', effects: { cash: 10000, trust: -2, consequences: { traits: { cunning: 1 }, message: 'You backed the winning side in a proxy war. Pragmatic alliance with the powerful.' } }, result: 'You back the winner. Rewards flow. But the loser remembers your choice.' },
+      { label: 'Charge both for "battlefield rent"', effects: { cash: 15000, streetCred: 4, consequences: { traits: { cunning: 1, manipulative: 1 }, message: 'You charged rent to warring factions. Profiting from other people\'s blood — mercenary genius.' } }, result: 'Mercenary genius. Both pay you to fight on your turf. You profit from their blood.' },
+      { label: 'Mediate for peace', effects: { trust: 5, streetCred: 5, publicImage: 3, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You brokered peace between warring factions. A statesman of the underworld.' } }, result: 'You broker peace. Both sides owe you. Your reputation as a leader soars.' }
     ]
   },
   {
@@ -1511,10 +1511,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'Your spy in a rival faction has been caught. They\'re being held and interrogated. The clock is ticking.',
     outcomes: [
-      { label: 'Rescue mission', effects: { cash: -5000, heat: 10, trust: 5 }, result: 'You extract your agent in a midnight raid. They\'re alive and grateful. But the rival knows you planted them.' },
-      { label: 'Deny everything', effects: { trust: -5 }, result: 'You cut them loose. "Never heard of them." They\'re tortured. Your intel channel is dead.' },
-      { label: 'Prisoner exchange', effects: { trust: 2 }, result: 'You offer a trade: their captured member for yours. Clean, professional. Both sides respect the protocol.' },
-      { label: 'Sacrifice them, protect intel', effects: { fear: 3, trust: -3 }, result: 'The spy knows too much to be captured alive. You ensure they can\'t talk. Cold calculus.' }
+      { label: 'Rescue mission', effects: { cash: -5000, heat: 10, trust: 5, consequences: { traits: { protector: 1, loyal: 1, brave: 1 }, message: 'You launched a rescue mission for a captured spy. Loyalty proven through action.' } }, result: 'You extract your agent in a midnight raid. They\'re alive and grateful. But the rival knows you planted them.' },
+      { label: 'Deny everything', effects: { trust: -5, consequences: { traits: { cold: 1 }, message: 'You abandoned your spy to save yourself. Self-preservation at the cost of loyalty.' } }, result: 'You cut them loose. "Never heard of them." They\'re tortured. Your intel channel is dead.' },
+      { label: 'Prisoner exchange', effects: { trust: 2, consequences: { traits: { diplomatic: 1 }, message: 'You negotiated a prisoner exchange. Professional diplomacy between adversaries.' } }, result: 'You offer a trade: their captured member for yours. Clean, professional. Both sides respect the protocol.' },
+      { label: 'Sacrifice them, protect intel', effects: { fear: 3, trust: -3, consequences: { traits: { ruthless: 1, cold: 1 }, message: 'You silenced your own spy to protect secrets. The coldest calculus of war.' } }, result: 'The spy knows too much to be captured alive. You ensure they can\'t talk. Cold calculus.' }
     ]
   },
   {
@@ -1522,10 +1522,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 2 },
     description: 'A new external threat endangers both you and your biggest rival. A federal task force, an outside cartel, or a political crackdown.',
     outcomes: [
-      { label: 'Temporary alliance', effects: { trust: 5, streetCred: 3 }, result: 'You and your rival work together. The threat is neutralized. The alliance might survive the crisis.' },
-      { label: 'Let the rival handle it', effects: {}, result: 'They fight alone and are weakened. You swoop in after. Opportunistic but effective.' },
-      { label: 'Help secretly', effects: { trust: 3 }, result: 'You provide anonymous support. The threat is defeated and your rival doesn\'t know you helped.' },
-      { label: 'Use the chaos to attack both', effects: { heat: 15, fear: 5, streetCred: 3 }, result: 'Three-way war. You attack the rival while they fight the threat. Brutal but you come out on top.' }
+      { label: 'Temporary alliance', effects: { trust: 5, streetCred: 3, consequences: { traits: { diplomatic: 1, leader: 1 }, message: 'You formed a temporary alliance against a common enemy. Unity in the face of a greater threat.' } }, result: 'You and your rival work together. The threat is neutralized. The alliance might survive the crisis.' },
+      { label: 'Let the rival handle it', effects: { consequences: { traits: { cunning: 1, cold: 1 }, message: 'You let your rival fight alone and tire themselves out. Opportunism disguised as neutrality.' } }, result: 'They fight alone and are weakened. You swoop in after. Opportunistic but effective.' },
+      { label: 'Help secretly', effects: { trust: 3, consequences: { traits: { cunning: 1 }, message: 'You helped your rival anonymously. A secret favor banked for the future.' } }, result: 'You provide anonymous support. The threat is defeated and your rival doesn\'t know you helped.' },
+      { label: 'Use the chaos to attack both', effects: { heat: 15, fear: 5, streetCred: 3, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You attacked everyone during a crisis. Three-way war for total dominance.' } }, result: 'Three-way war. You attack the rival while they fight the threat. Brutal but you come out on top.' }
     ]
   },
   {
@@ -1533,10 +1533,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'Your profitable territory is gentrifying. Coffee shops replacing bodegas. Property values tripling. Police attention increasing.',
     outcomes: [
-      { label: 'Sell properties at peak', effects: { cash: 50000 }, result: 'Cash out while values are high. $50K in clean real estate money. But you lose your base.' },
-      { label: 'Adapt to new demographics', effects: { streetCred: 2, cash: 5000 }, result: 'You switch from crack to cocaine, heroin to designer drugs. Same game, upscale clientele.' },
-      { label: 'Launder through upscale fronts', effects: { cash: -10000, publicImage: 3 }, result: 'You open a yoga studio and a juice bar. Perfect fronts for the new neighborhood.' },
-      { label: 'Resist the change', effects: { communityRep: 5, cash: -5000 }, result: 'You fund anti-gentrification efforts. The community rallies. Change slows but can\'t be stopped.' }
+      { label: 'Sell properties at peak', effects: { cash: 50000, consequences: { traits: { cunning: 1 }, message: 'You cashed out real estate at peak gentrification prices. Smart financial timing.' } }, result: 'Cash out while values are high. $50K in clean real estate money. But you lose your base.' },
+      { label: 'Adapt to new demographics', effects: { streetCred: 2, cash: 5000, consequences: { traits: { cunning: 1, charismatic: 1 }, message: 'You adapted your operation to serve gentrified clientele. Evolution over extinction.' } }, result: 'You switch from crack to cocaine, heroin to designer drugs. Same game, upscale clientele.' },
+      { label: 'Launder through upscale fronts', effects: { cash: -10000, publicImage: 3, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You opened legitimate fronts in a gentrifying neighborhood. Hiding in plain sight.' } }, result: 'You open a yoga studio and a juice bar. Perfect fronts for the new neighborhood.' },
+      { label: 'Resist the change', effects: { communityRep: 5, cash: -5000, consequences: { traits: { loyal: 1, compassionate: 1 }, message: 'You funded the community\'s fight against gentrification. Loyalty to your roots.' } }, result: 'You fund anti-gentrification efforts. The community rallies. Change slows but can\'t be stopped.' }
     ]
   },
   {
@@ -1544,10 +1544,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'Your spy sends alarming intel: the rival is planning a massive attack on your main stash house in 48 hours.',
     outcomes: [
-      { label: 'Evacuate the stash', effects: { cash: -3000 }, result: 'You move everything. They hit an empty building. Your product and cash are safe.' },
-      { label: 'Set a trap (ambush)', effects: { fear: 8, streetCred: 5, heat: 15 }, result: 'They walk into a killing field. Devastating losses for the attackers. Your reputation is legendary.' },
-      { label: 'Preemptive strike', effects: { heat: 20, fear: 5, cash: 10000 }, result: 'You hit them first. Their attack force was assembling — you catch them unaware. Decisive victory.' },
-      { label: 'Double-check the intel', effects: { stress: 3 }, result: 'You verify. 20% chance the intel was planted to make you panic. Worth confirming before acting.' }
+      { label: 'Evacuate the stash', effects: { cash: -3000, consequences: { traits: { cunning: 1, elusive: 1 }, message: 'You evacuated before the attack. Good intelligence used wisely — nothing to find.' } }, result: 'You move everything. They hit an empty building. Your product and cash are safe.' },
+      { label: 'Set a trap (ambush)', effects: { fear: 8, streetCred: 5, heat: 15, consequences: { traits: { cunning: 1, ruthless: 1, feared: 1 }, message: 'You turned intel into a devastating ambush. Your enemies walked into a killing field.' } }, result: 'They walk into a killing field. Devastating losses for the attackers. Your reputation is legendary.' },
+      { label: 'Preemptive strike', effects: { heat: 20, fear: 5, cash: 10000, consequences: { traits: { ruthless: 1, feared: 1, brave: 1 }, message: 'You struck first with overwhelming force. Decisive and devastating preemptive attack.' } }, result: 'You hit them first. Their attack force was assembling — you catch them unaware. Decisive victory.' },
+      { label: 'Double-check the intel', effects: { stress: 3, consequences: { traits: { cautious: 1, cunning: 1 }, message: 'You verified intel before acting. Patience and thoroughness — not every tip is trustworthy.' } }, result: 'You verify. 20% chance the intel was planted to make you panic. Worth confirming before acting.' }
     ]
   },
   {
@@ -1555,10 +1555,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 2 },
     description: 'All major factions invited to a city-wide summit to divide territory and reduce violence. Historic moment.',
     outcomes: [
-      { label: 'Attend and negotiate', effects: { trust: 5, streetCred: 3, publicImage: 2 }, result: 'Diplomatic triumph. You secure favorable terms. The city enters a period of relative calm.' },
-      { label: 'Attend but sabotage', effects: { fear: 5, trust: -5, heat: 10 }, result: 'You ensure no peace is reached. Chaos benefits the strongest. Everyone suspects but can\'t prove it.' },
-      { label: 'Send a representative', effects: { trust: 2 }, result: 'Your second handles it. You maintain safety while having a voice at the table.' },
-      { label: 'Refuse to attend', effects: { fear: 3, trust: -3 }, result: 'Your absence is a statement: you don\'t negotiate. Some see strength. Others see arrogance.' }
+      { label: 'Attend and negotiate', effects: { trust: 5, streetCred: 3, publicImage: 2, consequences: { traits: { diplomatic: 1, leader: 1, charismatic: 1 }, message: 'You attended a city-wide peace summit and secured favorable terms. A statesman of the streets.' } }, result: 'Diplomatic triumph. You secure favorable terms. The city enters a period of relative calm.' },
+      { label: 'Attend but sabotage', effects: { fear: 5, trust: -5, heat: 10, consequences: { traits: { manipulative: 1, cunning: 1 }, message: 'You sabotaged a peace summit from the inside. Chaos is more profitable than peace for you.' } }, result: 'You ensure no peace is reached. Chaos benefits the strongest. Everyone suspects but can\'t prove it.' },
+      { label: 'Send a representative', effects: { trust: 2, consequences: { traits: { strategic: 1 }, message: 'You sent a proxy to the peace summit. Participating without personal risk.' } }, result: 'Your second handles it. You maintain safety while having a voice at the table.' },
+      { label: 'Refuse to attend', effects: { fear: 3, trust: -3, consequences: { traits: { defiant: 1 }, message: 'You refused to attend a peace summit. A bold statement: you answer to no one.' } }, result: 'Your absence is a statement: you don\'t negotiate. Some see strength. Others see arrogance.' }
     ]
   },
   {
@@ -1566,10 +1566,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 3 },
     description: 'An international cartel is moving into Miami. Bigger, richer, more violent than any local operation. Every crew is threatened.',
     outcomes: [
-      { label: 'Ally with them (become distributor)', effects: { cash: 10000, streetCred: -2 }, result: 'You become their local arm. Steady income, massive backing. But you answer to someone now.' },
-      { label: 'Unite local factions against them', effects: { trust: 8, streetCred: 5, heat: 10 }, result: 'You rally Miami. For the first time, every faction works together. The cartel is pushed back.' },
-      { label: 'Pay tribute for independence', effects: { cash: -20000 }, result: 'You pay them $20K/month to operate independently. Expensive freedom.' },
-      { label: 'Infiltrate from within', effects: { streetCred: 3, stress: 5 }, result: 'You plant agents inside their operation. Long game. If it works, you\'ll own them from the inside.' }
+      { label: 'Ally with them (become distributor)', effects: { cash: 10000, streetCred: -2, consequences: { traits: { diplomatic: 1 }, message: 'You allied with a foreign cartel as their local distributor. Power through submission.' } }, result: 'You become their local arm. Steady income, massive backing. But you answer to someone now.' },
+      { label: 'Unite local factions against them', effects: { trust: 8, streetCred: 5, heat: 10, consequences: { traits: { leader: 1, diplomatic: 1, brave: 1 }, message: 'You united all of Miami against an outside threat. A legendary act of leadership.' } }, result: 'You rally Miami. For the first time, every faction works together. The cartel is pushed back.' },
+      { label: 'Pay tribute for independence', effects: { cash: -20000, consequences: { traits: { cautious: 1 }, message: 'You paid tribute to maintain independence. Expensive but you answer to no one.' } }, result: 'You pay them $20K/month to operate independently. Expensive freedom.' },
+      { label: 'Infiltrate from within', effects: { streetCred: 3, stress: 5, consequences: { traits: { cunning: 1, bold: 1 }, message: 'You planted agents inside a foreign cartel. The long game — if it works, you own them.' } }, result: 'You plant agents inside their operation. Long game. If it works, you\'ll own them from the inside.' }
     ]
   },
   {
@@ -1577,10 +1577,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 10 },
     description: 'Aggressive gang tags appear overnight on your most visible properties. A direct challenge to your authority.',
     outcomes: [
-      { label: 'Investigate first', effects: { streetCred: 1 }, result: '40% rival testing, 30% random vandals, 20% war declaration, 10% false flag. Information before action.' },
-      { label: 'Retaliate immediately', effects: { fear: 4, heat: 10, streetCred: 2 }, result: 'You tag their territory with your symbols and torch one of their cars. Message received and returned.' },
-      { label: 'Commission massive murals ($3K)', effects: { cash: -3000, communityRep: 5, streetCred: 3 }, result: 'You hire the best street artists. Your territory becomes a gallery. Cultural dominance.' },
-      { label: 'Clean up quietly', effects: { streetCred: 1 }, result: 'You remove the tags without fanfare. No escalation. Mature response. Some see it as weak.' }
+      { label: 'Investigate first', effects: { streetCred: 1, consequences: { traits: { cunning: 1 }, message: 'You investigated before reacting. Information before action — the mark of a strategist.' } }, result: '40% rival testing, 30% random vandals, 20% war declaration, 10% false flag. Information before action.' },
+      { label: 'Retaliate immediately', effects: { fear: 4, heat: 10, streetCred: 2, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You answered graffiti with fire. Immediate and overwhelming retaliation.' } }, result: 'You tag their territory with your symbols and torch one of their cars. Message received and returned.' },
+      { label: 'Commission massive murals ($3K)', effects: { cash: -3000, communityRep: 5, streetCred: 3, consequences: { traits: { charismatic: 1, leader: 1 }, message: 'You turned a territorial challenge into a cultural statement. Art as dominance.' } }, result: 'You hire the best street artists. Your territory becomes a gallery. Cultural dominance.' },
+      { label: 'Clean up quietly', effects: { streetCred: 1, consequences: { traits: { cautious: 1 }, message: 'You cleaned up the tags without escalating. Restraint — some call it wisdom, others weakness.' } }, result: 'You remove the tags without fanfare. No escalation. Mature response. Some see it as weak.' }
     ]
   },
   {
@@ -1588,10 +1588,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'A rival faction developed something new: better processing, innovative smuggling route, or cutting-edge distribution tech.',
     outcomes: [
-      { label: 'Steal it (espionage)', effects: { cash: -3000, streetCred: 3 }, result: 'Your spy extracts the details. You implement their innovation without the R&D cost.' },
-      { label: 'Buy licensing rights ($15K)', effects: { cash: -15000, trust: 2 }, result: 'Legitimate business deal. You pay for access. Professional respect earned.' },
-      { label: 'Develop your own (better)', effects: { cash: -10000, streetCred: 2 }, result: 'Your version is an improvement. It takes longer but you own it completely.' },
-      { label: 'Sabotage theirs', effects: { heat: 10, fear: 3, streetCred: 1 }, result: 'If you can\'t have it, no one can. Their facility has an unfortunate "accident."' }
+      { label: 'Steal it (espionage)', effects: { cash: -3000, streetCred: 3, consequences: { traits: { cunning: 1 }, message: 'You stole a rival\'s innovation through espionage. Why build when you can take?' } }, result: 'Your spy extracts the details. You implement their innovation without the R&D cost.' },
+      { label: 'Buy licensing rights ($15K)', effects: { cash: -15000, trust: 2, consequences: { traits: { diplomatic: 1 }, message: 'You paid for rival technology legitimately. Professional respect between competitors.' } }, result: 'Legitimate business deal. You pay for access. Professional respect earned.' },
+      { label: 'Develop your own (better)', effects: { cash: -10000, streetCred: 2, consequences: { traits: { leader: 1 }, message: 'You invested in developing your own superior technology. Independence through innovation.' } }, result: 'Your version is an improvement. It takes longer but you own it completely.' },
+      { label: 'Sabotage theirs', effects: { heat: 10, fear: 3, streetCred: 1, consequences: { traits: { ruthless: 1, feared: 1 }, message: 'You destroyed what you couldn\'t have. Sabotage as competitive strategy.' } }, result: 'If you can\'t have it, no one can. Their facility has an unfortunate "accident."' }
     ]
   },
 

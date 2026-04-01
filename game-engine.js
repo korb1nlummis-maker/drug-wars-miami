@@ -779,6 +779,7 @@ function processDistributionDaily(state) {
     dist.revenue.total += locationRevenue;
     dist.stats.unitsSold += totalUnitsSold;
     state.cash += locationRevenue;
+    state.dirtyMoney = (state.dirtyMoney || 0) + locationRevenue; // Distribution income is dirty
     result.revenue += locationRevenue;
     if (state.stats) state.stats.totalDistributionRevenue += locationRevenue;
   }
@@ -4697,6 +4698,7 @@ function processTerritoryIncome(state) {
     if (hasPerk(state, 'immortal')) income = Math.round(income * 1.15);
   }
   state.cash += income;
+  state.dirtyMoney = (state.dirtyMoney || 0) + income; // Territory income is dirty (protection rackets)
   return income;
 }
 
