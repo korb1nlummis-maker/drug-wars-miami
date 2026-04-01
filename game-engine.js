@@ -3097,6 +3097,23 @@ function travel(state, destinationId, transportId) {
     }
   }
 
+  // Vehicle condition check: damaged vehicle adds travel time and risk
+  var vehicleConditionPenalty = '';
+  if (state.vehicleState && state.vehicleState.activeVehicleIndex !== null && state.vehicleState.garage) {
+    var activeVeh = state.vehicleState.garage[state.vehicleState.activeVehicleIndex];
+    if (activeVeh && activeVeh.condition < 20) {
+      return { success: false, msg: '🔧 Your vehicle is too damaged to travel (condition ' + activeVeh.condition + '%). Repair it first.' };
+    }
+    if (activeVeh && activeVeh.condition < 50) {
+      vehicleConditionPenalty = ' ⚠️ Vehicle in poor condition — slower travel.';
+    }
+    // Degrade condition from travel
+    if (activeVeh) {
+      activeVeh.condition = Math.max(0, activeVeh.condition - (2 + Math.floor(Math.random() * 3)));
+      activeVeh.mileage = (activeVeh.mileage || 0) + 20 + Math.floor(Math.random() * 30);
+    }
+  }
+
   // Perk: connections reduces transport costs
   let transportCost = transport.cost;
   if (typeof hasPerk === 'function') {

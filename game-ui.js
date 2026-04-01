@@ -1640,6 +1640,7 @@ function renderGame() {
       <button class="main-tab-btn${mainTab === 'buysell' ? ' active' : ''}" onclick="mainTab='buysell'; render();">💰 Buy / Sell</button>
       <button class="main-tab-btn${mainTab === 'prices' ? ' active' : ''}" onclick="mainTab='prices'; render();">💊 Street Prices</button>
       <button class="main-tab-btn${mainTab === 'intel' ? ' active' : ''}" onclick="mainTab='intel'; render();">🗺️ Price Intel</button>
+      <button class="main-tab-btn${mainTab === 'empire' ? ' active' : ''}" onclick="mainTab='empire'; render();">👑 Empire</button>
       ${_tabUf.futures ? `<button class="main-tab-btn${mainTab === 'futures_tab' ? ' active' : ''}" onclick="currentScreen='futures'; render();">📊 Futures</button>` : _tabLocked('📊', 'Futures', 'futures')}
       ${_tabUf.imports ? `<button class="main-tab-btn${mainTab === 'imports_tab' ? ' active' : ''}" onclick="currentScreen='imports'; render();">🌍 Import</button>` : _tabLocked('🌍', 'Import', 'imports')}
       ${_tabUf.shipping ? `<button class="main-tab-btn${mainTab === 'shipping_tab' ? ' active' : ''}" onclick="currentScreen='shipping'; render();">🚛 Ship</button>` : _tabLocked('🚛', 'Ship', 'shipping')}
@@ -1858,6 +1859,101 @@ function renderGame() {
           <thead><tr><th>Location</th><th>Last Visit</th><th>Rep</th><th>Best Opportunities</th></tr></thead>
           <tbody>${intelRows}</tbody>
         </table>
+      </div>
+    `;
+  }
+
+  // === EMPIRE OVERVIEW TAB ===
+  if (mainTab === 'empire') {
+    var territories = typeof getControlledTerritories === 'function' ? getControlledTerritories(gameState) : [];
+    var crewCount = gameState.henchmen ? gameState.henchmen.length : 0;
+    var maxCrew = typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4;
+    var bizCount = gameState.frontBusinesses ? gameState.frontBusinesses.length : 0;
+    var vehicleCount = gameState.vehicleState && gameState.vehicleState.garage ? gameState.vehicleState.garage.length : 0;
+    var nw = typeof calculateNetWorth === 'function' ? calculateNetWorth(gameState) : (gameState.cash + gameState.bank - gameState.debt);
+    var kingpin = typeof getKingpinLevel === 'function' ? getKingpinLevel(gameState.xp || 0) : { level: 1, title: 'Nobody', emoji: '🔰' };
+    var childCount = gameState.relationships && gameState.relationships.children ? gameState.relationships.children.length : 0;
+    var scarCount = gameState.scars ? gameState.scars.length : 0;
+    var traitCount = gameState.playerTraits ? Object.keys(gameState.playerTraits).length : 0;
+    var abilityCount = gameState.playerAbilities ? Object.keys(gameState.playerAbilities).length : 0;
+    var totalKills = gameState.peopleKilled || 0;
+    var daysPlayed = gameState.day || 1;
+    var dirtyPct = gameState.cash > 0 ? Math.round((gameState.dirtyMoney || 0) / gameState.cash * 100) : 0;
+
+    // Crew by job
+    var jobCounts = {};
+    if (gameState.henchmen) {
+      gameState.henchmen.forEach(function(h) {
+        var job = h.assignedTo || 'idle';
+        jobCounts[job] = (jobCounts[job] || 0) + 1;
+      });
+    }
+
+    // Territory names
+    var terrNames = territories.map(function(t) {
+      var l = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(function(loc) { return loc.id === t; }) : null;
+      return l ? l.name : t.replace(/_/g, ' ');
+    });
+
+    // Active operations
+    var opsCount = gameState.mafiaOps && gameState.mafiaOps.activeOperations ? (Array.isArray(gameState.mafiaOps.activeOperations) ? gameState.mafiaOps.activeOperations.length : Object.keys(gameState.mafiaOps.activeOperations).length) : 0;
+
+    mainContent = `
+      <div style="text-align:center;margin-bottom:1rem;">
+        <div style="font-size:2rem;">${kingpin.emoji}</div>
+        <div style="font-family:var(--font-display);font-size:1.3rem;color:var(--neon-cyan);font-weight:bold">${kingpin.title}</div>
+        <div style="color:var(--text-dim);font-size:0.8rem">Level ${kingpin.level} · Day ${daysPlayed} · Net Worth: <span class="${nw >= 0 ? 'neon-green' : 'neon-red'}">$${nw.toLocaleString()}</span></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.5rem;margin-bottom:1rem;">
+        <div style="text-align:center;padding:0.5rem;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">💰</div>
+          <div style="font-size:0.7rem;color:#888">CASH</div>
+          <div class="neon-green" style="font-weight:bold">$${gameState.cash.toLocaleString()}</div>
+          ${dirtyPct > 10 ? '<div style="font-size:0.6rem;color:var(--neon-red)">' + dirtyPct + '% dirty</div>' : ''}
+        </div>
+        <div style="text-align:center;padding:0.5rem;background:rgba(0,200,255,0.05);border:1px solid rgba(0,200,255,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">🏦</div>
+          <div style="font-size:0.7rem;color:#888">BANK</div>
+          <div class="neon-cyan" style="font-weight:bold">$${gameState.bank.toLocaleString()}</div>
+        </div>
+        <div style="text-align:center;padding:0.5rem;background:rgba(255,0,100,0.05);border:1px solid rgba(255,0,100,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">🏴</div>
+          <div style="font-size:0.7rem;color:#888">TERRITORY</div>
+          <div class="neon-purple" style="font-weight:bold">${territories.length} district${territories.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="text-align:center;padding:0.5rem;background:rgba(255,170,0,0.05);border:1px solid rgba(255,170,0,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">👥</div>
+          <div style="font-size:0.7rem;color:#888">CREW</div>
+          <div class="neon-yellow" style="font-weight:bold">${crewCount}/${maxCrew}</div>
+        </div>
+        <div style="text-align:center;padding:0.5rem;background:rgba(0,255,200,0.05);border:1px solid rgba(0,255,200,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">🏢</div>
+          <div style="font-size:0.7rem;color:#888">BUSINESSES</div>
+          <div style="font-weight:bold;color:#00ffcc">${bizCount}</div>
+        </div>
+        <div style="text-align:center;padding:0.5rem;background:rgba(255,100,0,0.05);border:1px solid rgba(255,100,0,0.15);border-radius:6px">
+          <div style="font-size:1.5rem">🚗</div>
+          <div style="font-size:0.7rem;color:#888">VEHICLES</div>
+          <div style="font-weight:bold;color:#ff8844">${vehicleCount}</div>
+        </div>
+      </div>
+
+      ${territories.length > 0 ? '<div style="margin-bottom:0.8rem;padding:0.4rem;background:rgba(180,0,255,0.05);border:1px solid rgba(180,0,255,0.15);border-radius:6px"><span style="color:var(--neon-purple);font-weight:bold;font-size:0.8rem">🏴 Your Territory:</span> <span style="font-size:0.75rem;color:var(--text-dim)">' + terrNames.join(', ') + '</span></div>' : ''}
+
+      ${crewCount > 0 ? '<div style="margin-bottom:0.8rem;padding:0.4rem;background:rgba(255,170,0,0.05);border:1px solid rgba(255,170,0,0.15);border-radius:6px"><span style="color:var(--neon-yellow);font-weight:bold;font-size:0.8rem">👥 Crew Operations:</span> <span style="font-size:0.7rem;color:var(--text-dim)">' + Object.entries(jobCounts).map(function(e) { return e[0].replace(/_/g,' ') + ': ' + e[1]; }).join(' · ') + '</span></div>' : ''}
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:0.4rem;font-size:0.75rem;">
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">☠️ Kills: <b>${totalKills}</b></div>
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">🩹 Scars: <b>${scarCount}</b></div>
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">👶 Children: <b>${childCount}</b></div>
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">🧬 Traits: <b>${traitCount}</b></div>
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">⚡ Abilities: <b>${abilityCount}</b></div>
+        <div style="padding:0.3rem;background:rgba(255,255,255,0.02);border-radius:4px">🏢 Operations: <b>${opsCount}</b></div>
+      </div>
+
+      <div style="text-align:center;margin-top:1rem;">
+        <button class="btn btn-secondary" onclick="currentScreen='stats'; render();">📊 Detailed Stats</button>
       </div>
     `;
   }
