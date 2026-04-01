@@ -5809,6 +5809,24 @@ function renderStats() {
         </div>
       </div>
 
+      <!-- Life Status -->
+      <div class="stats-section" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:0.8rem;margin:0.8rem 0;">
+        <h3 class="section-title" style="color:var(--neon-purple);">🧬 LIFE STATUS</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.5rem;font-size:0.8rem;">
+          <div><span style="color:#888">💰 Dirty Money:</span> <span class="${(gameState.dirtyMoney || 0) > 5000 ? 'neon-red' : 'neon-green'}">$${(gameState.dirtyMoney || 0).toLocaleString()}</span></div>
+          <div><span style="color:#888">🏦 Clean Money:</span> <span class="neon-green">$${(gameState.cleanMoney || 0).toLocaleString()}</span></div>
+          <div><span style="color:#888">👶 Children:</span> <span class="neon-cyan">${gameState.relationships && gameState.relationships.children ? gameState.relationships.children.length : 0}</span></div>
+          <div><span style="color:#888">💔 Divorces:</span> <span class="neon-red">${gameState.relationships && gameState.relationships.divorces ? gameState.relationships.divorces : 0}</span></div>
+          <div><span style="color:#888">🩹 Scars:</span> <span class="neon-yellow">${gameState.scars ? gameState.scars.length : 0}</span></div>
+          <div><span style="color:#888">❤️ Max Health:</span> <span class="${(gameState.maxHealth || 100) < 80 ? 'neon-red' : 'neon-green'}">${gameState.maxHealth || 100}</span></div>
+          <div><span style="color:#888">⚖️ Child Support:</span> <span class="neon-yellow">$${gameState.relationships && gameState.relationships.children && gameState.relationships.children.length > 0 ? (gameState.relationships.children.length * 500).toLocaleString() + '/day' : '0'}</span></div>
+          <div><span style="color:#888">🏴 Territories:</span> <span class="neon-cyan">${gameState.territory ? Object.keys(gameState.territory).filter(k => gameState.territory[k].controlled).length : 0}</span></div>
+        </div>
+        ${gameState.scars && gameState.scars.length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;color:#888">Scars: ' + gameState.scars.map(function(s) { return '🩹 ' + s.type + ' (day ' + s.day + ')'; }).join(', ') + '</div>' : ''}
+        ${gameState.playerTraits && Object.keys(gameState.playerTraits).length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;"><span style="color:var(--neon-purple);">Traits:</span> ' + Object.entries(gameState.playerTraits).map(function(e) { return '<span style="background:rgba(180,0,255,0.15);padding:1px 6px;border-radius:3px;margin:1px;">' + e[0].replace(/_/g,' ') + (e[1] > 1 ? ' x' + e[1] : '') + '</span>'; }).join(' ') + '</div>' : ''}
+        ${gameState.playerAbilities && Object.keys(gameState.playerAbilities).length > 0 ? '<div style="margin-top:0.4rem;font-size:0.7rem;"><span style="color:var(--neon-green);">Abilities:</span> ' + Object.keys(gameState.playerAbilities).map(function(a) { return '<span style="background:rgba(0,255,100,0.1);padding:1px 6px;border-radius:3px;margin:1px;">' + a.replace(/_/g,' ') + '</span>'; }).join(' ') + '</div>' : ''}
+      </div>
+
       <!-- Net Worth Chart -->
       <div class="stats-section">
         <h3 class="section-title">📈 NET WORTH OVER TIME</h3>
@@ -6321,6 +6339,37 @@ function migrateGameState(state) {
   // Strategic trading mechanics migration
   if (!state.knownPrices) state.knownPrices = {};
   if (!state.locationTrades) state.locationTrades = {};
+
+  // === V7 Migration: Life Simulation + Consequence Engine ===
+  // Dirty/clean money
+  if (state.dirtyMoney === undefined) state.dirtyMoney = 0;
+  if (state.cleanMoney === undefined) state.cleanMoney = state.cash || 0;
+  // Relationships / life
+  if (!state.relationships) state.relationships = { partners: [], children: [], divorces: 0, totalChildSupport: 0 };
+  if (!state.relationships.children) state.relationships.children = [];
+  if (!state.scars) state.scars = [];
+  if (state.maxHealth === undefined) state.maxHealth = 100;
+  // Backstory triggers
+  if (!state._backstoryTriggered) state._backstoryTriggered = {};
+  // Consequence engine state
+  if (typeof initConsequenceState === 'function' && !state.playerTraits) {
+    initConsequenceState(state);
+  }
+  if (!state.playerTraits) state.playerTraits = {};
+  if (!state.playerAbilities) state.playerAbilities = {};
+  if (!state.pendingConsequences) state.pendingConsequences = [];
+  if (!state.choiceHistory) state.choiceHistory = [];
+  if (!state.unlockedContent) state.unlockedContent = [];
+  if (!state.lockedContent) state.lockedContent = [];
+  // Progressive unlock
+  if (!state.announcedUnlocks) state.announcedUnlocks = {};
+  // Bodies state
+  if (!state.bodies_state) state.bodies_state = typeof initBodyState === 'function' ? initBodyState() : { bodies: 0, totalKills: 0, disposedBodies: 0, discoveredBodies: 0, pendingDisposal: [], bodyLocations: [] };
+  // Loan shark tracking
+  if (state.lastBorrowDay === undefined) state.lastBorrowDay = -1;
+  if (state.debtDaysUnpaid === undefined) state.debtDaysUnpaid = 0;
+
+  if (!state.version || state.version < 7) state.version = 7;
 
   return state;
 }
