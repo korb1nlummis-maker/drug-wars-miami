@@ -2202,6 +2202,53 @@ function waitDay(state) {
     if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { loyal: 1 }, message: 'Your mentor from the block needs you.' }, 'backstory', 'corner_mentor');
   }
 
+  // CORNER KID: Act 1 story arc (day 20-480)
+  if (charId === 'corner_kid' && day >= 50 && !bt.corner_first_re_up) {
+    bt.corner_first_re_up = true;
+    msgs.push('💊 First re-up done. Your supplier trusts you now. "You move product fast, lil homie. I\'m gonna give you a better price next time." Street respect +5.');
+    if (typeof adjustRep === 'function') adjustRep(state, 'streetCred', 5);
+  }
+  if (charId === 'corner_kid' && day >= 90 && !bt.corner_block_beef) {
+    bt.corner_block_beef = true;
+    msgs.push('⚠️ Rival crew from two blocks over is selling on YOUR corner. Lil Rico says "We can handle this, boss. Say the word." Your first real territorial conflict.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { territorial: 1 } }, 'backstory', 'corner_beef');
+  }
+  if (charId === 'corner_kid' && day >= 140 && state.cash > 10000 && !bt.corner_mama_knows) {
+    bt.corner_mama_knows = true;
+    msgs.push('📞 Your mama called crying. "Baby, I found money in your room. Where is this coming from? Please tell me you ain\'t out there..." She knows. She always knew.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { family_guilt: 1 }, stats: { stress: 10 } }, 'backstory', 'corner_mama');
+  }
+  if (charId === 'corner_kid' && day >= 200 && !bt.corner_first_gun) {
+    bt.corner_first_gun = true;
+    msgs.push('🔫 Deshawn brought you a piece. "You need this now, boss. The game changed since you started. Can\'t be out here naked." Your innocence is officially gone.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { armed: 1, hardened: 1 } }, 'backstory', 'corner_gun');
+  }
+  if (charId === 'corner_kid' && day >= 260 && (state.henchmen || []).length >= 4 && !bt.corner_real_crew) {
+    bt.corner_real_crew = true;
+    msgs.push('👥 It\'s not just you and the boys anymore. You\'re running a real crew now. People call you "boss" without irony. The OGs on the corner tip their hats.');
+    if (typeof adjustRep === 'function') { adjustRep(state, 'streetCred', 8); adjustRep(state, 'fear', 3); }
+  }
+  if (charId === 'corner_kid' && day >= 320 && state.heat > 30 && !bt.corner_friend_arrested) {
+    bt.corner_friend_arrested = true;
+    msgs.push('🚔 Your childhood friend Marcus got picked up. He knows everything about your operation. The cops are squeezing him. Will he hold? Or will he fold?');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { delay: { days: 7, event: 'marcus_decision' }, traits: { paranoid: 1 } }, 'backstory', 'corner_marcus');
+  }
+  if (charId === 'corner_kid' && day >= 380 && !bt.corner_little_brother) {
+    bt.corner_little_brother = true;
+    msgs.push('👦 Your little brother wants in. He\'s 16. "I can hold corners, I can run packages. Let me work." He looks up to you. That scares you more than any gun.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { responsible: 1 } }, 'backstory', 'corner_brother');
+  }
+  if (charId === 'corner_kid' && day >= 450 && !bt.corner_block_legend) {
+    bt.corner_block_legend = true;
+    var terrCount = typeof getControlledTerritories === 'function' ? getControlledTerritories(state).length : 0;
+    if (terrCount >= 3) {
+      msgs.push('📖 They paint your name on the wall at the basketball court. Not as a memorial — as a legend. The kid from the block who built an empire. But empires attract attention...');
+    } else {
+      msgs.push('📖 The block is the same. Same broken streetlights, same corner boys. But you\'re different now. The question is: will the block remember you as a hero or a cautionary tale?');
+    }
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { block_legend: 1 } }, 'backstory', 'corner_legend');
+  }
+
   // EX-CON: Prison contact offers inside job
   if (charId === 'ex_con' && day >= 25 && !bt.excon_contact) {
     bt.excon_contact = true;
@@ -2219,6 +2266,43 @@ function waitDay(state) {
     }
   }
 
+  // EX-CON: Act 1 story arc (day 25-480)
+  if (charId === 'ex_con' && day >= 60 && !bt.excon_yard_cred) {
+    bt.excon_yard_cred = true;
+    msgs.push('💪 Word got around that you did five years without snitching. OGs from inside are reaching out. "You solid, homie. We got your back out here." Prison connections paying off.');
+    if (typeof adjustRep === 'function') { adjustRep(state, 'trust', 10); adjustRep(state, 'streetCred', 5); }
+  }
+  if (charId === 'ex_con' && day >= 100 && !bt.excon_ptsd) {
+    bt.excon_ptsd = true;
+    msgs.push('😰 Nightmare again. The cell door slamming. The fluorescent lights that never turn off. Five years changes a man. You wake up in a cold sweat. Freedom still feels fragile.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { haunted: 1 }, stats: { stress: 8 } }, 'backstory', 'excon_ptsd');
+  }
+  if (charId === 'ex_con' && day >= 160 && !bt.excon_old_cellmate) {
+    bt.excon_old_cellmate = true;
+    msgs.push('📞 Your old cellmate Darnell just got released. "I kept my mouth shut for you. Now I need work." He\'s loyal but volatile. Dangerous but useful.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { loyal_friend: 1 } }, 'backstory', 'excon_darnell');
+  }
+  if (charId === 'ex_con' && day >= 220 && state.cash > 20000 && !bt.excon_victim_family) {
+    bt.excon_victim_family = true;
+    msgs.push('📞 A woman approached you outside the store. "You killed my husband five years ago. I know who you are." She walked away. She didn\'t go to the police. But she knows.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { guilt: 1, watched: 1 } }, 'backstory', 'excon_victim');
+  }
+  if (charId === 'ex_con' && day >= 300 && !bt.excon_parole_ending) {
+    bt.excon_parole_ending = true;
+    msgs.push('📋 Probation period is over. You\'re officially a free man. No more check-ins. No more piss tests. But the record follows you forever. And the streets... the streets are all that\'s left.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { removeTraits: ['on_probation'], traits: { free_man: 1 } }, 'backstory', 'excon_parole_end');
+    if (state.characterFlags) state.characterFlags.onProbation = false;
+  }
+  if (charId === 'ex_con' && day >= 380 && (state.henchmen || []).length >= 5 && !bt.excon_prison_crew) {
+    bt.excon_crew = true;
+    msgs.push('👥 Half your crew did time. They understand. In prison you learn who\'s real and who\'s not. Out here, that loyalty is everything. Your crew would die for you.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { prison_brotherhood: 1 } }, 'backstory', 'excon_crew');
+  }
+  if (charId === 'ex_con' && day >= 460 && !bt.excon_act1_close) {
+    bt.excon_act1_close = true;
+    msgs.push('📖 Five years behind bars. Now ' + Math.floor(day / 30) + ' months free. Big Mike asks: "You ever think about going straight?" You laugh. Neither of you mean it.');
+  }
+
   // HUSTLER: Old mark recognizes you
   if (charId === 'hustler' && day >= 30 && !bt.hustler_mark) {
     bt.hustler_mark = true;
@@ -2229,6 +2313,36 @@ function waitDay(state) {
   if (charId === 'hustler' && day >= 45 && state.cash > 20000 && !bt.hustler_bookie) {
     bt.hustler_bookie = true;
     msgs.push('🎰 Your old bookie wants back in. "You got cash now. Let me run a gambling operation under your protection." New operation available.');
+  }
+
+  // HUSTLER: Act 1 story arc (day 30-480)
+  if (charId === 'hustler' && day >= 80 && !bt.hustler_first_big_score) {
+    bt.hustler_first_big_score = true;
+    msgs.push('💰 Your first real score. Not a three-card monte table — real money. The rush is different when the stakes are life and death instead of $20 bets.');
+    if (typeof adjustRep === 'function') adjustRep(state, 'streetCred', 3);
+  }
+  if (charId === 'hustler' && day >= 150 && !bt.hustler_silver_tongue_test) {
+    bt.hustler_silver_tongue_test = true;
+    msgs.push('🗣️ A deal went sideways. The buyer pulled a gun. But you talked him down. "Easy, easy — we can both walk away from this richer." Your mouth saved your life tonight.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { silver_tongue: 1, cool_under_pressure: 1 } }, 'backstory', 'hustler_talk');
+  }
+  if (charId === 'hustler' && day >= 220 && state.frontBusinesses && state.frontBusinesses.length >= 1 && !bt.hustler_legit_front) {
+    bt.hustler_legit_front = true;
+    msgs.push('🏪 The hustle comes full circle. Running a REAL business feels strange. But the laundromat / taco stand is just another hustle — this time the government is the mark.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { entrepreneur: 1 } }, 'backstory', 'hustler_legit');
+  }
+  if (charId === 'hustler' && day >= 300 && !bt.hustler_con_artist_past) {
+    bt.hustler_con_artist_past = true;
+    msgs.push('📞 An old con partner called. "I got a PERFECT scam. Insurance fraud. $200K payout. I just need your face." Old habits calling. Tempting but risky.');
+  }
+  if (charId === 'hustler' && day >= 370 && state.cash > 50000 && !bt.hustler_gambler_streak) {
+    bt.hustler_gambler_streak = true;
+    msgs.push('🎰 You\'re at a high-stakes poker game. The table has $80K on it. You can feel the cards. Your hustler instincts are screaming. This is your element.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { gambler: 1, risk_taker: 1 } }, 'backstory', 'hustler_poker');
+  }
+  if (charId === 'hustler' && day >= 450 && !bt.hustler_act1_close) {
+    bt.hustler_act1_close = true;
+    msgs.push('📖 Every angle has an angle. You learned that on the streets with fake Rolexes. Now the angles are worth millions. But the biggest hustle of all? Making people think you\'re legitimate.');
   }
 
   // CONNECTED KID: Cartel demands tribute
