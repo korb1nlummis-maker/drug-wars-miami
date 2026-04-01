@@ -2925,6 +2925,115 @@ function waitDay(state) {
       bt.hustler_a3_mirror = true;
       msgs.push('💭 You caught your reflection in a window. Three-card monte kid. Fake Rolex hustler. Now you launder millions and dine with senators. Same hustle. Bigger table. Same empty feeling.');
     }
+
+    // CONNECTED KID: Act 3 - The throne has thorns
+    if (charId === 'connected_kid' && day >= 1550 && !bt.connected_a3_cartel_summit) {
+      bt.connected_a3_cartel_summit = true;
+      msgs.push('💀 You\'re invited to a cartel summit in Bogota. The big table. Medellin, Cali, your operation. "Your father sat in this chair. Now you do." The weight of generations of blood money.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { cartel_inner_circle: 1 } }, 'backstory', 'connected_a3_summit');
+    }
+    if (charId === 'connected_kid' && day >= 1800 && !bt.connected_a3_soto_dead) {
+      bt.connected_a3_soto_dead = true;
+      msgs.push('💀 Victor Soto was found dead. Not by your hand — by his own people. "He was reckless," they said. But you know the truth: the cartel chose YOU over him. That\'s power. That\'s terror.');
+      if (typeof adjustRep === 'function') { adjustRep(state, 'fear', 15); adjustRep(state, 'streetCred', 10); }
+    }
+    if (charId === 'connected_kid' && day >= 2050 && !bt.connected_a3_uncle_betrayal) {
+      bt.connected_a3_uncle_betrayal = true;
+      msgs.push('🗡️ Your "uncle" was a fraud. Not related at all — a former associate of your father who saw an opportunity. He\'s been siphoning money through a side account for months. $80K gone.');
+      state.cash = Math.max(0, state.cash - 80000);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { trust_no_one: 1 } }, 'backstory', 'connected_a3_uncle');
+    }
+    if (charId === 'connected_kid' && day >= 2250 && !bt.connected_a3_father_letter) {
+      bt.connected_a3_father_letter = true;
+      msgs.push('✉️ A letter arrived. Your father\'s handwriting, dated years ago. Hidden in the prison mail system. "If you\'re reading this, I failed. Don\'t make my mistakes. Trust no one. Not even me."');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { fathers_warning: 1 }, stats: { stress: 10 } }, 'backstory', 'connected_a3_letter');
+    }
+    if (charId === 'connected_kid' && day >= 2450 && !bt.connected_a3_empire_size) {
+      bt.connected_a3_empire_size = true;
+      var terrC = typeof getControlledTerritories === 'function' ? getControlledTerritories(state).length : 0;
+      var crewC = (state.henchmen || []).length;
+      msgs.push('👑 ' + terrC + ' territories. ' + crewC + ' crew. Cartel backing. Your father built this in 20 years. You did it in ' + Math.floor(day / 30) + ' months. But empires that grow fast collapse fast.');
+    }
+
+    // CLEANSKIN: Act 3 - The mask cracks
+    if (charId === 'cleanskin' && day >= 1550 && !bt.cleanskin_a3_divorce_final) {
+      bt.cleanskin_a3_divorce_final = true;
+      msgs.push('💔 The divorce is final. They took the house and custody. Child support: $500/day. "I don\'t know who you are anymore." They were right. You don\'t either.');
+      if (!state.relationships) state.relationships = { partners: [], children: [], divorces: 0 };
+      state.relationships.divorces = (state.relationships.divorces || 0) + 1;
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { divorced: 1, alone: 1 }, stats: { stress: 20 } }, 'backstory', 'cleanskin_a3_divorce');
+    }
+    if (charId === 'cleanskin' && day >= 1800 && !bt.cleanskin_a3_vance_closing) {
+      bt.cleanskin_a3_vance_closing = true;
+      msgs.push('🕵️ Agent Vance subpoenaed your banking records. All of them. Seven years of transactions. Your shell companies are good, but she\'s better. She found a $12,000 discrepancy.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 12);
+    }
+    if (charId === 'cleanskin' && day >= 2050 && !bt.cleanskin_a3_accountant_kidnapped) {
+      bt.cleanskin_a3_accountant_kidnapped = true;
+      msgs.push('🚨 Your real accountant — the one who manages the legitimate side — was kidnapped by a rival. They want your financial records. If those books get out, EVERYONE goes down.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { exposed_risk: 1 } }, 'backstory', 'cleanskin_a3_kidnap');
+    }
+    if (charId === 'cleanskin' && day >= 2300 && !bt.cleanskin_a3_clean_exit) {
+      bt.cleanskin_a3_clean_exit = true;
+      msgs.push('💭 You crunched the numbers. $' + Math.round((state.cash + state.bank) * 0.6).toLocaleString() + ' in clean offshore accounts. Enough to disappear. New name. New country. No one would find you. The exit is there. Do you take it?');
+    }
+    if (charId === 'cleanskin' && day >= 2480 && !bt.cleanskin_a3_identity_crisis) {
+      bt.cleanskin_a3_identity_crisis = true;
+      msgs.push('🎭 Which one are you? The accountant with the CPA license? Or the drug lord with the offshore millions? The mask has become the face. You can\'t tell anymore.');
+    }
+
+    // VETERAN: Act 3 - The old soldier's last campaign
+    if (charId === 'veteran' && day >= 1550 && !bt.veteran_a3_flash_dead) {
+      bt.veteran_a3_flash_dead = true;
+      msgs.push('💀 Flash — the young gun who challenged you — turned up dead. Not your doing. The streets are eating their young. You remember when that could have been you. It still could be.');
+    }
+    if (charId === 'veteran' && day >= 1800 && !bt.veteran_a3_tombstone_cancer) {
+      bt.veteran_a3_tombstone_cancer = true;
+      msgs.push('🏥 Tombstone has cancer. Lung cancer. "All those years breathing in lab fumes, boss." Your oldest soldier, your most loyal man. Dying slow. You pay for the best oncologist in Miami.');
+      state.cash = Math.max(0, state.cash - 40000);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { losing_brothers: 1 }, stats: { stress: 15 } }, 'backstory', 'veteran_a3_tombstone');
+    }
+    if (charId === 'veteran' && day >= 2100 && !bt.veteran_a3_last_fight) {
+      bt.veteran_a3_last_fight = true;
+      msgs.push('⚔️ A crew of young guns tried to rob your stash house. You handled it personally. Broke a man\'s arm, dislocated another\'s shoulder. At your age. Razor watched in awe. "You still got it, boss."');
+      state.health = Math.max(30, (state.health || 100) - 10);
+      if (typeof adjustRep === 'function') adjustRep(state, 'fear', 8);
+    }
+    if (charId === 'veteran' && day >= 2300 && !bt.veteran_a3_daughter) {
+      bt.veteran_a3_daughter = true;
+      msgs.push('📞 A woman called. Said she\'s your daughter. Born while you were on a job in \'79. Her mother never told you. She\'s 25 now. Wants nothing from you except answers.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { secret_daughter: 1 } }, 'backstory', 'veteran_a3_daughter');
+    }
+    if (charId === 'veteran' && day >= 2480 && !bt.veteran_a3_legacy_question) {
+      bt.veteran_a3_legacy_question = true;
+      msgs.push('💭 Razor asked the question nobody asks: "When it\'s over — and it WILL be over — what do you want them to say about you?" You don\'t have an answer. That scares you more than any gun.');
+    }
+
+    // IMMIGRANT: Act 3 - Between two worlds, belonging to neither
+    if (charId === 'immigrant' && day >= 1550 && !bt.immigrant_a3_interpol) {
+      bt.immigrant_a3_interpol = true;
+      msgs.push('🌍 INTERPOL flagged your supply route. International cooperation between Miami PD and foreign agencies. Your bridge between worlds is now a target for BOTH sides.');
+      state.heat = Math.min(100, (state.heat || 0) + 12);
+    }
+    if (charId === 'immigrant' && day >= 1800 && !bt.immigrant_a3_cousin_deep) {
+      bt.immigrant_a3_cousin_deep = true;
+      msgs.push('💊 Your cousin is in deep. Selling. Using. Both. You created this. You brought them here, showed them the game. Now they\'re drowning in it. Save them or save yourself?');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { enabler_guilt: 1 } }, 'backstory', 'immigrant_a3_cousin');
+    }
+    if (charId === 'immigrant' && day >= 2050 && !bt.immigrant_a3_home_coup) {
+      bt.immigrant_a3_home_coup = true;
+      msgs.push('🏛️ Political upheaval back home. The politician who offered you citizenship was overthrown. Your deal is void. Worse: the new regime knows your name. International heat rising.');
+      state.heat = Math.min(100, (state.heat || 0) + 8);
+    }
+    if (charId === 'immigrant' && day >= 2250 && !bt.immigrant_a3_american_dream) {
+      bt.immigrant_a3_american_dream = true;
+      msgs.push('🇺🇸 You became a citizen. Not through the corrupt politician — through a lawyer, proper paperwork, and a LOT of laundered money. Standing in the courthouse, hand on heart. The irony burns.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { citizen: 1, american: 1 }, removeTraits: ['fugitive_status'] }, 'backstory', 'immigrant_a3_citizen');
+    }
+    if (charId === 'immigrant' && day >= 2480 && !bt.immigrant_a3_roots) {
+      bt.immigrant_a3_roots = true;
+      msgs.push('📖 You visit the community center you built. Kids playing basketball. Adults in English class. A mural of your face on the wall. You came here with nothing. Now you\'re everything — and nothing — to these people.');
+    }
   }
 
   msgs.push(...processCrewDaily(state));
