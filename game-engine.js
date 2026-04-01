@@ -52,27 +52,32 @@ const LOCATIONS = [
 // DRUGS - expanded from original 6 to 12
 // ============================================================
 const DRUGS = [
-  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8 },
-  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6 },
-  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5 },
-  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4 },
-  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3 },
-  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5 },
-  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2 },
-  { id: 'weed', name: 'Weed', minPrice: 300, maxPrice: 1000, volatility: 0.25, category: 'low', emoji: '🌿', minLevel: 1 },
-  { id: 'speed', name: 'Speed', minPrice: 70, maxPrice: 300, volatility: 0.35, category: 'bulk', emoji: '⚡', minLevel: 1 },
-  { id: 'shrooms', name: 'Shrooms', minPrice: 50, maxPrice: 400, volatility: 0.5, category: 'bulk', emoji: '🍄', minLevel: 1 },
-  { id: 'ludes', name: 'Ludes', minPrice: 10, maxPrice: 70, volatility: 0.4, category: 'bulk', emoji: '💤', minLevel: 1 },
-  { id: 'peyote', name: 'Peyote', minPrice: 30, maxPrice: 250, volatility: 0.45, category: 'bulk', emoji: '🌵', minLevel: 1 },
-  // === NEW EXPANSION DRUGS ===
-  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, ngPlus: true },
-  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4 },
-  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2 },
-  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3 },
-  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2 },
-  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5 },
-  { id: 'adderall', name: 'Adderall/Rx Pills', minPrice: 400, maxPrice: 1800, volatility: 0.30, category: 'low', emoji: '📋', minLevel: 1 },
-  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1 },
+  // === STARTER DRUGS (available day 1) ===
+  { id: 'weed', name: 'Weed', minPrice: 300, maxPrice: 1000, volatility: 0.25, category: 'low', emoji: '🌿', minLevel: 1, minDay: 1 },
+  { id: 'speed', name: 'Speed', minPrice: 70, maxPrice: 300, volatility: 0.35, category: 'bulk', emoji: '⚡', minLevel: 1, minDay: 1 },
+  { id: 'shrooms', name: 'Shrooms', minPrice: 50, maxPrice: 400, volatility: 0.5, category: 'bulk', emoji: '🍄', minLevel: 1, minDay: 1 },
+  { id: 'ludes', name: 'Ludes', minPrice: 10, maxPrice: 70, volatility: 0.4, category: 'bulk', emoji: '💤', minLevel: 1, minDay: 1 },
+  { id: 'peyote', name: 'Peyote', minPrice: 30, maxPrice: 250, volatility: 0.45, category: 'bulk', emoji: '🌵', minLevel: 1, minDay: 1 },
+  { id: 'adderall', name: 'Adderall/Rx Pills', minPrice: 400, maxPrice: 1800, volatility: 0.30, category: 'low', emoji: '📋', minLevel: 1, minDay: 1 },
+  // === EARLY GAME DRUGS (unlock day 20-60) ===
+  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1, minDay: 20 },
+  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2, minDay: 30 },
+  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2, minDay: 40 },
+  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2, minDay: 50 },
+  // === MID GAME DRUGS (unlock day 80-200) ===
+  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3, minDay: 80 },
+  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3, minDay: 100 },
+  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4, minDay: 120 },
+  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4, minDay: 150 },
+  // === EMPIRE DRUGS (unlock day 200-500) ===
+  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5, minDay: 200 },
+  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5, minDay: 250 },
+  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5, minDay: 300 },
+  // === KINGPIN DRUGS (unlock day 400-1000) ===
+  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6, minDay: 400 },
+  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8, minDay: 600 },
+  // === ENDGAME DRUGS (NG+ or very late game) ===
+  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, minDay: 1000, ngPlus: true },
 ];
 
 // ============================================================
@@ -1989,6 +1994,12 @@ function generatePrices(state) {
     if (state.newGamePlus && state.newGamePlus.active) {
       const vol = getNgPlusMod(state, 'priceVolatility', 1);
       price = midPrice + (price - midPrice) * vol;
+    }
+
+    // Day-based drug availability: drugs unlock over time
+    if (drug.minDay && (state.day || 1) < drug.minDay) {
+      prices[drug.id] = null; // Not available yet - haven't discovered this drug
+      continue;
     }
 
     // NG+ drug availability check (e.g., Fentanyl requires Tier 2+)
