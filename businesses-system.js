@@ -373,6 +373,52 @@ function processBusinessesDaily(state) {
     if (owned.shutdownUntil && day < owned.shutdownUntil) continue;
     owned.shutdownUntil = 0;
 
+    // === OPERATING COSTS (daily) ===
+    var operatingCost = Math.round((def.setupCost || 10000) * 0.002); // 0.2% of setup cost per day
+    // Front worker crew reduces operating costs by 15% each
+    var frontWorkers = 0;
+    if (state.henchmen) {
+      for (var fw = 0; fw < state.henchmen.length; fw++) {
+        if (state.henchmen[fw].assignedTo === 'front_cover' && !state.henchmen[fw].injured) frontWorkers++;
+      }
+    }
+    if (frontWorkers > 0) operatingCost = Math.round(operatingCost * Math.max(0.4, 1 - frontWorkers * 0.15));
+    if (typeof state.cash === 'number') state.cash -= operatingCost;
+    owned.totalOperatingCosts = (owned.totalOperatingCosts || 0) + operatingCost;
+
+    // === POLICE RAID RISK (scales with heat and investigation) ===
+    var raidChance = 0.005; // 0.5% base daily chance
+    if (state.heat > 50) raidChance += 0.01;
+    if (state.heat > 80) raidChance += 0.02;
+    if (state.investigation && state.investigation.level >= 3) raidChance += 0.015;
+    if (state.investigation && state.investigation.level >= 5) raidChance += 0.03;
+    // Laundering heavily draws attention
+    if (def.launderingCapacity > 5000) raidChance += 0.005;
+    // Raid resistance from upgrades
+    if (owned.upgrades && owned.upgrades.includes('security_firm')) raidChance *= 0.75;
+
+    if (Math.random() < raidChance) {
+      // POLICE RAID on this business
+      var raidSeverity = (state.investigation ? state.investigation.level : 0) >= 4 ? 'federal' : 'local';
+      if (raidSeverity === 'federal') {
+        // Federal raid: business DESTROYED, seized by government
+        biz.owned.splice(i, 1);
+        i--;
+        biz.eventLog.push({ day: day, businessId: owned.businessId, eventId: 'federal_raid', text: '🚨 FEDERAL RAID: ' + def.name + ' seized by DEA! Business permanently lost.' });
+        state.heat = Math.min(100, (state.heat || 0) + 15);
+        if (state.investigation) state.investigation.points = Math.max(0, state.investigation.points - 10); // raid spent some investigation energy
+        continue;
+      } else {
+        // Local raid: shutdown + fine + evidence found
+        owned.shutdownUntil = day + 7;
+        var raidFine = 2000 + Math.floor(Math.random() * 8000);
+        if (typeof state.cash === 'number') state.cash = Math.max(0, state.cash - raidFine);
+        state.heat = Math.min(100, (state.heat || 0) + 10);
+        biz.eventLog.push({ day: day, businessId: owned.businessId, eventId: 'police_raid', text: '🚔 Police raid on ' + def.name + '! Shut down 7 days, $' + raidFine.toLocaleString() + ' fine.' });
+        continue;
+      }
+    }
+
     // Calculate income
     const income = getBusinessIncome(state, owned);
     dailyTotal += income;

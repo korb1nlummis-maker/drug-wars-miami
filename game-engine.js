@@ -4369,7 +4369,45 @@ function resolveCourtCase(state) {
     }
     const basePrison = sentence.prisonDays[0] + Math.floor(Math.random() * (sentence.prisonDays[1] - sentence.prisonDays[0]));
     const prisonDays = Math.round(basePrison * prisonMod);
-    state.day += prisonDays;
+
+    // === SIMULATE PRISON TIME (cascade effects) ===
+    // Each day in prison: crew drains cash, businesses run without you, rivals expand
+    for (var pd = 0; pd < prisonDays; pd++) {
+      state.day++;
+      // Crew still needs to be paid (they run things while you're inside)
+      var dailyCrewCost = 0;
+      for (var ci = 0; ci < state.henchmen.length; ci++) {
+        var ht = HENCHMEN_TYPES.find(function(t) { return t.id === state.henchmen[ci].type; });
+        if (ht) dailyCrewCost += ht.dailyPay;
+      }
+      state.cash = Math.max(0, state.cash - dailyCrewCost);
+      // If can't pay crew, they start leaving
+      if (state.cash <= 0 && state.henchmen.length > 0 && Math.random() < 0.15) {
+        state.henchmen.pop(); // Least loyal leaves
+      }
+      // Debt compounds
+      state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+      state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
+      // Business income trickles in (50% without you there)
+      if (state.frontBusinesses) {
+        for (var bi = 0; bi < state.frontBusinesses.length; bi++) {
+          var bdef = typeof FRONT_BUSINESSES !== 'undefined' ? FRONT_BUSINESSES.find(function(b) { return b.id === state.frontBusinesses[bi].id; }) : null;
+          if (bdef) state.cash += Math.round((bdef.dailyIncome || 100) * 0.5);
+        }
+      }
+      // Rival factions expand into your territory (5% per day)
+      if (state.territory && Math.random() < 0.05) {
+        var controlled = Object.keys(state.territory).filter(function(k) { return state.territory[k].controlled; });
+        if (controlled.length > 0) {
+          var lost = controlled[Math.floor(Math.random() * controlled.length)];
+          state.territory[lost].controlled = false;
+        }
+      }
+      // Child support still owed
+      if (state.relationships && state.relationships.children) {
+        state.relationships.totalChildSupport = (state.relationships.totalChildSupport || 0) + state.relationships.children.length * 500;
+      }
+    }
 
     // Asset forfeiture — scaled by charge severity
     const forfeitMod = state.courtCase.worstForfeitMod || 1.0;
@@ -4392,11 +4430,7 @@ function resolveCourtCase(state) {
       h.loyalty = Math.max(0, h.loyalty - prisonDays * 3);
     }
 
-    // Interest compounds while in prison
-    for (let i = 0; i < prisonDays; i++) {
-      state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
-      state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
-    }
+    // (Interest/crew/territory already simulated in prison loop above)
 
     // Business/property seizure on conviction (RICO charges = lose fronts)
     var businessesSeized = 0;
