@@ -621,19 +621,54 @@ function render() {
 // ============================================================
 // PERSISTENT TOOLBAR (shown in-game)
 // ============================================================
+var _helpVisible = false;
+
+var SCREEN_HELP = {
+  game: '🏪 <b>The Market</b> — Buy drugs cheap, travel to another district, sell high. Watch the price trends. Build your empire one deal at a time.',
+  crew: '👥 <b>Your Crew</b> — Hire people at the Black Market. Assign jobs: guards, runners, lookouts, body disposal. Promote loyal members. Fire traitors.',
+  fronts: '🏢 <b>Front Businesses</b> — Legitimate businesses that earn clean income AND launder dirty drug money. Upgrade for more capacity. Staff with crew for +10% income.',
+  heist: '🎯 <b>Heists</b> — Plan a heist → Buy equipment → Assign crew → Execute. Each heist has rounds of combat. Better equipment = better odds. Bring the right crew.',
+  factions: '⚔️ <b>Factions</b> — Gangs control districts. Your standing affects prices (+/-25%). Bribe them, trade on their turf, or go to war. Allies give discounts, enemies ambush you.',
+  processing: '⚗️ <b>Drug Lab</b> — Buy chemicals, cook drugs into higher-value products. Chemistry skill improves quality. Higher quality = higher sell price. The Dropout gets +15% yield.',
+  vehicles: '🚗 <b>Garage</b> — Buy vehicles for speed, cargo space, and armor. Faster cars = better escape chance. Trucks carry more product. Exotic cars boost reputation.',
+  properties: '🏠 <b>Properties</b> — Buy safe houses, warehouses, labs. Properties add crew slots, stash space, and lab capacity. Protect your assets.',
+  distribution: '📦 <b>Distribution</b> — Set up dealer networks in districts. Hire street dealers who sell for you automatically. Passive income but generates heat.',
+  romance: '💕 <b>Romance</b> — Meet people in specific districts. Date them (costs money). Relationships can lead to marriage, kids, and... divorce. Child support is $500/day per kid.',
+  factions: '⚔️ <b>Factions</b> — 8 Miami gangs + 26 world factions. Standing affects prices, territory access, and ambush risk. Bribe, ally, or war.',
+  skills: '🎓 <b>Skills</b> — 8 skill trees with 100 skills. Earn skill points by leveling up. Skills affect trading, combat, stealth, crew management, and more.',
+  politics: '🏛️ <b>Politics</b> — Corrupt officials, recruit contacts, gather intel. Political influence reduces investigation and improves court outcomes.',
+  bodies: '☠️ <b>Body Disposal</b> — Undisposed bodies attract police. Assign crew to auto-dispose, or choose a method manually. Each method has different cost/risk.',
+  operations: '🏢 <b>Mafia Operations</b> — Protection rackets, gambling, arms trafficking. Big money but big heat. Requires territory and crew.',
+  nightlife: '🌙 <b>Nightlife</b> — Attend events to network, reduce stress, and meet contacts. VIP status at venues gives ongoing bonuses.',
+  lifestyle: '🏠 <b>Lifestyle</b> — Your daily living costs. Higher lifestyle = less stress but more attention. Kingpin lifestyle costs $10K/day and adds +5 heat.',
+  court: '⚖️ <b>Court</b> — When arrested: charges based on what you were carrying. Pay contacts, intimidate witnesses, or take a plea deal. Evidence strength matters.',
+  imports: '📦 <b>Import/Export</b> — Connect with international suppliers for bulk drugs at wholesale prices. Build relationships over time. Risky but profitable.',
+  shipping: '🚢 <b>Shipping</b> — Unlock transport tiers from mules to narco subs. Higher tiers move more product but cost more. Interception risk scales with heat.',
+  futures: '📈 <b>Futures Trading</b> — Bet on drug price movements. Buy futures contracts and settle when the price moves in your favor. Early exit = penalty.',
+  campaign: '📜 <b>Campaign</b> — 5-act story with branching paths. Each mission has 2-4 approaches with different consequences. Your choices shape the story.',
+  missions: '📋 <b>Missions</b> — Procedural missions generate daily. Side mission chains have multiple chapters. Every choice earns traits that affect future options.',
+  phone: '📱 <b>Phone</b> — Messages from suppliers, buyers, crew, and threats. Respond to earn money, missions, and intel. Watch for wiretaps at high heat.',
+  defense: '🏰 <b>Territory Defense</b> — Build fortifications, watchtowers, weapon caches. Defend against raids. Assign crew as territory guards for +5 defense each.',
+  stats: '📊 <b>Empire Stats</b> — Net worth, drug P&L, dirty/clean money ratio, scars, children, traits, and abilities. Track your empire\'s growth.',
+};
+
 function renderToolbar() {
   const muteIcon = MusicEngine.isMuted() ? '🔇' : '🔊';
   const sfxIcon = MusicEngine.isSfxMuted() ? '🔕' : '🔔';
+  var helpText = SCREEN_HELP[currentScreen] || '';
   return `
     <div class="toolbar">
       <button class="toolbar-btn" onclick="goHome()" title="Main Menu">🏠</button>
       <button class="toolbar-btn" onclick="openSaveLoadModal()" title="Save/Load">💾</button>
+      <button class="toolbar-btn" onclick="_helpVisible=!_helpVisible; render();" title="Help" style="${_helpVisible ? 'background:rgba(0,255,255,0.2);' : ''}">❓</button>
+      ${typeof restartTutorial === 'function' ? '<button class="toolbar-btn" onclick="restartTutorial(); render();" title="Restart Tutorial">📖</button>' : ''}
       <button class="toolbar-btn" onclick="MusicEngine.toggleMute(); render();" title="Toggle Music">${muteIcon}</button>
       <button class="toolbar-btn" onclick="MusicEngine.toggleSfxMute(); render();" title="Toggle Sound Effects">${sfxIcon}</button>
       <div class="toolbar-vol">
         <input type="range" min="0" max="100" value="${Math.round(MusicEngine.getVolume() * 100)}" class="vol-slider" oninput="MusicEngine.setVolume(this.value/100)" title="Volume">
       </div>
     </div>
+    ${_helpVisible && helpText ? '<div style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.2);border-radius:6px;padding:0.5rem 0.7rem;margin:0.3rem 0;font-size:0.8rem;color:var(--text-main);line-height:1.4;">' + helpText + '</div>' : ''}
   `;
 }
 
@@ -1405,7 +1440,7 @@ function renderGame() {
     <div class="status-bar">
       <div class="status-row">
         <span class="stat"><span class="stat-label">DAY</span> <span class="stat-value">${GAME_CONFIG.endlessMode ? gameState.day : gameState.day + '/' + GAME_CONFIG.totalDays}</span>${typeof getTimePeriod === 'function' ? ` <span style="font-size:0.7rem">${getTimePeriod(gameState).emoji}</span>` : ''}</span>
-        <span class="stat"><span class="stat-label">CASH</span> <span class="stat-value neon-green">$${gameState.cash.toLocaleString()}</span></span>
+        <span class="stat" title="Total cash. Dirty money needs laundering through front businesses."><span class="stat-label">CASH</span> <span class="stat-value neon-green">$${gameState.cash.toLocaleString()}</span>${(gameState.dirtyMoney || 0) > 1000 ? `<span style="font-size:0.55rem;color:var(--neon-red);margin-left:2px" title="Dirty money draws investigation. Launder through fronts!">💰${Math.round((gameState.dirtyMoney || 0) / Math.max(1, gameState.cash) * 100)}%🔴</span>` : ''}</span>
         <span class="stat"><span class="stat-label">BANK</span> <span class="stat-value neon-cyan">$${gameState.bank.toLocaleString()}</span></span>
         <span class="stat"><span class="stat-label">DEBT</span> <span class="stat-value ${gameState.debt > 0 ? 'neon-red' : 'neon-green'}">$${gameState.debt.toLocaleString()}</span></span>
       </div>
@@ -1990,6 +2025,7 @@ function renderTradeModal() {
         <h3>${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
         <p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>
         <p>You have: ${owned} units | Cash: $${gameState.cash.toLocaleString()} | Space: ${getFreeSpace(gameState)}</p>
+        ${tradeMode === 'sell' ? `<p style="font-size:0.75rem;color:var(--neon-red);">⚠️ Drug sales produce <b>dirty money</b>. Launder through front businesses to avoid investigation.</p>` : ''}
         <div style="font-size:0.7rem;color:var(--text-dim);margin:0.3rem 0;padding:0.3rem 0.5rem;background:rgba(0,255,255,0.03);border-radius:4px;border:1px solid var(--border-color);">
           <span style="margin-right:0.8rem;">📦 ${_bulkNote}</span>
           ${_repLabel ? '<span style="color:var(--neon-yellow);">⭐ ' + _repLabel + ' (' + _repBonus + ')</span>' : '<span>🏪 Trade here more for rep discounts (' + Math.max(0, 5 - _ltCount) + ' more trades)</span>'}
