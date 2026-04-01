@@ -2149,6 +2149,45 @@ function waitDay(state) {
     msgs.push('📞 Professor Herrera called. "I heard about your... career change. I can teach you advanced synthesis. Meet me at the old lab." (+Chemistry contact unlocked)');
     if (typeof applyConsequences === 'function') applyConsequences(state, { ability: 'chemist_knowledge', message: 'Professor Herrera teaches you advanced synthesis techniques.' }, 'backstory', 'dropout_professor');
   }
+  // DROPOUT: Act 1 story arc (day 15-500)
+  if (charId === 'dropout' && day >= 75 && !bt.dropout_first_batch) {
+    bt.dropout_first_batch = true;
+    msgs.push('⚗️ Your first real batch is ready. The purity is... impressive. Tito is pleased. "You\'re worth every penny, college boy." Your reputation as a cook begins.');
+    if (typeof adjustRep === 'function') adjustRep(state, 'streetCred', 5);
+  }
+  if (charId === 'dropout' && day >= 120 && state.cash > 15000 && !bt.dropout_lab_dream) {
+    bt.dropout_lab_dream = true;
+    msgs.push('💭 You dream about the university lab. Clean equipment. Proper ventilation. Instead you\'re cooking in a bathtub. Maybe with enough money you could set up a REAL lab...');
+  }
+  if (charId === 'dropout' && day >= 180 && !bt.dropout_tito_trouble) {
+    bt.dropout_tito_trouble = true;
+    msgs.push('📞 Tito called. "The Colombians want to meet your cook. They want to buy in bulk. This is big, amigo. But these guys... they don\'t play around." New supplier route possible.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { connected_supplier: 1 }, message: 'Tito introduces you to Colombian buyers.' }, 'backstory', 'dropout_tito');
+  }
+  if (charId === 'dropout' && day >= 250 && (state.henchmen || []).length >= 3 && !bt.dropout_students) {
+    bt.dropout_students = true;
+    msgs.push('🎓 Two of your old classmates tracked you down. "We heard you\'re... in business. We need jobs. We know chemistry." Potential lab assistants if you trust them.');
+  }
+  if (charId === 'dropout' && day >= 320 && state.heat > 40 && !bt.dropout_dea_professor) {
+    bt.dropout_dea_professor = true;
+    msgs.push('⚠️ Professor Herrera sent a coded message: "The DEA visited the university asking about former students. They know about the lab techniques I taught. Be careful."');
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+  }
+  if (charId === 'dropout' && day >= 400 && state.cash > 100000 && !bt.dropout_breaking_point) {
+    bt.dropout_breaking_point = true;
+    msgs.push('💭 You catch yourself humming a chemistry formula while counting cash. $' + state.cash.toLocaleString() + '. Your mother thinks you\'re a pharmaceutical rep. How long can you keep this up?');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { conflicted: 1 }, message: 'The weight of your double life grows heavier.' }, 'backstory', 'dropout_breaking');
+  }
+  if (charId === 'dropout' && day >= 480 && !bt.dropout_act1_end) {
+    bt.dropout_act1_end = true;
+    var tierNow = typeof getKingpinLevel === 'function' ? getKingpinLevel(state.xp || 0).level : 1;
+    if (tierNow >= 5) {
+      msgs.push('📖 Chapter 1 closes. From broke college kid to... this. The dean who denied your financial aid drives a Honda. You drive something else entirely.');
+    } else {
+      msgs.push('📖 You\'ve been in the game long enough to know: there\'s no going back to that lecture hall. The streets are your classroom now.');
+    }
+  }
+
   // DROPOUT: University sends investigators
   if (charId === 'dropout' && day >= 60 && state.cash > 50000 && !bt.dropout_uni) {
     bt.dropout_uni = true;
