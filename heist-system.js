@@ -412,7 +412,7 @@ function assignHeistCrew(state, crewIndices) {
     return { success: false, message: `Maximum ${heistType.crewMax} crew members for this heist.` };
   }
 
-  const crew = state.crew || [];
+  const crew = state.henchmen || state.crew || [];
   const assigned = [];
   for (const idx of crewIndices) {
     if (idx < 0 || idx >= crew.length) {

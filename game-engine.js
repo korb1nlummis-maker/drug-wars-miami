@@ -4476,7 +4476,13 @@ function resolveCourtCase(state) {
   const roll = Math.random();
   // Evidence strength reduces your success chance
   var evidencePenalty = (state.courtCase.evidenceStrength || 0) / 200; // 0-0.5 penalty
-  const chance = Math.max(0.02, state.courtCase.totalSuccessChance - evidencePenalty);
+  // Trait bonus: snitch/cooperator gives court bonus
+  var traitCourtBonus = 0;
+  if (typeof getTraitBonuses === 'function') {
+    var tbCourt = getTraitBonuses(state);
+    if (tbCourt.courtBonus) traitCourtBonus = tbCourt.courtBonus;
+  }
+  const chance = Math.max(0.02, state.courtCase.totalSuccessChance - evidencePenalty + traitCourtBonus);
   const notGuilty = roll < chance;
 
   state.investigation.timesArrested++;

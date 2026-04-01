@@ -256,7 +256,7 @@ function enterPrison(state, tier, sentenceDays) {
   ps.prePrisonState = {
     cash: state.cash,
     territories: state.territories ? [...state.territories] : [],
-    crewCount: state.crew ? state.crew.length : 0
+    crewCount: state.henchmen ? state.henchmen.length : (state.crew ? state.crew.length : 0)
   };
 
   ps.inPrison = true;
@@ -303,7 +303,7 @@ function enterPrison(state, tier, sentenceDays) {
 
 function _setupAutopilot(state) {
   const ps = state.prison;
-  const crew = state.crew || [];
+  const crew = state.henchmen || state.crew || [];
 
   let bestManager = null;
   let bestScore = 0;
@@ -754,8 +754,8 @@ function processEmpireAutopilot(state) {
   results.messages.push(`Empire earned $${dailyIncome} (${Math.floor(ap.efficiency * 100)}% efficiency).`);
 
   // Crew salaries still paid
-  const crew = state.crew || [];
-  const salaries = crew.reduce((sum, m) => sum + (m.salary || 0), 0);
+  const crew = state.henchmen || state.crew || [];
+  const salaries = crew.reduce((sum, m) => sum + (m.salary || m.dailyPay || 0), 0);
   if (state.cash !== undefined) state.cash -= salaries;
   ap.totalLost += salaries;
 
@@ -957,9 +957,9 @@ function releaseFromPrison(state) {
 
   // Transfer recruits to crew
   if (ps.recruits.length > 0) {
-    state.crew = state.crew || [];
+    if (!state.henchmen) state.henchmen = [];
     for (const recruit of ps.recruits) {
-      state.crew.push({
+      state.henchmen.push({
         name: recruit.name,
         rank: 1,
         loyalty: recruit.loyalty,
@@ -1016,7 +1016,7 @@ function getPrisonReport(state) {
 
   const ap = ps.empireAutopilot;
   const territories = state.territories || [];
-  const crew = state.crew || [];
+  const crew = state.henchmen || state.crew || [];
   const escapeInfo = getEscapeChance(state);
 
   return {

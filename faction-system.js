@@ -593,6 +593,13 @@ function checkGangAmbush(state, locationId) {
     if (state.henchmen && state.henchmen.some(h => h.type === 'lookout' && !h.injured)) {
       ambushChance *= 0.5;
     }
+    // Trait bonus: cunning/strategic traits reduce ambush chance
+    if (typeof getTraitBonuses === 'function') {
+      var tbAmb = getTraitBonuses(state);
+      if (tbAmb.ambushAvoidance) ambushChance *= (1 - tbAmb.ambushAvoidance);
+    }
+    // Feared reputation makes gangs think twice
+    if (state.rep && state.rep.fear > 60) ambushChance *= 0.7;
 
     if (ambushChance > 0 && Math.random() < ambushChance) {
       const faction = f.faction;

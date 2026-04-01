@@ -111,8 +111,8 @@ function checkEncounterCondition(state, cond) {
   if (cond.minHeat && (state.heat || 0) < cond.minHeat) return false;
   if (cond.maxHeat !== undefined && (state.heat || 0) > cond.maxHeat) return false;
   if (cond.minRep && typeof getRep === 'function' && getRep(state, 'streetCred') < cond.minRep) return false;
-  if (cond.minCrew && (state.crew || []).length < cond.minCrew) return false;
-  if (cond.district && typeof state.currentDistrict !== 'undefined' && cond.district.indexOf(state.currentDistrict) === -1) return false;
+  if (cond.minCrew && (state.henchmen || state.crew || []).length < cond.minCrew) return false;
+  if (cond.district && state.currentLocation && cond.district.indexOf(state.currentLocation) === -1) return false;
   if (cond.hasPet && (!state.encounters || !state.encounters.companions.pet)) return false;
   if (cond.hasBusiness && typeof state.businesses !== 'undefined' && (!state.businesses.owned || state.businesses.owned.length === 0)) return false;
   if (cond.minAct) {
@@ -124,7 +124,7 @@ function checkEncounterCondition(state, cond) {
 
 function getEncounterWeights(state) {
   const heat = state.heat || 0;
-  const crewCount = (state.crew || []).length;
+  const crewCount = (state.henchmen || state.crew || []).length;
   const hasBiz = state.businesses && state.businesses.owned && state.businesses.owned.length > 0;
   return {
     street: 1.5,
