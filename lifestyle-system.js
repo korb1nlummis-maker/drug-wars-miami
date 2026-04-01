@@ -292,18 +292,68 @@ function processLifestyleDaily(state) {
       }
     }
 
-    // Heat from flashy lifestyle
+    // Heat from flashy lifestyle (MORE heat if using dirty money)
     if (tier.heatGain) {
-      state.heat = Math.min(100, (state.heat || 0) + tier.heatGain * 0.3);
+      var lifestyleHeat = tier.heatGain * 0.3;
+      // Spending dirty money on visible lifestyle = extra attention
+      var dirtyRatio = (state.dirtyMoney || 0) / Math.max(1, state.cash || 1);
+      if (dirtyRatio > 0.5 && tier.dailyCost > 500) {
+        lifestyleHeat *= 1.5; // 50% more heat from dirty lifestyle
+        if (state.day % 7 === 0) msgs.push('🏦 Spending large amounts of unexplained cash is raising red flags...');
+      }
+      state.heat = Math.min(100, (state.heat || 0) + lifestyleHeat);
     }
 
     // Flash spending triggers IRS-style attention
     if ((ls.flashSpending || 0) > 50000 && state.day % 30 === 0) {
-      msgs.push('💰 Your spending habits are attracting attention from financial investigators...');
+      msgs.push('💰 Financial investigators are looking into your spending patterns...');
       if (state.investigation) {
-        state.investigation.points = Math.min(100, state.investigation.points + 5);
+        var investigationHit = 5;
+        // More investigation if lots of dirty money
+        if ((state.dirtyMoney || 0) > 20000) investigationHit += 3;
+        state.investigation.points = Math.min(100, state.investigation.points + investigationHit);
       }
       ls.flashSpending = Math.max(0, ls.flashSpending - 25000);
+    }
+
+    // === CHILD SUPPORT PAYMENTS ===
+    if (state.relationships && state.relationships.children && state.relationships.children.length > 0) {
+      var childSupport = state.relationships.children.length * 500; // $500 per child per day
+      if (state.cash >= childSupport) {
+        state.cash -= childSupport;
+        state.relationships.totalChildSupport = (state.relationships.totalChildSupport || 0) + childSupport;
+      } else {
+        // Can't pay child support - legal trouble
+        state.relationships.missedChildSupport = (state.relationships.missedChildSupport || 0) + 1;
+        if (state.relationships.missedChildSupport % 14 === 0) {
+          msgs.push('⚖️ Family court warning: missed child support payments. Pay up or face contempt charges.');
+          state.heat = Math.min(100, (state.heat || 0) + 3);
+          if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 2);
+        }
+      }
+    }
+
+    // === MONTHLY BILLS (every 30 days) ===
+    if (state.day % 30 === 0) {
+      var monthlyBills = 0;
+      // Vehicle insurance
+      if (state.vehicleState && state.vehicleState.garage && state.vehicleState.garage.length > 0) {
+        var vehicleInsurance = state.vehicleState.garage.length * 200;
+        monthlyBills += vehicleInsurance;
+      }
+      // Property taxes on owned properties
+      if (state.properties) {
+        var propTax = Object.keys(state.properties).length * 500;
+        monthlyBills += propTax;
+      }
+      if (monthlyBills > 0) {
+        if (state.cash >= monthlyBills) {
+          state.cash -= monthlyBills;
+          msgs.push('📋 Monthly bills paid: $' + monthlyBills.toLocaleString() + ' (insurance, taxes)');
+        } else {
+          msgs.push('⚠️ Can\'t afford monthly bills ($' + monthlyBills.toLocaleString() + '). Accounts going delinquent.');
+        }
+      }
     }
 
     // Natural stress accumulation (based on empire size)

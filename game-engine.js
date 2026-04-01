@@ -469,14 +469,20 @@ function launderMoney(state, amount) {
     state.investigation.level = getInvestigationLevel(state.investigation.points);
   }
 
+  // Convert dirty → clean money
+  var dirtyConverted = Math.min(actual, state.dirtyMoney || 0);
+  state.dirtyMoney = Math.max(0, (state.dirtyMoney || 0) - dirtyConverted);
+  state.cleanMoney = (state.cleanMoney || 0) + actual;
+
   // Track totals
+  if (state.stats) state.stats.totalLaunderedMoney = (state.stats.totalLaunderedMoney || 0) + actual;
   for (const owned of state.frontBusinesses) {
     owned.totalLaundered += Math.floor(actual / state.frontBusinesses.length);
   }
 
   return {
     success: true,
-    msg: `💰 Laundered $${actual.toLocaleString()} through your businesses. Money deposited to bank.`,
+    msg: `💰 Laundered $${actual.toLocaleString()} through your businesses. $${dirtyConverted.toLocaleString()} dirty money cleaned. Deposited to bank.`,
     amount: actual,
     investigationReduced: Math.round(investigationReduction * 10) / 10,
   };
@@ -1796,6 +1802,27 @@ function createGameState() {
     activeBuffs: [],
     transportCostMultiplier: 1,
     pendingEvent: null, // event waiting for player response
+    // === DIRTY/CLEAN MONEY SYSTEM ===
+    dirtyMoney: 0,           // Cash earned from drugs/crime (NOT yet laundered)
+    cleanMoney: GAME_CONFIG.startingCash, // Legitimate or laundered cash
+    // state.cash = dirtyMoney + cleanMoney (total). Spending dirty money draws attention.
+    // Laundering moves dirty → clean through front businesses.
+    // Large dirty cash purchases (property, vehicles) trigger investigation.
+    // === LIFE SIMULATION ===
+    monthlyExpenses: {
+      rent: 100,             // Based on lifestyle tier
+      childSupport: 0,       // Set if player has kids from romance
+      loanPayment: 0,        // Auto-pay minimum on debt
+      insurance: 0,          // Vehicle insurance
+      crewPayroll: 0,        // Calculated daily from crew
+    },
+    relationships: {          // Deep relationship tracking
+      partners: [],           // Current romantic partners [{npcId, stage, hasKids, kidsCount, divorced, childSupportMonthly}]
+      children: [],           // [{name, age, motherId, birthDay}]
+      divorces: 0,
+      totalChildSupport: 0,
+    },
+    scars: [],                // Permanent injuries from combat
     // Skill tree
     skillPoints: 0,
     skills: {}, // { skillId: level }
@@ -2723,6 +2750,8 @@ function sellDrug(state, drugId, amount) {
   else if (locTradesSell >= 5) price = Math.round(price * 1.03);   // 3% premium after 5+ trades
   const totalRevenue = price * amount;
   state.cash += totalRevenue;
+  // Drug sales produce DIRTY money
+  state.dirtyMoney = (state.dirtyMoney || 0) + totalRevenue;
   state.inventory[drugId] -= amount;
   if (state.inventory[drugId] === 0) delete state.inventory[drugId];
   state.drugsSold += amount;

@@ -180,6 +180,57 @@ function processRomanceDaily(state, currentDay) {
     if (event) {
       rel.pendingEvent = event;
     }
+
+    // === LIFE EVENTS: Kids, Pregnancy, Divorce ===
+    var npc = ROMANCE_NPCS.find(function(n) { return n.id === npcId; });
+    if (!npc) continue;
+
+    // Partner stage: chance of pregnancy (1% per day)
+    if (rel.stage === 'partner' && !rel.pregnant && Math.random() < 0.01) {
+      rel.pregnant = true;
+      rel.pregnancyDay = currentDay;
+      rel.pendingEvent = { id: 'pregnancy', npcId: npcId, triggered: true,
+        description: npc.name + ' tells you she\'s pregnant. Your life is about to change.' };
+    }
+
+    // Pregnancy → birth after 90 days
+    if (rel.pregnant && currentDay - (rel.pregnancyDay || 0) >= 90) {
+      rel.pregnant = false;
+      rel.hasKids = true;
+      rel.kidsCount = (rel.kidsCount || 0) + 1;
+      // Add child to game state
+      if (state.relationships && state.relationships.children) {
+        var childNames = ['Junior', 'Maria', 'Diego', 'Isabella', 'Carlos', 'Sofia', 'Miguel', 'Valentina'];
+        state.relationships.children.push({
+          name: childNames[Math.floor(Math.random() * childNames.length)],
+          motherId: npcId,
+          motherName: npc.name,
+          birthDay: currentDay,
+        });
+      }
+      rel.pendingEvent = { id: 'child_born', npcId: npcId, triggered: true,
+        description: 'Your child is born! ' + npc.name + ' expects you to provide. Child support: $500/day.' };
+    }
+
+    // Neglected partner with kids → divorce threat (30+ days no contact)
+    if (rel.hasKids && rom.daysSinceContact[npcId] > 30 && !rel.divorced) {
+      if (Math.random() < 0.1) { // 10% chance per day after 30 days neglect
+        rel.divorced = true;
+        rel.stage = 'stranger';
+        rel.points = 0;
+        // Child support remains
+        rel.pendingEvent = { id: 'divorce', npcId: npcId, triggered: true,
+          description: npc.name + ' left you. "You chose the streets over your family." Child support continues. $500/day per child.' };
+      }
+    }
+
+    // Partner finds out about criminal activity → trust drops
+    if (rel.stage === 'partner' && state.heat > 60 && Math.random() < 0.03) {
+      rel.points = Math.max(0, rel.points - 15);
+      rel.stage = calculateStage(rel.points);
+      rel.pendingEvent = { id: 'partner_worried', npcId: npcId, triggered: true,
+        description: npc.name + ' found something that scared her. "What exactly do you do for a living?" -15 relationship.' };
+    }
   }
 }
 
