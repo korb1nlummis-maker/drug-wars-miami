@@ -7066,10 +7066,10 @@ function renderHeist() {
       '</div>';
 
     // Crew assignment
-    if (gameState.crew && gameState.crew.length > 0) {
+    if (gameState.henchmen && gameState.henchmen.length > 0) {
       activeSection += '<div style="margin-bottom:8px;"><strong>Assign Crew:</strong> ';
       var indices = [];
-      gameState.crew.forEach(function(c, ci) {
+      gameState.henchmen.forEach(function(c, ci) {
         if (!c.injured && !c.dead) indices.push(ci);
       });
       if (indices.length > 0) {
@@ -7619,10 +7619,30 @@ function renderEncounterModal() {
       } else if (labelLower.includes('confront') || labelLower.includes('negotiate') || labelLower.includes('talk')) {
         tone = '<span style="color:#88aaff;font-size:0.65rem">Diplomatic</span>';
       }
-      var hintLine = (hints.length > 0 || tone) ?
+      // Trait-based flavor: your reputation affects how choices feel
+      var traitFlavor = '';
+      if (gameState.playerTraits) {
+        var traits = gameState.playerTraits;
+        if (labelLower.includes('fight') || labelLower.includes('attack') || labelLower.includes('kill')) {
+          if (traits.violent && traits.violent >= 3) traitFlavor = '<span style="color:#ff00aa;font-size:0.6rem">⚡ Your violent reputation makes this easier</span>';
+          else if (traits.ruthless && traits.ruthless >= 2) traitFlavor = '<span style="color:#ff00aa;font-size:0.6rem">🗡️ They know what you\'re capable of</span>';
+        } else if (labelLower.includes('help') || labelLower.includes('save') || labelLower.includes('donate')) {
+          if (traits.charitable && traits.charitable >= 2) traitFlavor = '<span style="color:#00ff88;font-size:0.6rem">💚 The community knows your generosity</span>';
+          else if (traits.community_minded) traitFlavor = '<span style="color:#00ff88;font-size:0.6rem">🤝 People trust you in this neighborhood</span>';
+        } else if (labelLower.includes('negotiate') || labelLower.includes('talk') || labelLower.includes('convince')) {
+          if (traits.diplomatic && traits.diplomatic >= 2) traitFlavor = '<span style="color:#88aaff;font-size:0.6rem">🕊️ Your diplomatic reputation opens doors</span>';
+          else if (traits.silver_tongue) traitFlavor = '<span style="color:#88aaff;font-size:0.6rem">🗣️ Your silver tongue gives you an edge</span>';
+        } else if (labelLower.includes('bribe') || labelLower.includes('corrupt')) {
+          if (traits.corruptor && traits.corruptor >= 2) traitFlavor = '<span style="color:#ffcc00;font-size:0.6rem">💰 They already know you pay well</span>';
+        } else if (labelLower.includes('sneak') || labelLower.includes('escape') || labelLower.includes('run')) {
+          if (traits.elusive) traitFlavor = '<span style="color:#44ccff;font-size:0.6rem">💨 You\'re known for slipping away</span>';
+        }
+      }
+      var hintLine = (hints.length > 0 || tone || traitFlavor) ?
         '<div style="font-size:0.65rem;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.1);">' +
           (tone ? tone + (hints.length > 0 ? ' | ' : '') : '') +
           hints.join(' ') +
+          (traitFlavor ? '<br>' + traitFlavor : '') +
         '</div>' : '';
       return '<button class="btn btn-buy" style="margin:4px;min-width:200px;text-align:center;padding:8px 12px;" ' +
         'onclick="if(typeof resolveEncounterOutcome===\'function\') resolveEncounterOutcome(gameState,' + idx + '); render();">' +
