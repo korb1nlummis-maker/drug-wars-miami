@@ -1783,8 +1783,8 @@ function resolveNPCOutcome(state, outcomeIndex) {
     }
 
     // Player HP
-    if (typeof outcome.effects.playerHP === 'number' && typeof state.hp === 'number') {
-      state.hp = Math.max(1, state.hp + outcome.effects.playerHP);
+    if (typeof outcome.effects.playerHP === 'number') {
+      state.health = Math.max(1, (state.health || 100) + outcome.effects.playerHP);
     }
 
     // Check crew requirement
@@ -1801,6 +1801,28 @@ function resolveNPCOutcome(state, outcomeIndex) {
         state.namedNPCs.npcBenefits[event.npcId] = {};
       }
       state.namedNPCs.npcBenefits[event.npcId][outcome.effects.permanentBenefit] = true;
+    }
+
+    // Wire into consequence engine for trait tracking
+    if (typeof applyConsequences === 'function') {
+      var conseq = {};
+      // Infer traits from NPC choice effects
+      if (outcome.effects.npcRep > 10) conseq.traits = { charitable: 1 };
+      else if (outcome.effects.npcRep < -10) conseq.traits = { ruthless: 1 };
+      if (outcome.effects.fear > 0) {
+        conseq.traits = conseq.traits || {};
+        conseq.traits.feared = 1;
+      }
+      if (outcome.effects.cash < -5000) {
+        conseq.traits = conseq.traits || {};
+        conseq.traits.generous = 1;
+      }
+      if (outcome.effects.permanentBenefit) {
+        conseq.message = npc.name + ': You earned "' + outcome.effects.permanentBenefit + '"';
+      }
+      if (Object.keys(conseq).length > 0) {
+        applyConsequences(state, conseq, 'npc_' + event.npcId, outcome.id);
+      }
     }
   }
 
@@ -1891,7 +1913,7 @@ function processNPCsDaily(state) {
     if (!npcData) {
       if (checkNPCTrigger(state, npc, 0)) {
         // Check location match if player has a location
-        if (typeof state.currentDistrict === 'string' && npc.location !== state.currentDistrict) {
+        if (state.currentLocation && npc.location && npc.location !== state.currentLocation) {
           continue;
         }
         // Random chance to encounter (30% per day when conditions met)
