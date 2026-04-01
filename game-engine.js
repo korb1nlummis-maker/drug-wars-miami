@@ -4396,7 +4396,9 @@ function resolveCombatRound(state, action, event) {
     if (event.enemyHealth > 0) {
       const enemyHitChance = 0.4 + (event.enemyCount * 0.05);
       if (Math.random() < enemyHitChance) {
-        let damage = Math.round(event.enemyDamage * (0.5 + Math.random() * 0.5) * getNgPlusMod(state, 'enemyDamageMultiplier', 1));
+        // Game day scaling: enemies hit harder as game progresses
+        var dayScaling = typeof getGameDayScaling === 'function' ? getGameDayScaling(state) : { enemyDamageMod: 1.0 };
+        let damage = Math.round(event.enemyDamage * (0.5 + Math.random() * 0.5) * getNgPlusMod(state, 'enemyDamageMultiplier', 1) * (dayScaling.enemyDamageMod || 1.0));
 
         // Skill tree: thick_skin damage reduction
         const dmgReduce = getSkillEffect(state, 'damageReduction');
@@ -4919,6 +4921,12 @@ function getInvestigationLevel(points) {
 function updateInvestigation(state, trigger, amount) {
   if (!state.investigation) return [];
   const messages = [];
+
+  // Game day scaling: investigation pressure increases over time
+  if (amount > 0 && typeof getGameDayScaling === 'function') {
+    var invScale = getGameDayScaling(state);
+    amount = Math.round(amount * (invScale.investigationMod || 1.0));
+  }
 
   // Lawyer reduces investigation gain by 40%
   const hasLawyer = state.henchmen.some(h => h.type === 'lawyer' && !h.injured);
@@ -6762,6 +6770,51 @@ function getEffectiveSpeech(state) {
   let speech = state.speechSkill || 0;
   speech += getSkillEffect(state, 'speechBonus');
   return Math.min(100, speech);
+}
+
+// ============================================================
+// GAME DAY SCALING - Makes everything harder over 5000 days
+// ============================================================
+
+/**
+ * Get difficulty scaling based on current game day and campaign act.
+ * This is the CORE function that makes the game progressively harder.
+ * Called by combat, encounters, heat, prices, and rival systems.
+ */
+function getGameDayScaling(state) {
+  var day = state.day || 1;
+  var actMods = typeof getActModifiers === 'function' ? getActModifiers(state) : { encounterDifficulty: 1.0, heatGainMod: 1.0, priceVolatility: 1.0 };
+
+  // Base scaling: linear increase from 1.0 at day 1 to 3.0 at day 5000
+  var dayScale = 1.0 + (day / 5000) * 2.0;
+
+  // Combine with act modifiers
+  return {
+    // Combat: enemies get tougher
+    combatDifficulty: actMods.encounterDifficulty * (1 + (day / 5000) * 1.5),
+    // Enemy health scales with day
+    enemyHealthMod: 1.0 + (day / 5000) * 2.0,
+    // Enemy damage scales with day
+    enemyDamageMod: 1.0 + (day / 5000) * 1.0,
+    // Heat gain increases over time (feds get smarter)
+    heatGainMod: actMods.heatGainMod * (1 + (day / 5000) * 0.8),
+    // Price volatility increases (market gets crazier)
+    priceVolatility: actMods.priceVolatility * (1 + (day / 5000) * 0.5),
+    // Encounter chance increases slightly
+    encounterChanceMod: 1.0 + (day / 10000) * 0.5,
+    // Rival dealer power scales
+    rivalPowerMod: 1.0 + (day / 5000) * 2.5,
+    // Max rivals increases with game age
+    maxRivals: Math.min(20, 6 + Math.floor(day / 500)),
+    // Investigation pressure increases
+    investigationMod: 1.0 + (day / 5000) * 1.0,
+    // Raid chance on businesses increases
+    raidChanceMod: 1.0 + (day / 5000) * 0.5,
+    // Raw day scaling
+    dayScale: dayScale,
+    // Current day for reference
+    day: day,
+  };
 }
 
 // ============================================================

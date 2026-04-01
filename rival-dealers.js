@@ -85,7 +85,13 @@ function initRivalState() {
 // Spawn a new rival
 function spawnRival(state) {
   if (!state.rivalState) state.rivalState = initRivalState();
-  if (state.rivalState.rivals.length >= RIVAL_CONFIG.maxRivals) return null;
+  // Game day scaling: more rivals allowed as game progresses
+  var maxRivalsNow = RIVAL_CONFIG.maxRivals;
+  if (typeof getGameDayScaling === 'function') {
+    var rivalScale = getGameDayScaling(state);
+    maxRivalsNow = rivalScale.maxRivals || RIVAL_CONFIG.maxRivals;
+  }
+  if (state.rivalState.rivals.length >= maxRivalsNow) return null;
 
   // Determine tier based on player's progression
   const playerPower = calculatePlayerPower(state);
@@ -168,10 +174,12 @@ function processRivalsDaily(state) {
   for (const rival of state.rivalState.rivals) {
     if (!rival.alive) continue;
 
-    // Growth
-    const growthMod = rival.growth === 'slow' ? 0.01 : rival.growth === 'moderate' ? 0.03 : rival.growth === 'fast' ? 0.05 : 0.08;
+    // Growth (scales with game day - rivals get stronger over time)
+    var baseGrowth = rival.growth === 'slow' ? 0.01 : rival.growth === 'moderate' ? 0.03 : rival.growth === 'fast' ? 0.05 : 0.08;
+    var rivalDayScale = typeof getGameDayScaling === 'function' ? getGameDayScaling(state).rivalPowerMod || 1.0 : 1.0;
+    const growthMod = baseGrowth * rivalDayScale;
     rival.cash *= (1 + growthMod);
-    rival.power = rival.cash / 100;
+    rival.power = rival.cash / 100 * rivalDayScale;
     rival.crew = Math.min(rival.maxTerritory * 5, rival.crew + (Math.random() < growthMod * 5 ? 1 : 0));
 
     // Territory expansion
