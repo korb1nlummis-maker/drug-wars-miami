@@ -3160,13 +3160,14 @@ function renderCourt() {
   if (cc.resolved && cc.verdict) {
     const isGuilty = cc.verdict === 'guilty';
     const isFallGuy = cc.verdict === 'fall_guy';
+    const isPleaDeal = cc.verdict === 'plea_deal';
 
-    let verdictEmoji = isGuilty ? '🔨' : isFallGuy ? '🎭' : '🎉';
-    let verdictText = isGuilty ? 'GUILTY' : isFallGuy ? 'CASE CLOSED' : 'NOT GUILTY';
-    let verdictClass = isGuilty ? 'verdict-guilty' : 'verdict-not-guilty';
+    let verdictEmoji = isGuilty ? '🔨' : isFallGuy ? '🎭' : isPleaDeal ? '🤝' : '🎉';
+    let verdictText = isGuilty ? 'GUILTY' : isFallGuy ? 'CASE CLOSED' : isPleaDeal ? 'PLEA DEAL ACCEPTED' : 'NOT GUILTY';
+    let verdictClass = (isGuilty || isPleaDeal) ? 'verdict-guilty' : 'verdict-not-guilty';
     let detailHtml = '';
 
-    if (isGuilty && cc.penalties && cc.penalties.length > 0) {
+    if ((isGuilty || isPleaDeal) && cc.penalties && cc.penalties.length > 0) {
       detailHtml = `<ul style="text-align:left;margin:1rem auto;max-width:320px;font-size:0.85rem;list-style:none;padding:0">
         ${cc.penalties.map(p => `<li style="margin:0.3rem 0">⚡ ${p}</li>`).join('')}
       </ul>`;
@@ -3210,14 +3211,63 @@ function renderCourt() {
 
         <div class="court-contacts-grid">${contactCards}</div>
 
+        ${cc.evidenceStrength !== undefined ? `
+          <div style="margin:1rem 0;padding:0.8rem;border:1px solid ${cc.evidenceStrength > 60 ? 'var(--neon-red)' : cc.evidenceStrength > 30 ? 'var(--neon-yellow)' : 'var(--neon-green)'};border-radius:8px;background:rgba(0,0,0,0.3)">
+            <div style="font-family:var(--font-display);font-size:0.8rem;margin-bottom:0.3rem">
+              📁 EVIDENCE STRENGTH: <span class="${cc.evidenceStrength > 60 ? 'neon-red' : cc.evidenceStrength > 30 ? 'neon-yellow' : 'neon-green'}" style="font-size:1.1rem">${cc.evidenceStrength}%</span>
+              <span class="text-dim" style="font-size:0.7rem;margin-left:0.5rem">${cc.evidenceStrength > 70 ? 'Overwhelming' : cc.evidenceStrength > 50 ? 'Strong' : cc.evidenceStrength > 30 ? 'Moderate' : 'Weak'}</span>
+            </div>
+            <div class="court-chance-bar">
+              <div class="court-chance-fill" style="width:${cc.evidenceStrength}%;background:${cc.evidenceStrength > 60 ? 'var(--neon-red)' : cc.evidenceStrength > 30 ? 'var(--neon-yellow)' : 'var(--neon-green)'}"></div>
+            </div>
+            <p class="text-dim" style="font-size:0.7rem;margin-top:0.3rem">Higher evidence = harder to beat at trial. Intimidate witnesses to weaken the case.</p>
+          </div>
+        ` : ''}
+
+        ${cc.witnesses && cc.witnesses.length > 0 ? `
+          <h3 class="section-title neon-red" style="margin-top:1rem">👁️ WITNESSES — Intimidate to Weaken Evidence</h3>
+          <p class="text-dim" style="font-size:0.8rem;margin-bottom:0.5rem">Requires an enforcer or assassin crew member. Success weakens the prosecution's case.</p>
+          <div class="court-contacts-grid">
+            ${cc.witnesses.map((w, i) => {
+              const intimidated = cc.witnessesIntimidated && cc.witnessesIntimidated.includes(i);
+              const hasEnforcer = gameState.henchmen && gameState.henchmen.some(h => (h.type === 'enforcer' || h.type === 'assassin') && !h.injured);
+              const canIntimidate = !intimidated && hasEnforcer;
+              return `
+                <div class="court-contact-card ${intimidated ? 'used' : (!canIntimidate ? 'disabled' : '')}" ${canIntimidate ? `onclick="doIntimidateWitness(${i})"` : ''}>
+                  <div style="font-size:1.5rem">${w.type === 'forensic' ? '🔬' : w.type === 'insider' ? '🐀' : w.type === 'undercover' ? '🕵️' : '👤'}</div>
+                  <div style="font-family:var(--font-display);font-size:0.75rem;font-weight:700">${w.name}</div>
+                  <div class="text-dim" style="font-size:0.7rem">Type: ${w.type} · Strength: ${w.strength}</div>
+                  <div style="font-family:var(--font-display);margin:0.3rem 0">
+                    ${intimidated ? '<span class="neon-green">✓ DEALT WITH</span>' : !hasEnforcer ? '<span class="neon-red" style="font-size:0.7rem">Need enforcer/assassin</span>' : '<span class="neon-yellow">INTIMIDATE</span>'}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
+
         <div style="margin:1rem 0">
           <div style="font-family:var(--font-display);font-size:0.8rem;margin-bottom:0.3rem">
             CHANCE OF ACQUITTAL: <span class="${chancePercent >= 50 ? 'neon-green' : chancePercent >= 25 ? 'neon-yellow' : 'neon-red'}" style="font-size:1.2rem">${chancePercent}%</span>
+            ${cc.evidenceStrength !== undefined ? `<span class="text-dim" style="font-size:0.7rem;margin-left:0.5rem">(Evidence penalty: -${Math.round((cc.evidenceStrength || 0) / 2)}%)</span>` : ''}
           </div>
           <div class="court-chance-bar">
             <div class="court-chance-fill" style="width:${chancePercent}%"></div>
           </div>
         </div>
+
+        ${cc.pleaDealOffered && !cc.pleaDealAccepted ? `
+          <div style="margin:0.5rem 0;padding:0.8rem;border:2px solid var(--neon-yellow);border-radius:8px;background:rgba(255,204,0,0.05)">
+            <h4 style="color:var(--neon-yellow);margin:0 0 0.3rem 0">🤝 PLEA DEAL OFFERED</h4>
+            <p class="text-dim" style="font-size:0.8rem;margin-bottom:0.5rem">
+              The DA is willing to negotiate. Accept a reduced sentence (${Math.round((cc.pleaDealReduction || 0.5) * 100)}% reduction) in exchange for cooperation.
+              <br><span style="color:var(--neon-red);font-size:0.75rem">Warning: You'll be marked as a snitch. The streets remember.</span>
+            </p>
+            <button class="btn btn-secondary" onclick="doAcceptPleaDeal()" style="width:100%;border-color:var(--neon-yellow);color:var(--neon-yellow)">
+              🤝 ACCEPT PLEA DEAL — Reduced sentence, but lose street cred
+            </button>
+          </div>
+        ` : ''}
 
         ${cc.hasFallGuy && !cc.fallGuyUsed ? `
           <button class="btn btn-secondary" onclick="doUseFallGuy()" style="width:100%;margin-top:0.5rem;border-color:var(--neon-orange)">
@@ -3286,6 +3336,35 @@ function exitCourt() {
     // Generate new prices at current location after jail
     generatePrices(gameState);
     recordPriceHistory(gameState);
+  }
+  render();
+}
+
+function doAcceptPleaDeal() {
+  if (typeof acceptPleaDeal !== 'function') return;
+  if (!confirm('Accept plea deal? You will serve reduced time but be marked as a snitch.')) return;
+  playSound('click');
+  const result = acceptPleaDeal(gameState);
+  if (result.success) {
+    gameState.messageLog.push(result.msg);
+    if (typeof updateAchievementStats === 'function') updateAchievementStats(gameState, 'plea_deal', {});
+    processNewAchievements();
+  } else {
+    showNotification(result.msg, 'error');
+  }
+  render();
+}
+
+function doIntimidateWitness(witnessIndex) {
+  if (typeof intimidateWitness !== 'function') return;
+  playSound('click');
+  const result = intimidateWitness(gameState, witnessIndex);
+  if (result.success) {
+    showNotification(result.msg, 'success');
+    gameState.messageLog.push(result.msg);
+  } else {
+    showNotification(result.msg, 'error');
+    gameState.messageLog.push(result.msg);
   }
   render();
 }
