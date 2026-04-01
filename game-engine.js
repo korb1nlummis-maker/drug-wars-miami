@@ -2359,6 +2359,43 @@ function waitDay(state) {
     if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { heir: 1, connected: 1 }, message: 'Your father\'s legacy opens doors.' }, 'backstory', 'connected_lt');
   }
 
+  // CONNECTED KID: Act 1 story arc (day 20-480)
+  if (charId === 'connected_kid' && day >= 80 && !bt.connected_crew_test) {
+    bt.connected_crew_test = true;
+    msgs.push('⚠️ Junior — your most disloyal crew member — challenged you in front of everyone. "Your daddy ran things different. You ain\'t him." This is a test. How you respond defines everything.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { tested: 1 } }, 'backstory', 'connected_test');
+  }
+  if (charId === 'connected_kid' && day >= 130 && !bt.connected_mothers_warning) {
+    bt.connected_mothers_warning = true;
+    msgs.push('📞 Your mother called from her sister\'s house. "Don\'t be like your father. Please. He chose that life and it destroyed our family. You still have a choice." Do you?');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { family_torn: 1 } }, 'backstory', 'connected_mother');
+  }
+  if (charId === 'connected_kid' && day >= 200 && state.cash > 30000 && !bt.connected_cartel_meeting) {
+    bt.connected_cartel_meeting = true;
+    msgs.push('💀 The Colombians want a sit-down. "Your father\'s debts are settled. Now let\'s talk business. You have his connections. We have the product. A new arrangement." This changes everything.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { cartel_connected: 1 }, ability: 'cartel_pricing' }, 'backstory', 'connected_cartel');
+  }
+  if (charId === 'connected_kid' && day >= 280 && !bt.connected_rival_heir) {
+    bt.connected_rival_heir = true;
+    msgs.push('⚔️ Another kingpin\'s son appeared — Victor Soto. He claims YOUR father stole territory from HIS father. "Blood debts pass to the next generation." A new rival with a personal vendetta.');
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+  }
+  if (charId === 'connected_kid' && day >= 350 && !bt.connected_fathers_stash) {
+    bt.connected_fathers_stash = true;
+    msgs.push('🗝️ Flaco found something in the old stash house wall — a lockbox. Inside: $25,000 cash, a coded journal, and a photo of your father with men you don\'t recognize. What was he really into?');
+    state.cash += 25000;
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { mystery_heir: 1 } }, 'backstory', 'connected_stash');
+  }
+  if (charId === 'connected_kid' && day >= 420 && (state.henchmen || []).length >= 6 && !bt.connected_legacy_crew) {
+    bt.connected_legacy_crew = true;
+    msgs.push('👑 Carlos, Flaco, Junior — even the ones who doubted you — they kneel now. Not because of your father\'s name. Because of yours. You ARE the connected kid. No — you\'re the new king.');
+    if (typeof adjustRep === 'function') { adjustRep(state, 'fear', 5); adjustRep(state, 'streetCred', 10); }
+  }
+  if (charId === 'connected_kid' && day >= 470 && !bt.connected_act1_close) {
+    bt.connected_act1_close = true;
+    msgs.push('📖 Your father\'s shadow grows smaller. This empire isn\'t his anymore — it\'s yours. Built on his bones, sure. But the blood, the sweat, the decisions? All yours.');
+  }
+
   // CLEANSKIN: IRS audit
   if (charId === 'cleanskin' && day >= 40 && state.dirtyMoney > 10000 && !bt.cleanskin_irs) {
     bt.cleanskin_irs = true;
@@ -2385,6 +2422,114 @@ function waitDay(state) {
     msgs.push('🤝 The community has your back. Local shop owners, families, church — they all vouch for you. "He\'s one of us." Community protection activated. -5 heat.');
     state.heat = Math.max(0, (state.heat || 0) - 5);
     if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { community_protected: true }, ability: 'community_shield', message: 'Your community protects you from scrutiny.' }, 'backstory', 'immigrant_community');
+  }
+
+  // CLEANSKIN: Act 1 story arc (day 40-480)
+  if (charId === 'cleanskin' && day >= 80 && !bt.cleanskin_first_deal) {
+    bt.cleanskin_first_deal = true;
+    msgs.push('💊 Your first drug deal. Hands shaking. Heart pounding. A man in a parking lot. Cash in an envelope. Product in a bag. You drove home at exactly the speed limit.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { nervous: 1 } }, 'backstory', 'cleanskin_first');
+  }
+  if (charId === 'cleanskin' && day >= 140 && !bt.cleanskin_double_life) {
+    bt.cleanskin_double_life = true;
+    msgs.push('👔 Monday you wore a suit to meet your banker. Tuesday you wore all black to meet a dealer in Overtown. Two lives. One person. The mask is getting harder to maintain.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { double_life: 1 } }, 'backstory', 'cleanskin_double');
+  }
+  if (charId === 'cleanskin' && day >= 200 && state.frontBusinesses && state.frontBusinesses.length >= 1 && !bt.cleanskin_laundering_natural) {
+    bt.cleanskin_laundering_natural = true;
+    msgs.push('🏦 Laundering money feels... natural to you. Years of accounting trained you for this. Shell companies, layered transactions, depreciation schedules. You\'re an artist with spreadsheets.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { money_artist: 1 }, ability: 'advanced_laundering' }, 'backstory', 'cleanskin_launder');
+  }
+  if (charId === 'cleanskin' && day >= 270 && !bt.cleanskin_wife_suspicious) {
+    bt.cleanskin_wife_suspicious = true;
+    msgs.push('📞 Your wife/partner noticed the new watch. The nicer restaurants. "Did you get a promotion you didn\'t tell me about?" The lies are getting bigger.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { liar: 1 }, stats: { stress: 5 } }, 'backstory', 'cleanskin_wife');
+  }
+  if (charId === 'cleanskin' && day >= 340 && state.cash > 80000 && !bt.cleanskin_offshore) {
+    bt.cleanskin_offshore = true;
+    msgs.push('🌴 A contact in the Caymans set up an offshore account. $' + Math.round(state.cash * 0.1).toLocaleString() + ' moved overseas. The IRS can\'t touch it. You\'re thinking like a criminal now.');
+    state.bank += Math.round(state.cash * 0.1);
+    state.cash -= Math.round(state.cash * 0.1);
+  }
+  if (charId === 'cleanskin' && day >= 410 && !bt.cleanskin_old_boss) {
+    bt.cleanskin_old_boss = true;
+    msgs.push('📞 Your old boss from the accounting firm called. "We need your expertise for a big audit. Come back. We\'ll double your salary." $120K/year. You made that yesterday.');
+  }
+  if (charId === 'cleanskin' && day >= 470 && !bt.cleanskin_act1_close) {
+    bt.cleanskin_act1_close = true;
+    msgs.push('📖 The accountant became the kingpin. Every dollar tracked. Every risk calculated. You didn\'t stumble into crime — you planned it like a quarterly report.');
+  }
+
+  // VETERAN: Act 1 story arc (day 35-480)
+  if (charId === 'veteran' && day >= 70 && !bt.veteran_old_wounds) {
+    bt.veteran_old_wounds = true;
+    msgs.push('🩹 The bullet wound from \'72 acts up in the rain. Tombstone hands you pills. "Boss, you gotta take care of yourself. The body remembers what the mind tries to forget."');
+    state.health = Math.max(50, (state.health || 100) - 5);
+  }
+  if (charId === 'veteran' && day >= 130 && !bt.veteran_reputation_precedes) {
+    bt.veteran_reputation_precedes = true;
+    msgs.push('😤 A young dealer recognized you at a bar. "Holy shit... you\'re the one who..." He didn\'t finish the sentence. He bought you a drink with shaking hands. Your past follows you.');
+    if (typeof adjustRep === 'function') { adjustRep(state, 'fear', 8); adjustRep(state, 'streetCred', 5); }
+  }
+  if (charId === 'veteran' && day >= 200 && !bt.veteran_teaching_young) {
+    bt.veteran_teaching_young = true;
+    msgs.push('🥊 You\'re training the young crew. Knife work. Situational awareness. When to fight and when to walk away. They look at you like you\'re a war hero. You know what you really are.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { mentor: 1, teacher: 1 } }, 'backstory', 'veteran_teaching');
+  }
+  if (charId === 'veteran' && day >= 270 && !bt.veteran_funeral) {
+    bt.veteran_funeral = true;
+    msgs.push('⚰️ An old associate\'s funeral. Half the mourners are in the game. Half the mourners are carrying. You notice three unmarked cars across the street. Feds photographing attendees.');
+    state.heat = Math.min(100, (state.heat || 0) + 3);
+  }
+  if (charId === 'veteran' && day >= 340 && state.health < 80 && !bt.veteran_mortality) {
+    bt.veteran_mortality = true;
+    msgs.push('💭 You woke up at 3 AM and couldn\'t go back to sleep. How many years do you have left? The body is failing. The game doesn\'t have a retirement plan.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { mortality_aware: 1 } }, 'backstory', 'veteran_mortality');
+  }
+  if (charId === 'veteran' && day >= 400 && !bt.veteran_one_last_score) {
+    bt.veteran_one_last_score = true;
+    msgs.push('💭 Razor said it best: "One more big score, boss. Then we disappear. Somewhere warm where nobody knows our names." The dream of getting out. Everyone has it. Nobody does it.');
+  }
+  if (charId === 'veteran' && day >= 470 && !bt.veteran_act1_close) {
+    bt.veteran_act1_close = true;
+    msgs.push('📖 Old soldier. New war. The scars tell the story. The money fills the gaps. But at night, in the dark, you know: the game always collects its debts.');
+  }
+
+  // IMMIGRANT: Act 1 story arc (day 30-480)
+  if (charId === 'immigrant' && day >= 80 && !bt.immigrant_language_barrier) {
+    bt.immigrant_language_barrier = true;
+    msgs.push('🗣️ A deal almost went bad because of language. The buyer thought you said "fifty" when you said "fifteen." You need to improve your English. Or find a translator you trust.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { language_barrier: 1 } }, 'backstory', 'immigrant_language');
+  }
+  if (charId === 'immigrant' && day >= 140 && !bt.immigrant_home_country_news) {
+    bt.immigrant_home_country_news = true;
+    msgs.push('📞 Call from home. Your sister is sick. The hospital costs money you don\'t have... unless you use the dirty money. The family needs $3,000 for treatment.');
+    state.cash = Math.max(0, (state.cash || 0) - 3000);
+    state.dirtyMoney = Math.max(0, (state.dirtyMoney || 0) - 3000);
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { family_first: 1 } }, 'backstory', 'immigrant_sister');
+  }
+  if (charId === 'immigrant' && day >= 210 && !bt.immigrant_connect_value) {
+    bt.immigrant_connect_value = true;
+    msgs.push('🌍 Your international connection sent a gift: premium product at 40% below market. American dealers can\'t get this quality. Your homeland connections are priceless.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { international_bridge: 1 } }, 'backstory', 'immigrant_connect');
+  }
+  if (charId === 'immigrant' && day >= 280 && !bt.immigrant_community_leader) {
+    bt.immigrant_community_leader = true;
+    msgs.push('🤝 The immigrant community looks to you now. Not just for money — for advice, protection, justice. You\'re becoming what you never expected: a community leader. A dangerous one.');
+    if (typeof adjustRep === 'function') { adjustRep(state, 'trust', 8); adjustRep(state, 'publicImage', 5); }
+  }
+  if (charId === 'immigrant' && day >= 350 && !bt.immigrant_deportation_threat) {
+    bt.immigrant_deportation_threat = true;
+    msgs.push('🚨 ICE has your address. A sympathetic clerk at the immigration office tipped you off. "They\'re building a file. You have maybe 30 days." Time to get papers or disappear.');
+    if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { fugitive_status: 1 }, stats: { heat: 10, stress: 15 } }, 'backstory', 'immigrant_deport');
+  }
+  if (charId === 'immigrant' && day >= 420 && state.cash > 50000 && !bt.immigrant_embassy) {
+    bt.immigrant_embassy = true;
+    msgs.push('🏛️ A corrupt embassy official can make your problems disappear. New papers, clean identity, $30,000. Or you can keep running. The choice defines your future.');
+  }
+  if (charId === 'immigrant' && day >= 470 && !bt.immigrant_act1_close) {
+    bt.immigrant_act1_close = true;
+    msgs.push('📖 You crossed an ocean to find a better life. You found the American dream — just not the version they put on postcards. Home feels further away than ever.');
   }
 
   // === LATE-GAME CHARACTER MILESTONES (Day 100+) ===
