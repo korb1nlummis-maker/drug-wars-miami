@@ -107,6 +107,32 @@ function processVehiclesDaily(state) {
     }
   });
 
+  // Mechanic crew auto-repair: each mechanic restores 5 condition per day to worst vehicle
+  if (state.henchmen) {
+    var mechanics = state.henchmen.filter(function(h) {
+      return h.type === 'mechanic' && !h.injured;
+    }).length;
+    if (mechanics > 0 && vehicleState.garage.length > 0) {
+      // Find the most damaged vehicle
+      var worstIdx = 0;
+      var worstCondition = vehicleState.garage[0].condition;
+      for (var vi = 1; vi < vehicleState.garage.length; vi++) {
+        if (vehicleState.garage[vi].condition < worstCondition) {
+          worstCondition = vehicleState.garage[vi].condition;
+          worstIdx = vi;
+        }
+      }
+      if (worstCondition < 100) {
+        var repairAmount = mechanics * 5; // 5 condition per mechanic per day
+        vehicleState.garage[worstIdx].condition = Math.min(100, worstCondition + repairAmount);
+        if (repairAmount >= 10) {
+          var vDef = getVehicleDef(vehicleState.garage[worstIdx].vehicleId);
+          messages.push('🔧 Mechanic crew repaired ' + (vDef ? vDef.name : 'vehicle') + ' (+' + repairAmount + '% condition)');
+        }
+      }
+    }
+  }
+
   return messages;
 }
 

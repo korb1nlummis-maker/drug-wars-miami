@@ -409,10 +409,60 @@ function processFactionDaily(state) {
       }
     }
 
-    // Active war auto-battles
-    if (state.factions.wars[faction.id] && Math.random() < 0.15) {
-      const battleResult = resolveFactionBattle(state, faction.id);
-      if (battleResult) msgs.push(battleResult.msg);
+    // Active war auto-battles and war consequences
+    if (state.factions.wars[faction.id]) {
+      var war = state.factions.wars[faction.id];
+
+      // Daily war costs: maintaining a war is expensive
+      var warCost = 500 + (war.battles || 0) * 200;
+      if (state.cash >= warCost) {
+        state.cash -= warCost;
+      } else {
+        // Can't afford war - crew morale drops
+        if (state.henchmen) {
+          for (var wi = 0; wi < state.henchmen.length; wi++) {
+            state.henchmen[wi].loyalty = Math.max(0, (state.henchmen[wi].loyalty || 50) - 2);
+          }
+        }
+      }
+
+      // War generates constant heat
+      state.heat = Math.min(100, (state.heat || 0) + 1);
+
+      // 15% daily auto-battle
+      if (Math.random() < 0.15) {
+        const battleResult = resolveFactionBattle(state, faction.id);
+        if (battleResult) {
+          msgs.push(battleResult.msg);
+
+          // War consequence engine integration
+          if (typeof applyConsequences === 'function') {
+            if (battleResult.playerWon) {
+              applyConsequences(state, { traits: { warrior: 1, territorial: 1 } }, 'war_' + faction.id, 'battle_won');
+            } else {
+              applyConsequences(state, { traits: { scarred: 1 } }, 'war_' + faction.id, 'battle_lost');
+            }
+          }
+
+          // Losing a battle can damage businesses in war zone
+          if (!battleResult.playerWon && state.frontBusinesses && Math.random() < 0.25) {
+            var bizInWarZone = state.frontBusinesses.filter(function(b) {
+              return faction.territory && faction.territory.includes(b.location);
+            });
+            if (bizInWarZone.length > 0) {
+              var damagedBiz = bizInWarZone[Math.floor(Math.random() * bizInWarZone.length)];
+              damagedBiz.shutdownUntil = (state.day || 0) + 3;
+              msgs.push('💥 ' + faction.name + ' damaged your business! Shut down 3 days.');
+            }
+          }
+        }
+      }
+
+      // War exhaustion: long wars (20+ days) both sides want peace
+      var warDays = (state.day || 0) - (war.startDay || 0);
+      if (warDays > 20 && Math.random() < 0.05) {
+        msgs.push('⚔️ The war with ' + faction.name + ' drags on. Both sides are exhausted. Consider negotiating peace.');
+      }
     }
 
     // Faction standing drift toward neutral (very slow)

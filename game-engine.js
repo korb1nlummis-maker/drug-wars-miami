@@ -2234,6 +2234,74 @@ function waitDay(state) {
     if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { community_protected: true }, ability: 'community_shield', message: 'Your community protects you from scrutiny.' }, 'backstory', 'immigrant_community');
   }
 
+  // === LATE-GAME CHARACTER MILESTONES (Day 100+) ===
+  if (charId && day >= 100 && bt) {
+    // ALL CHARACTERS: Empire reflection at day 100
+    if (day >= 100 && !bt.empire_reflection) {
+      bt.empire_reflection = true;
+      var nwNow = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      if (nwNow > 200000) {
+        msgs.push('💭 You look out over the Miami skyline. $' + nwNow.toLocaleString() + ' in assets. You came from nothing. The question is: what now?');
+      } else {
+        msgs.push('💭 100 days in the game. The money comes and goes. The streets take their toll. But you\'re still standing.');
+      }
+    }
+
+    // DROPOUT: University wants to honor you (if rich and clean)
+    if (charId === 'dropout' && day >= 120 && nwNow > 500000 && (state.heat || 0) < 20 && !bt.dropout_honor) {
+      bt.dropout_honor = true;
+      msgs.push('🎓 University of Miami wants you as a guest speaker. "Self-made success story." The irony isn\'t lost on you.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { public_figure: true }, stats: { publicImage: 10 } }, 'backstory', 'dropout_honor');
+    }
+
+    // CORNER KID: OG mentor dies
+    if (charId === 'corner_kid' && day >= 150 && !bt.corner_mentor_death) {
+      bt.corner_mentor_death = true;
+      msgs.push('💀 Word from the block: your OG mentor was found dead. Drive-by. The streets took another one. He taught you everything.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { grieving: 1, hardened: 1 }, stats: { fear: 5 } }, 'backstory', 'corner_mentor_death');
+    }
+
+    // EX-CON: Offered witness protection
+    if (charId === 'ex_con' && day >= 130 && (state.heat || 0) > 60 && !bt.excon_witsec) {
+      bt.excon_witsec = true;
+      msgs.push('🕵️ A federal agent approached you. "We can make this all go away. New identity. New life. All you have to do is testify." The offer sits heavy.');
+    }
+
+    // HUSTLER: Old bookie wants revenge
+    if (charId === 'hustler' && day >= 120 && !bt.hustler_revenge) {
+      bt.hustler_revenge = true;
+      msgs.push('⚠️ The bookie you stiffed years ago? He found you. "You think success makes you untouchable? I\'ve been watching." New enemy on the horizon.');
+      state.heat = Math.min(100, (state.heat || 0) + 8);
+    }
+
+    // CONNECTED KID: Father breaks out of prison
+    if (charId === 'connected_kid' && day >= 180 && !bt.connected_father) {
+      bt.connected_father = true;
+      msgs.push('📞 "Mijo... I\'m out. They couldn\'t hold me forever." Your father is free. He wants his empire back. What you\'ve built is HIS legacy — or is it yours now?');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { heir_challenged: true }, message: 'Your father is back. The succession crisis begins.' }, 'backstory', 'connected_father');
+    }
+
+    // VETERAN: Old partner resurfaces
+    if (charId === 'veteran' && day >= 140 && !bt.veteran_partner) {
+      bt.veteran_partner = true;
+      msgs.push('📞 "It\'s been 20 years, but I never forgot you. I need help. One last job. For old times\' sake." Your old partner from the enforcer days needs you.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { nostalgic: 1 } }, 'backstory', 'veteran_partner');
+    }
+
+    // IMMIGRANT: Green card opportunity
+    if (charId === 'immigrant' && day >= 160 && state.cash > 100000 && !bt.immigrant_greencard) {
+      bt.immigrant_greencard = true;
+      msgs.push('📋 A lawyer says he can get you legal status. $50,000 and some creative paperwork. No more looking over your shoulder. But $50K is a lot of laundered cash...');
+    }
+
+    // CLEANSKIN: Former colleagues suspect you
+    if (charId === 'cleanskin' && day >= 110 && state.cash > 200000 && !bt.cleanskin_colleagues) {
+      bt.cleanskin_colleagues = true;
+      msgs.push('📞 Your old accounting firm called. "We ran your numbers. Something doesn\'t add up. Where\'s the money coming from?" They\'re asking questions.');
+      state.heat = Math.min(100, (state.heat || 0) + 5);
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
