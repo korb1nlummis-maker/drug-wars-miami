@@ -1603,10 +1603,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A massive sinkhole opens up and swallows part of a building. If it\'s near your stash house... uh oh.',
     outcomes: [
-      { label: 'Check your properties', effects: { cash: -5000, stress: 5 }, result: 'One of your stash spots took damage. $5K in product lost to the earth. Insurance? What insurance?' },
-      { label: 'Help with rescue efforts', effects: { communityRep: 8, publicImage: 5 }, result: 'You organize your crew for rescue. Heroes of the neighborhood. PR gold.' },
-      { label: 'Loot evacuated buildings', effects: { cash: 3000, heat: 5, publicImage: -5 }, result: 'While everyone runs out, you run in. Quick grab of valuables. Dark but profitable.' },
-      { label: 'Use the chaos as cover', effects: { cash: 2000 }, result: 'Emergency services are overwhelmed. Perfect window for a major deal with zero surveillance.' }
+      { label: 'Check your properties', effects: { cash: -5000, stress: 5, consequences: { traits: { cautious: 1 }, message: 'You prioritized protecting your assets over everything else.' } }, result: 'One of your stash spots took damage. $5K in product lost to the earth. Insurance? What insurance?' },
+      { label: 'Help with rescue efforts', effects: { communityRep: 8, publicImage: 5, consequences: { traits: { brave: 1, heroic: 1 }, stats: { reputation: 3 }, message: 'You risked your safety to save others. The neighborhood remembers heroes.' } }, result: 'You organize your crew for rescue. Heroes of the neighborhood. PR gold.' },
+      { label: 'Loot evacuated buildings', effects: { cash: 3000, heat: 5, publicImage: -5, consequences: { traits: { opportunistic: 1, criminal: 1 }, message: 'Looting during a disaster -- the lowest of the low, but profitable.' } }, result: 'While everyone runs out, you run in. Quick grab of valuables. Dark but profitable.' },
+      { label: 'Use the chaos as cover', effects: { cash: 2000, consequences: { traits: { opportunistic: 1 }, message: 'You exploited a disaster for personal gain. Cold but effective.' } }, result: 'Emergency services are overwhelmed. Perfect window for a major deal with zero surveillance.' }
     ]
   },
   {
@@ -1614,10 +1614,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20, minAct: 2 },
     description: 'A famous rapper name-drops your product in a hit song. Demand spikes overnight. Your phone won\'t stop ringing.',
     outcomes: [
-      { label: 'Capitalize fully', effects: { cash: 10000, heat: 10, streetCred: 5 }, result: 'Demand up 30% for a week. You sell everything at premium. Legendary status but police take notice.' },
-      { label: 'Raise prices', effects: { cash: 8000, trust: -2 }, result: 'Supply and demand. Your regulars grumble but new customers pay whatever you ask.' },
-      { label: 'Lay low despite demand', effects: { streetCred: 2 }, result: 'You resist the temptation. Extra demand means extra attention. Smart restraint.' },
-      { label: 'Contact the rapper directly', effects: { cash: -5000, streetCred: 5, publicImage: 3 }, result: 'You connect with them. Mutual promotion. The beginning of a very profitable friendship.' }
+      { label: 'Capitalize fully', effects: { cash: 10000, heat: 10, streetCred: 5, consequences: { traits: { opportunistic: 1 }, message: 'You seized the moment and maximized profit. Bold move.' } }, result: 'Demand up 30% for a week. You sell everything at premium. Legendary status but police take notice.' },
+      { label: 'Raise prices', effects: { cash: 8000, trust: -2, consequences: { traits: { opportunistic: 1 }, message: 'Price gouging your own customers -- profitable but disloyal.' } }, result: 'Supply and demand. Your regulars grumble but new customers pay whatever you ask.' },
+      { label: 'Lay low despite demand', effects: { streetCred: 2, consequences: { traits: { cautious: 1 }, message: 'Restraint under pressure. Not everyone can resist easy money.' } }, result: 'You resist the temptation. Extra demand means extra attention. Smart restraint.' },
+      { label: 'Contact the rapper directly', effects: { cash: -5000, streetCred: 5, publicImage: 3, consequences: { traits: { adventurous: 1 }, stats: { reputation: 2 }, message: 'Networking with celebrities. You play the long game.' } }, result: 'You connect with them. Mutual promotion. The beginning of a very profitable friendship.' }
     ]
   },
   {
@@ -1625,10 +1625,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'During renovation, workers find a sealed box from the 1980s. Inside: vintage drugs, old cash, and a coded diary from a cocaine cowboy.',
     outcomes: [
-      { label: 'Decode the diary', effects: { cash: 5000, streetCred: 2 }, result: 'The codes reveal locations of hidden stashes across Miami. A treasure map from the past.' },
-      { label: 'Sell the vintage product', effects: { cash: 8000 }, result: 'Collectors and nostalgic users pay premium for 80s product. Niche market, big money.' },
-      { label: 'Keep it as a trophy', effects: { streetCred: 3 }, result: 'The diary sits in your office. A reminder that empires rise and fall. History rhymes.' },
-      { label: 'Turn it over to a museum ($2K finder fee)', effects: { cash: 2000, publicImage: 5 }, result: 'The museum is thrilled. Local hero discovers historical artifact. Great press coverage.' }
+      { label: 'Decode the diary', effects: { cash: 5000, streetCred: 2, consequences: { traits: { adventurous: 1 }, message: 'Cracking codes from the past. Your curiosity paid off.' } }, result: 'The codes reveal locations of hidden stashes across Miami. A treasure map from the past.' },
+      { label: 'Sell the vintage product', effects: { cash: 8000, consequences: { traits: { opportunistic: 1 }, message: 'Monetizing history. Everything has a price tag to you.' } }, result: 'Collectors and nostalgic users pay premium for 80s product. Niche market, big money.' },
+      { label: 'Keep it as a trophy', effects: { streetCred: 3, consequences: { traits: { superstitious: 1 }, message: 'You hold onto relics of the past. Talismans of a bygone era.' } }, result: 'The diary sits in your office. A reminder that empires rise and fall. History rhymes.' },
+      { label: 'Turn it over to a museum ($2K finder fee)', effects: { cash: 2000, publicImage: 5, consequences: { traits: { community_minded: 1 }, stats: { reputation: 2 }, message: 'Preserving history for the community. A surprisingly civic-minded choice.' } }, result: 'The museum is thrilled. Local hero discovers historical artifact. Great press coverage.' }
     ]
   },
   {
@@ -1636,10 +1636,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'A crew member shows up after being missing for 3 days claiming aliens abducted them. They seem dead serious.',
     outcomes: [
-      { label: 'Believe them (humor)', effects: { stress: -3, trust: 2 }, result: 'You play along. The crew has a great laugh. Morale boost from the absurdity of it all.' },
-      { label: 'Demand the real story', effects: { trust: -1 }, result: 'They were on a bender. Lost 3 days to partying. The alien story was to save face.' },
-      { label: 'Drug test them', effects: { trust: -2 }, result: 'Test reveals they sampled too much of your product. Addiction intervention needed.' },
-      { label: 'Let it go', effects: { trust: 1 }, result: 'Everyone needs their stories. You don\'t push. They\'re back and that\'s what matters.' }
+      { label: 'Believe them (humor)', effects: { stress: -3, trust: 2, consequences: { traits: { superstitious: 1 }, message: 'You entertained the impossible. Open minds build loyal crews.' } }, result: 'You play along. The crew has a great laugh. Morale boost from the absurdity of it all.' },
+      { label: 'Demand the real story', effects: { trust: -1, consequences: { traits: { skeptic: 1 }, message: 'You see through nonsense. No fairy tales on your watch.' } }, result: 'They were on a bender. Lost 3 days to partying. The alien story was to save face.' },
+      { label: 'Drug test them', effects: { trust: -2, consequences: { traits: { cautious: 1 }, message: 'Trust but verify. Product integrity matters more than feelings.' } }, result: 'Test reveals they sampled too much of your product. Addiction intervention needed.' },
+      { label: 'Let it go', effects: { trust: 1, consequences: { traits: { cautious: 1 }, message: 'Sometimes the best management is knowing when not to dig deeper.' } }, result: 'Everyone needs their stories. You don\'t push. They\'re back and that\'s what matters.' }
     ]
   },
   {
@@ -1647,10 +1647,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'A documentary film crew wants to film "street life" in your territory. Cameras everywhere.',
     outcomes: [
-      { label: 'Allow with conditions', effects: { publicImage: 5, cash: 2000 }, result: 'You control the narrative. They film what you allow. Great PR, no incriminating footage.' },
-      { label: 'Refuse access', effects: { fear: 1 }, result: 'They film from outside the territory. Less control but less risk.' },
-      { label: 'Use as propaganda', effects: { publicImage: 8, streetCred: 3 }, result: 'You stage interviews showing community investment. The documentary paints you as Robin Hood.' },
-      { label: 'Sabotage the production', effects: { fear: 2, publicImage: -2 }, result: 'Cameras "break." Footage "disappears." The crew gives up. No documentary, no evidence.' }
+      { label: 'Allow with conditions', effects: { publicImage: 5, cash: 2000, consequences: { traits: { creative: 1 }, message: 'Controlling the narrative -- media savvy at its finest.' } }, result: 'You control the narrative. They film what you allow. Great PR, no incriminating footage.' },
+      { label: 'Refuse access', effects: { fear: 1, consequences: { traits: { cautious: 1 }, message: 'Cameras are evidence. Keeping them out is the safe play.' } }, result: 'They film from outside the territory. Less control but less risk.' },
+      { label: 'Use as propaganda', effects: { publicImage: 8, streetCred: 3, consequences: { traits: { deceptive: 1, creative: 1 }, message: 'You weaponized media to build a false image. Masterful manipulation.' } }, result: 'You stage interviews showing community investment. The documentary paints you as Robin Hood.' },
+      { label: 'Sabotage the production', effects: { fear: 2, publicImage: -2, consequences: { traits: { criminal: 1 }, message: 'Destroying evidence and intimidating journalists. Heavy-handed but effective.' } }, result: 'Cameras "break." Footage "disappears." The crew gives up. No documentary, no evidence.' }
     ]
   },
   {
@@ -1658,10 +1658,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A fight in your territory goes viral on social media. Millions of views. Your operation is in the background.',
     outcomes: [
-      { label: 'Spin it positive', effects: { publicImage: 3, streetCred: 2 }, result: 'You pay commenters to frame it as your crew defending the neighborhood. PR crisis averted.' },
-      { label: 'Get the video taken down', effects: { cash: -2000 }, result: 'Your tech contact files copyright claims. Most copies disappear within 48 hours.' },
-      { label: 'Ignore it', effects: { heat: 5 }, result: 'It dies down after a week. But police watched it carefully and mapped your territory.' },
-      { label: 'Embrace the attention', effects: { streetCred: 5, heat: 8 }, result: 'You lean in. Comment sections become recruitment tools. Famous but exposed.' }
+      { label: 'Spin it positive', effects: { publicImage: 3, streetCred: 2, consequences: { traits: { deceptive: 1, creative: 1 }, message: 'Astroturfing social media. You control the narrative even online.' } }, result: 'You pay commenters to frame it as your crew defending the neighborhood. PR crisis averted.' },
+      { label: 'Get the video taken down', effects: { cash: -2000, consequences: { traits: { tech_savvy: 1 }, message: 'Digital damage control. You understand the power of online evidence.' } }, result: 'Your tech contact files copyright claims. Most copies disappear within 48 hours.' },
+      { label: 'Ignore it', effects: { heat: 5, consequences: { traits: { cautious: 1 }, message: 'Sometimes inaction is the worst action. The internet never forgets.' } }, result: 'It dies down after a week. But police watched it carefully and mapped your territory.' },
+      { label: 'Embrace the attention', effects: { streetCred: 5, heat: 8, consequences: { traits: { adventurous: 1 }, message: 'You turned viral infamy into street fame. Bold and reckless.' } }, result: 'You lean in. Comment sections become recruitment tools. Famous but exposed.' }
     ]
   },
   {
@@ -1669,10 +1669,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'An alligator from a nearby farm is loose in your district. Chaos in the streets. Animal control is overwhelmed.',
     outcomes: [
-      { label: 'Catch it yourself (hero status)', effects: { communityRep: 10, publicImage: 5, health: -5 }, result: 'You wrangle the gator bare-handed. It\'s on every local news channel. Neighborhood legend.' },
-      { label: 'Call animal control', effects: { publicImage: 1 }, result: 'Boring but responsible. They handle it. You organize the block party after.' },
-      { label: 'Sell it to an exotic buyer ($3K)', effects: { cash: 3000, streetCred: 1 }, result: 'You capture it and flip it to a collector. $3K for a few minutes of danger.' },
-      { label: 'Use it to scare a rival', effects: { fear: 5, streetCred: 3 }, result: 'You have it delivered to a rival\'s front door. The message is... primal.' }
+      { label: 'Catch it yourself (hero status)', effects: { communityRep: 10, publicImage: 5, health: -5, consequences: { traits: { brave: 1, heroic: 1 }, stats: { reputation: 3 }, message: 'Wrestling an alligator bare-handed. Absolute legend status.' } }, result: 'You wrangle the gator bare-handed. It\'s on every local news channel. Neighborhood legend.' },
+      { label: 'Call animal control', effects: { publicImage: 1, consequences: { traits: { cautious: 1 }, message: 'The responsible choice. Not flashy but sensible.' } }, result: 'Boring but responsible. They handle it. You organize the block party after.' },
+      { label: 'Sell it to an exotic buyer ($3K)', effects: { cash: 3000, streetCred: 1, consequences: { traits: { opportunistic: 1 }, message: 'You see dollar signs in everything -- even escaped reptiles.' } }, result: 'You capture it and flip it to a collector. $3K for a few minutes of danger.' },
+      { label: 'Use it to scare a rival', effects: { fear: 5, streetCred: 3, consequences: { traits: { creative: 1 }, message: 'Psychological warfare via exotic animal. Points for originality.' } }, result: 'You have it delivered to a rival\'s front door. The message is... primal.' }
     ]
   },
   {
@@ -1680,10 +1680,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 20 },
     description: 'You remember an old crypto wallet you set up years ago. You find the hardware in a drawer. It might have value.',
     outcomes: [
-      { label: 'Access the wallet', effects: { cash: (function() { return [5000, 15000, 50000, 100000][Math.floor(Math.random() * 4)]; })() }, result: 'The old password works! The balance has appreciated significantly. Unexpected windfall.' },
-      { label: 'Hire a crypto expert ($1K)', effects: { cash: -1000 }, result: 'They recover the wallet safely and help you cash out anonymously. Professional service.' },
-      { label: 'Forget the password', effects: { stress: 5 }, result: 'You try every password you can think of. Nothing works. The money sits there, mocking you.' },
-      { label: 'Sell the hardware ($500)', effects: { cash: 500 }, result: 'You sell the wallet to someone else. They either crack it or don\'t. Quick $500.' }
+      { label: 'Access the wallet', effects: { cash: (function() { return [5000, 15000, 50000, 100000][Math.floor(Math.random() * 4)]; })(), consequences: { traits: { tech_savvy: 1 }, message: 'Early crypto adoption pays off. You were ahead of the curve.' } }, result: 'The old password works! The balance has appreciated significantly. Unexpected windfall.' },
+      { label: 'Hire a crypto expert ($1K)', effects: { cash: -1000, consequences: { traits: { cautious: 1, tech_savvy: 1 }, message: 'Smart enough to know your limits. Professional help for professional problems.' } }, result: 'They recover the wallet safely and help you cash out anonymously. Professional service.' },
+      { label: 'Forget the password', effects: { stress: 5, consequences: { traits: { cautious: 1 }, message: 'Locked out of your own fortune. Security works both ways.' } }, result: 'You try every password you can think of. Nothing works. The money sits there, mocking you.' },
+      { label: 'Sell the hardware ($500)', effects: { cash: 500, consequences: { traits: { opportunistic: 1 }, message: 'Quick flip, minimal effort. Classic hustle mentality.' } }, result: 'You sell the wallet to someone else. They either crack it or don\'t. Quick $500.' }
     ]
   },
   {
@@ -1691,10 +1691,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Found during a boat trip: a sealed bottle with coordinates written on a waterlogged note. Drug drop that never got picked up?',
     outcomes: [
-      { label: 'Follow the coordinates', effects: { cash: 10000, heat: 5, stress: 3 }, result: 'An old drug stash buried on a beach. $10K in waterproof packaging. Finder\'s keepers.' },
-      { label: 'Send someone else', effects: { cash: 5000, trust: 1 }, result: 'Your crew member finds half the stash. They definitely kept some. But $5K for no risk.' },
-      { label: 'Ignore it — could be a trap', effects: {}, result: 'Paranoia wins. Could have been real, could have been bait. You\'ll never know.' },
-      { label: 'Sell the coordinates ($2K)', effects: { cash: 2000 }, result: 'You sell the intel. Let someone else take the risk. Easy profit.' }
+      { label: 'Follow the coordinates', effects: { cash: 10000, heat: 5, stress: 3, consequences: { traits: { adventurous: 1, brave: 1 }, message: 'Treasure hunting on the open water. You live for this kind of risk.' } }, result: 'An old drug stash buried on a beach. $10K in waterproof packaging. Finder\'s keepers.' },
+      { label: 'Send someone else', effects: { cash: 5000, trust: 1, consequences: { traits: { cautious: 1 }, message: 'Let others take the risk. Smart delegation.' } }, result: 'Your crew member finds half the stash. They definitely kept some. But $5K for no risk.' },
+      { label: 'Ignore it — could be a trap', effects: { consequences: { traits: { cautious: 1 }, message: 'Healthy paranoia keeps you alive in this business.' } }, result: 'Paranoia wins. Could have been real, could have been bait. You\'ll never know.' },
+      { label: 'Sell the coordinates ($2K)', effects: { cash: 2000, consequences: { traits: { opportunistic: 1 }, message: 'Selling information instead of acting on it. Middleman mentality.' } }, result: 'You sell the intel. Let someone else take the risk. Easy profit.' }
     ]
   },
   {
@@ -1702,10 +1702,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'Someone who looks exactly like you is committing crimes across Miami. Police are confused. So are you.',
     outcomes: [
-      { label: 'Use it as an alibi', effects: { heat: -10, streetCred: 2 }, result: '"Couldn\'t have been me, officer. I was at church." Perfect deniability while your twin runs wild.' },
-      { label: 'Find and confront the double', effects: { streetCred: 3, stress: 3 }, result: 'You track them down. It\'s uncanny. They agree to disappear for $5K. Identity secured.' },
-      { label: 'Hire them as a decoy', effects: { cash: -2000, streetCred: 5 }, result: 'Why fight it? You now have a body double for dangerous meetings. Presidential-level security.' },
-      { label: 'Frame them for your crimes', effects: { heat: -20, trust: -3 }, result: 'You tip off the police about your lookalike. They arrest them for YOUR crimes. Diabolical.' }
+      { label: 'Use it as an alibi', effects: { heat: -10, streetCred: 2, consequences: { traits: { deceptive: 1 }, message: 'Exploiting confusion for deniability. The perfect alibi fell into your lap.' } }, result: '"Couldn\'t have been me, officer. I was at church." Perfect deniability while your twin runs wild.' },
+      { label: 'Find and confront the double', effects: { streetCred: 3, stress: 3, consequences: { traits: { brave: 1 }, message: 'You faced a mirror image of yourself. Identity is everything in this game.' } }, result: 'You track them down. It\'s uncanny. They agree to disappear for $5K. Identity secured.' },
+      { label: 'Hire them as a decoy', effects: { cash: -2000, streetCred: 5, consequences: { traits: { creative: 1 }, message: 'Body doubles -- next-level operational security.' } }, result: 'Why fight it? You now have a body double for dangerous meetings. Presidential-level security.' },
+      { label: 'Frame them for your crimes', effects: { heat: -20, trust: -3, consequences: { traits: { deceptive: 1, criminal: 1, predatory: 1 }, message: 'You sacrificed an innocent person for your freedom. Truly diabolical.' } }, result: 'You tip off the police about your lookalike. They arrest them for YOUR crimes. Diabolical.' }
     ]
   },
   {
@@ -1713,10 +1713,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minCrew: 1 },
     description: 'Your crew swears the safehouse is haunted. Strange noises at night. Doors slamming. One guy quit over it.',
     outcomes: [
-      { label: 'Investigate', effects: { stress: 2 }, result: 'Old pipes and a raccoon in the walls. Mystery solved. The crew feels silly but relieved.' },
-      { label: 'Check for rival bugs', effects: { streetCred: 2 }, result: 'The "ghost" was a rival\'s surveillance tech making noise. You find and destroy their equipment.' },
-      { label: 'Play along (haunted theme)', effects: { trust: 2, stress: -1 }, result: 'You lean into the legend. "The ghost protects us." Crew morale turns superstition into confidence.' },
-      { label: 'Move to a new safehouse ($5K)', effects: { cash: -5000, trust: 1 }, result: 'Not worth the bad vibes. New place, fresh start. Sometimes the pragmatic move is the right one.' }
+      { label: 'Investigate', effects: { stress: 2, consequences: { traits: { skeptic: 1 }, message: 'Rational thinking debunks the supernatural. Facts over fear.' } }, result: 'Old pipes and a raccoon in the walls. Mystery solved. The crew feels silly but relieved.' },
+      { label: 'Check for rival bugs', effects: { streetCred: 2, consequences: { traits: { tech_savvy: 1 }, message: 'Counter-surveillance instincts. You turned a ghost story into actionable intel.' } }, result: 'The "ghost" was a rival\'s surveillance tech making noise. You find and destroy their equipment.' },
+      { label: 'Play along (haunted theme)', effects: { trust: 2, stress: -1, consequences: { traits: { superstitious: 1, creative: 1 }, message: 'You turned fear into loyalty. The ghost is now crew mascot.' } }, result: 'You lean into the legend. "The ghost protects us." Crew morale turns superstition into confidence.' },
+      { label: 'Move to a new safehouse ($5K)', effects: { cash: -5000, trust: 1, consequences: { traits: { cautious: 1 }, message: 'Bad vibes are bad for business. Fresh start, clean energy.' } }, result: 'Not worth the bad vibes. New place, fresh start. Sometimes the pragmatic move is the right one.' }
     ]
   },
   {
@@ -1724,10 +1724,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minAct: 2, minCrew: 2 },
     description: 'A gallery in Wynwood has a painting worth $2M with laughably weak security. Your fence contact can move it.',
     outcomes: [
-      { label: 'Plan and execute the heist', effects: { cash: 200000, heat: 20, streetCred: 5 }, result: 'Clean execution. The painting disappears overnight. Your fence takes 90% but you keep $200K.' },
-      { label: 'Scout but don\'t commit', effects: {}, result: 'You case the joint but decide the risk isn\'t worth it. The painting hangs there, taunting you.' },
-      { label: 'Tip off another crew (for a cut)', effects: { cash: 50000, trust: -1 }, result: 'You sell the plan for $50K. They take the heat, you take the profit.' },
-      { label: 'Blackmail the gallery', effects: { cash: 20000, fear: 2 }, result: '"Nice security. Be a shame if something happened." $20K protection money. Recurring revenue.' }
+      { label: 'Plan and execute the heist', effects: { cash: 200000, heat: 20, streetCred: 5, consequences: { traits: { adventurous: 1, criminal: 1 }, message: 'Art heist executed. You diversified into high-end crime.' } }, result: 'Clean execution. The painting disappears overnight. Your fence takes 90% but you keep $200K.' },
+      { label: 'Scout but don\'t commit', effects: { consequences: { traits: { cautious: 1 }, message: 'You looked but didn\'t leap. Discipline over greed.' } }, result: 'You case the joint but decide the risk isn\'t worth it. The painting hangs there, taunting you.' },
+      { label: 'Tip off another crew (for a cut)', effects: { cash: 50000, trust: -1, consequences: { traits: { opportunistic: 1, deceptive: 1 }, message: 'Selling intel while others take the risk. Classic broker move.' } }, result: 'You sell the plan for $50K. They take the heat, you take the profit.' },
+      { label: 'Blackmail the gallery', effects: { cash: 20000, fear: 2, consequences: { traits: { criminal: 1, predatory: 1 }, message: 'Protection rackets -- old school organized crime. You\'re going full mafioso.' } }, result: '"Nice security. Be a shame if something happened." $20K protection money. Recurring revenue.' }
     ]
   },
   {
@@ -1735,10 +1735,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A drone drops a package in your territory and flies away. No sender, no markings. What\'s inside?',
     outcomes: [
-      { label: 'Open it carefully', effects: { cash: 2000 }, result: 'Free product. Someone\'s delivery went to the wrong address. Your gain.' },
-      { label: 'Check for surveillance gear', effects: { streetCred: 1 }, result: 'Good instinct. It\'s a tracking device disguised as a package. You destroy it and relocate.' },
-      { label: 'Leave it alone', effects: {}, result: 'Smart. You don\'t touch unknown packages. It sits there until someone else grabs it.' },
-      { label: 'Trace the drone', effects: { streetCred: 2 }, result: 'You follow the signal. It leads to a rival\'s tech operation. Valuable intelligence about their capabilities.' }
+      { label: 'Open it carefully', effects: { cash: 2000, consequences: { traits: { adventurous: 1 }, message: 'Curiosity rewarded. Finders keepers in the drug game.' } }, result: 'Free product. Someone\'s delivery went to the wrong address. Your gain.' },
+      { label: 'Check for surveillance gear', effects: { streetCred: 1, consequences: { traits: { tech_savvy: 1, cautious: 1 }, message: 'Counter-surveillance instincts saved you from a trap.' } }, result: 'Good instinct. It\'s a tracking device disguised as a package. You destroy it and relocate.' },
+      { label: 'Leave it alone', effects: { consequences: { traits: { cautious: 1 }, message: 'Unknown packages mean unknown risks. Smart restraint.' } }, result: 'Smart. You don\'t touch unknown packages. It sits there until someone else grabs it.' },
+      { label: 'Trace the drone', effects: { streetCred: 2, consequences: { traits: { tech_savvy: 1, adventurous: 1 }, message: 'Signal tracing and electronic warfare. You\'re evolving.' } }, result: 'You follow the signal. It leads to a rival\'s tech operation. Valuable intelligence about their capabilities.' }
     ]
   },
   {
@@ -1746,10 +1746,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'Workers discover a Cold War-era bunker beneath a property you own. Sealed since the 1960s. Massive underground space.',
     outcomes: [
-      { label: 'Convert to ultimate safehouse ($100K)', effects: { cash: -100000, streetCred: 5 }, result: 'Fortified, hidden, off-grid. The ultimate safehouse. Nobody is getting to you down here.' },
-      { label: 'Convert to massive stash ($50K)', effects: { cash: -50000, streetCred: 3 }, result: 'Temperature-controlled, secure, invisible. You can store millions in product underground.' },
-      { label: 'Convert to lab ($75K)', effects: { cash: -75000, streetCred: 4 }, result: 'Underground processing lab. Zero noise, zero smell, zero visibility. Perfect production.' },
-      { label: 'Sell the discovery ($30K)', effects: { cash: 30000 }, result: 'You sell the bunker rights to a prepper for $30K. Quick cash, no construction hassle.' }
+      { label: 'Convert to ultimate safehouse ($100K)', effects: { cash: -100000, streetCred: 5, consequences: { traits: { adventurous: 1 }, message: 'Underground fortress. You\'re building an empire beneath the surface.' } }, result: 'Fortified, hidden, off-grid. The ultimate safehouse. Nobody is getting to you down here.' },
+      { label: 'Convert to massive stash ($50K)', effects: { cash: -50000, streetCred: 3, consequences: { traits: { cautious: 1 }, message: 'Invisible storage for invisible product. Infrastructure investment.' } }, result: 'Temperature-controlled, secure, invisible. You can store millions in product underground.' },
+      { label: 'Convert to lab ($75K)', effects: { cash: -75000, streetCred: 4, consequences: { traits: { criminal: 1 }, message: 'Underground production facility. You\'re scaling operations to industrial levels.' } }, result: 'Underground processing lab. Zero noise, zero smell, zero visibility. Perfect production.' },
+      { label: 'Sell the discovery ($30K)', effects: { cash: 30000, consequences: { traits: { opportunistic: 1 }, message: 'Quick flip. Not every opportunity needs to be maximized.' } }, result: 'You sell the bunker rights to a prepper for $30K. Quick cash, no construction hassle.' }
     ]
   },
   {
@@ -1757,10 +1757,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A massive flash mob appears in your territory. Hundreds of people dancing. Is it cover for something?',
     outcomes: [
-      { label: 'Enjoy the show', effects: { stress: -2, publicImage: 1 }, result: 'Just a flash mob. Your crew joins in. A moment of pure joy in an otherwise dark life.' },
-      { label: 'Use as cover for a deal', effects: { cash: 3000 }, result: 'Perfect distraction. You close a deal in the chaos. Nobody sees a thing.' },
-      { label: 'Check for rival activity', effects: { streetCred: 1 }, result: 'You scan the crowd. Sure enough, a rival crew is using the mob to move product. You intercept.' },
-      { label: 'Fund a bigger one ($2K)', effects: { cash: -2000, communityRep: 5, publicImage: 3 }, result: 'You sponsor a monthly flash mob. Community event + perfect recurring cover for operations.' }
+      { label: 'Enjoy the show', effects: { stress: -2, publicImage: 1, consequences: { traits: { community_minded: 1 }, message: 'You let yourself enjoy the moment. Even hustlers need joy.' } }, result: 'Just a flash mob. Your crew joins in. A moment of pure joy in an otherwise dark life.' },
+      { label: 'Use as cover for a deal', effects: { cash: 3000, consequences: { traits: { opportunistic: 1 }, message: 'Every crowd is a cover. Every event is an opportunity.' } }, result: 'Perfect distraction. You close a deal in the chaos. Nobody sees a thing.' },
+      { label: 'Check for rival activity', effects: { streetCred: 1, consequences: { traits: { cautious: 1 }, message: 'Always scanning for threats. Vigilance is survival.' } }, result: 'You scan the crowd. Sure enough, a rival crew is using the mob to move product. You intercept.' },
+      { label: 'Fund a bigger one ($2K)', effects: { cash: -2000, communityRep: 5, publicImage: 3, consequences: { traits: { community_minded: 1, creative: 1 }, message: 'Community investment that doubles as operational cover. Win-win.' } }, result: 'You sponsor a monthly flash mob. Community event + perfect recurring cover for operations.' }
     ]
   },
   {
@@ -1768,10 +1768,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'You or a crew member collapses. Heart pounding, vision blurring. This is real. Hospital or street doctor?',
     outcomes: [
-      { label: 'Hospital (safe but exposed)', effects: { health: 30, heat: 5, cash: -3000 }, result: 'Full medical treatment. You survive. But your name is in the system now.' },
-      { label: 'Street doctor (risky but private)', effects: { health: 15, cash: -1000 }, result: 'Back-alley medicine. They patch you up. No records. But the treatment is... rough.' },
-      { label: 'Dr. Rosa (if available)', effects: { health: 25 }, result: 'Rosa works her magic. Professional care, no records, no questions. Thank God for her.' },
-      { label: 'Tough it out', effects: { health: -10, stress: 5 }, result: 'You refuse help. Whatever it was passes, but you\'re weaker for it. Stubbornness has a cost.' }
+      { label: 'Hospital (safe but exposed)', effects: { health: 30, heat: 5, cash: -3000, consequences: { traits: { cautious: 1 }, message: 'You chose survival over secrecy. Smart prioritization.' } }, result: 'Full medical treatment. You survive. But your name is in the system now.' },
+      { label: 'Street doctor (risky but private)', effects: { health: 15, cash: -1000, consequences: { traits: { brave: 1 }, message: 'Back-alley medicine takes guts. Privacy at a painful cost.' } }, result: 'Back-alley medicine. They patch you up. No records. But the treatment is... rough.' },
+      { label: 'Dr. Rosa (if available)', effects: { health: 25, consequences: { traits: { cautious: 1 }, message: 'Having trusted medical contacts is invaluable in this life.' } }, result: 'Rosa works her magic. Professional care, no records, no questions. Thank God for her.' },
+      { label: 'Tough it out', effects: { health: -10, stress: 5, consequences: { traits: { brave: 1 }, message: 'Stubborn to a fault. You refuse to show weakness, even to yourself.' } }, result: 'You refuse help. Whatever it was passes, but you\'re weaker for it. Stubbornness has a cost.' }
     ]
   },
   {
@@ -1779,10 +1779,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'A lawyer contacts you: a distant relative died and left you legitimate property and $30K in clean money.',
     outcomes: [
-      { label: 'Accept the inheritance', effects: { cash: 30000, publicImage: 2 }, result: 'Clean money! Legitimate property! Your accountant nearly cries with joy.' },
-      { label: 'Use it to expand fronts', effects: { cash: 30000, streetCred: 1 }, result: 'The property becomes a new front business. Legitimate origin, criminal application.' },
-      { label: 'Contest reveals your identity', effects: { cash: 30000, heat: 5 }, result: 'Relatives contest the will. Court proceedings put your name in public records. Worth it?' },
-      { label: 'Decline (stay hidden)', effects: {}, result: 'The money is clean but the paper trail isn\'t worth it. You let it go to other relatives.' }
+      { label: 'Accept the inheritance', effects: { cash: 30000, publicImage: 2, consequences: { traits: { opportunistic: 1 }, message: 'Clean money from a dirty life. The universe handed you a gift.' } }, result: 'Clean money! Legitimate property! Your accountant nearly cries with joy.' },
+      { label: 'Use it to expand fronts', effects: { cash: 30000, streetCred: 1, consequences: { traits: { criminal: 1 }, message: 'Laundering through legitimate inheritance. Creative accounting.' } }, result: 'The property becomes a new front business. Legitimate origin, criminal application.' },
+      { label: 'Contest reveals your identity', effects: { cash: 30000, heat: 5, consequences: { traits: { adventurous: 1 }, message: 'You gambled your anonymity for cash. High risk, uncertain reward.' } }, result: 'Relatives contest the will. Court proceedings put your name in public records. Worth it?' },
+      { label: 'Decline (stay hidden)', effects: { consequences: { traits: { cautious: 1 }, message: 'Turning down free money to stay invisible. Discipline over desire.' } }, result: 'The money is clean but the paper trail isn\'t worth it. You let it go to other relatives.' }
     ]
   },
   {
@@ -1790,10 +1790,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A major marathon/parade shuts down streets across your district. Traffic is impossible but crowd cover is excellent.',
     outcomes: [
-      { label: 'Use crowd cover for deals', effects: { cash: 3000 }, result: 'Hand-to-hand deals in a crowd of thousands. Invisible. Best sales day in months.' },
-      { label: 'Reroute deliveries', effects: { cash: -500, stress: 2 }, result: 'Your supply chain is disrupted. Detours cost time and money but you adapt.' },
-      { label: 'Work the crowd', effects: { cash: 5000, heat: 3 }, result: 'Tourists, partiers, athletes. Everyone wants something. You provide. Massive single-day revenue.' },
-      { label: 'Take the day off', effects: { stress: -3 }, result: 'You watch the runners from a cafe. Sometimes the best business decision is to rest.' }
+      { label: 'Use crowd cover for deals', effects: { cash: 3000, consequences: { traits: { opportunistic: 1 }, message: 'Every crowd is a marketplace. You never miss an angle.' } }, result: 'Hand-to-hand deals in a crowd of thousands. Invisible. Best sales day in months.' },
+      { label: 'Reroute deliveries', effects: { cash: -500, stress: 2, consequences: { traits: { cautious: 1 }, message: 'Adapting to disruption. Logistics under pressure.' } }, result: 'Your supply chain is disrupted. Detours cost time and money but you adapt.' },
+      { label: 'Work the crowd', effects: { cash: 5000, heat: 3, consequences: { traits: { opportunistic: 1, adventurous: 1 }, message: 'Aggressive sales in a target-rich environment. High energy hustle.' } }, result: 'Tourists, partiers, athletes. Everyone wants something. You provide. Massive single-day revenue.' },
+      { label: 'Take the day off', effects: { stress: -3, consequences: { traits: { cautious: 1 }, message: 'Rest is a strategic asset. You know when to step back.' } }, result: 'You watch the runners from a cafe. Sometimes the best business decision is to rest.' }
     ]
   },
   {
@@ -1801,10 +1801,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 25 },
     description: 'Someone escaped from county lockup. They show up at your door, sweating and desperate. They know your name.',
     outcomes: [
-      { label: 'Harbor them', effects: { heat: 15, trust: 5 }, result: 'You hide them. Major heat if discovered but their loyalty is unconditional now.' },
-      { label: 'Turn them away', effects: { trust: -3 }, result: 'You slam the door. They\'re caught within hours. From prison, they might start talking about you.' },
-      { label: 'Help them flee the state ($5K)', effects: { cash: -5000, trust: 5 }, result: 'You fund their escape. New ID, bus ticket, cash. They vanish and owe you their freedom.' },
-      { label: 'Negotiate their value', effects: {}, result: 'They have inside intel from prison. Crew rosters, hit lists, police informant identities. Valuable.' }
+      { label: 'Harbor them', effects: { heat: 15, trust: 5, consequences: { traits: { brave: 1, heroic: 1 }, message: 'Harboring a fugitive. Extreme loyalty at extreme risk.' } }, result: 'You hide them. Major heat if discovered but their loyalty is unconditional now.' },
+      { label: 'Turn them away', effects: { trust: -3, consequences: { traits: { cautious: 1 }, message: 'Self-preservation first. Cold but rational.' } }, result: 'You slam the door. They\'re caught within hours. From prison, they might start talking about you.' },
+      { label: 'Help them flee the state ($5K)', effects: { cash: -5000, trust: 5, consequences: { traits: { charitable: 1, brave: 1 }, message: 'You funded someone\'s freedom. That kind of loyalty can\'t be bought.' } }, result: 'You fund their escape. New ID, bus ticket, cash. They vanish and owe you their freedom.' },
+      { label: 'Negotiate their value', effects: { consequences: { traits: { opportunistic: 1 }, message: 'Everything has a price -- even desperation. You extract value from every situation.' } }, result: 'They have inside intel from prison. Crew rosters, hit lists, police informant identities. Valuable.' }
     ]
   },
   {
@@ -1812,10 +1812,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { hasBusiness: true },
     description: 'An influencer with 500K followers starts posting from your front business. Great for visibility. Terrible for secrecy.',
     outcomes: [
-      { label: 'Offer them free meals (advertising)', effects: { cash: -200, publicImage: 5 }, result: 'They become a regular promoter. Your front business gets a 40% revenue boost. Perfect cover.' },
-      { label: 'Discourage them', effects: { fear: 1 }, result: 'A quiet word and they stop posting. But they post about the "weird vibe" instead.' },
-      { label: 'Embrace it', effects: { publicImage: 3, heat: 3 }, result: 'Viral attention. Your front booms. But so does police awareness of the location.' },
-      { label: 'Pay them to promote competitors instead ($1K)', effects: { cash: -1000 }, result: 'Redirect their influence to rival territory. Now THEIR fronts get unwanted attention.' }
+      { label: 'Offer them free meals (advertising)', effects: { cash: -200, publicImage: 5, consequences: { traits: { creative: 1 }, message: 'Influencer marketing for your front business. Modern hustle.' } }, result: 'They become a regular promoter. Your front business gets a 40% revenue boost. Perfect cover.' },
+      { label: 'Discourage them', effects: { fear: 1, consequences: { traits: { cautious: 1 }, message: 'Cameras and attention are the enemy. You shut it down quietly.' } }, result: 'A quiet word and they stop posting. But they post about the "weird vibe" instead.' },
+      { label: 'Embrace it', effects: { publicImage: 3, heat: 3, consequences: { traits: { adventurous: 1 }, message: 'Leaning into the spotlight. Risky but bold.' } }, result: 'Viral attention. Your front booms. But so does police awareness of the location.' },
+      { label: 'Pay them to promote competitors instead ($1K)', effects: { cash: -1000, consequences: { traits: { deceptive: 1 }, message: 'Weaponizing social media against your rivals. Information warfare.' } }, result: 'Redirect their influence to rival territory. Now THEIR fronts get unwanted attention.' }
     ]
   },
   {
@@ -1823,10 +1823,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'A meteorite fragment lands near Miami. Scientists and gawkers swarm the area. Your territory is either blocked or booming.',
     outcomes: [
-      { label: 'Collect fragments ($15K)', effects: { cash: 15000, stress: 1 }, result: 'You beat the scientists to the good pieces. Meteorite fragments sell for thousands to collectors.' },
-      { label: 'Sell food/merch to tourists', effects: { cash: 5000, publicImage: 2 }, result: 'You set up stands near the impact site. T-shirts, snacks, "authentic meteorite dust." Capitalism.' },
-      { label: 'Use the crowd for deals', effects: { cash: 3000 }, result: 'Thousands of out-of-towners in your area. Perfect cover for a busy sales day.' },
-      { label: 'Stay away from the chaos', effects: {}, result: 'You let the circus play out. In a week everyone forgets and life returns to normal.' }
+      { label: 'Collect fragments ($15K)', effects: { cash: 15000, stress: 1, consequences: { traits: { adventurous: 1, opportunistic: 1 }, message: 'Racing scientists to space rocks. You find profit in the cosmos.' } }, result: 'You beat the scientists to the good pieces. Meteorite fragments sell for thousands to collectors.' },
+      { label: 'Sell food/merch to tourists', effects: { cash: 5000, publicImage: 2, consequences: { traits: { creative: 1 }, message: 'Pop-up entrepreneurship at its finest. Every disaster is a market.' } }, result: 'You set up stands near the impact site. T-shirts, snacks, "authentic meteorite dust." Capitalism.' },
+      { label: 'Use the crowd for deals', effects: { cash: 3000, consequences: { traits: { opportunistic: 1 }, message: 'Tourists and chaos equal cover. You never miss an angle.' } }, result: 'Thousands of out-of-towners in your area. Perfect cover for a busy sales day.' },
+      { label: 'Stay away from the chaos', effects: { consequences: { traits: { cautious: 1 }, message: 'Not every event needs your involvement. Patience is its own reward.' } }, result: 'You let the circus play out. In a week everyone forgets and life returns to normal.' }
     ]
   },
   {
@@ -1834,10 +1834,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'You\'re randomly selected to appear on a local TV game show. Cash prizes but your face on television.',
     outcomes: [
-      { label: 'Appear (risk the exposure)', effects: { cash: 5000, publicImage: 3, heat: 5 }, result: 'You win $5K and charm the audience. But police now have HD footage of your face.' },
-      { label: 'Send a crew member', effects: { cash: 2000, trust: 2 }, result: 'Your most charismatic crew member goes instead. They win $2K and have a blast.' },
-      { label: 'Decline', effects: {}, result: 'You pass. The spotlight is the last thing you need. Smart but boring.' },
-      { label: 'Rig the game ($3K bribe)', effects: { cash: 7000, streetCred: 1 }, result: 'You bribe a producer. Guaranteed win. $10K prize minus the $3K bribe. Classic.' }
+      { label: 'Appear (risk the exposure)', effects: { cash: 5000, publicImage: 3, heat: 5, consequences: { traits: { adventurous: 1, brave: 1 }, message: 'TV spotlight on a criminal. Bold to the point of reckless.' } }, result: 'You win $5K and charm the audience. But police now have HD footage of your face.' },
+      { label: 'Send a crew member', effects: { cash: 2000, trust: 2, consequences: { traits: { cautious: 1 }, message: 'Delegation keeps you safe and your crew happy.' } }, result: 'Your most charismatic crew member goes instead. They win $2K and have a blast.' },
+      { label: 'Decline', effects: { consequences: { traits: { cautious: 1 }, message: 'Staying off camera. Anonymity is your greatest asset.' } }, result: 'You pass. The spotlight is the last thing you need. Smart but boring.' },
+      { label: 'Rig the game ($3K bribe)', effects: { cash: 7000, streetCred: 1, consequences: { traits: { deceptive: 1, criminal: 1 }, message: 'Rigging a game show. You can\'t help but cheat.' } }, result: 'You bribe a producer. Guaranteed win. $10K prize minus the $3K bribe. Classic.' }
     ]
   },
   {
@@ -1845,10 +1845,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Everyone in your district is staring at the sky. Strange lights. News helicopters circling. Total distraction.',
     outcomes: [
-      { label: 'Use the distraction', effects: { cash: 5000 }, result: 'While everyone watches the sky, your crew moves product unobserved. Best cover story ever — aliens.' },
-      { label: 'Watch with the crowd', effects: { stress: -3 }, result: 'You look up too. Whatever it is, it\'s beautiful. A moment of wonder in a brutal world.' },
-      { label: 'Sell "alien merch"', effects: { cash: 2000, publicImage: 1 }, result: 'You print UFO t-shirts overnight. Sold out by morning. Hustle never sleeps.' },
-      { label: 'Check your crop/lab', effects: { stress: 2 }, result: 'You rush to make sure it\'s not a DEA helicopter with fancy lights. It\'s not. Paranoia is exhausting.' }
+      { label: 'Use the distraction', effects: { cash: 5000, consequences: { traits: { opportunistic: 1 }, message: 'Aliens or not, distracted citizens mean easy business.' } }, result: 'While everyone watches the sky, your crew moves product unobserved. Best cover story ever — aliens.' },
+      { label: 'Watch with the crowd', effects: { stress: -3, consequences: { traits: { superstitious: 1 }, message: 'You gazed at the unknown. Even hustlers can feel wonder.' } }, result: 'You look up too. Whatever it is, it\'s beautiful. A moment of wonder in a brutal world.' },
+      { label: 'Sell "alien merch"', effects: { cash: 2000, publicImage: 1, consequences: { traits: { creative: 1, opportunistic: 1 }, message: 'Merch hustle activated. You monetize the mysterious.' } }, result: 'You print UFO t-shirts overnight. Sold out by morning. Hustle never sleeps.' },
+      { label: 'Check your crop/lab', effects: { stress: 2, consequences: { traits: { cautious: 1 }, message: 'Paranoia keeps you one step ahead -- even if the threat isn\'t real.' } }, result: 'You rush to make sure it\'s not a DEA helicopter with fancy lights. It\'s not. Paranoia is exhausting.' }
     ]
   },
   {
@@ -1856,10 +1856,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30, minAct: 2 },
     description: 'A dying old-timer whispers of $5M buried in the Everglades by 1980s cocaine cowboys. He has part of a map.',
     outcomes: [
-      { label: 'Buy the map ($10K)', effects: { cash: -10000, streetCred: 2 }, result: 'Partial coordinates. You\'ll need more pieces. But the hunt has begun.' },
-      { label: 'Dig with what you have', effects: { cash: 20000, stress: 3 }, result: 'You search the general area. Find a buried cache — not $5M but $20K. Not bad.' },
-      { label: 'Sell the intel ($5K)', effects: { cash: 5000 }, result: 'You flip the story. Someone else can dig in the swamps. Quick profit, zero mosquito bites.' },
-      { label: 'Dismiss as fantasy', effects: {}, result: 'Old men tell old stories. You have real money to chase, not fairy tales.' }
+      { label: 'Buy the map ($10K)', effects: { cash: -10000, streetCred: 2, consequences: { traits: { adventurous: 1 }, message: 'Treasure maps and buried gold. You live for the hunt.' } }, result: 'Partial coordinates. You\'ll need more pieces. But the hunt has begun.' },
+      { label: 'Dig with what you have', effects: { cash: 20000, stress: 3, consequences: { traits: { adventurous: 1, brave: 1 }, message: 'Digging in the Everglades for cocaine-era treasure. Peak adventure.' } }, result: 'You search the general area. Find a buried cache — not $5M but $20K. Not bad.' },
+      { label: 'Sell the intel ($5K)', effects: { cash: 5000, consequences: { traits: { opportunistic: 1 }, message: 'Information brokering. Let others get their hands dirty.' } }, result: 'You flip the story. Someone else can dig in the swamps. Quick profit, zero mosquito bites.' },
+      { label: 'Dismiss as fantasy', effects: { consequences: { traits: { skeptic: 1 }, message: 'You don\'t chase fairy tales. Only verified opportunities.' } }, result: 'Old men tell old stories. You have real money to chase, not fairy tales.' }
     ]
   },
   {
@@ -1867,10 +1867,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 15 },
     description: 'You find/capture a rival boss\'s beloved dog. A prized pit bull with a diamond collar. They\'re frantically searching.',
     outcomes: [
-      { label: 'Return for goodwill', effects: { trust: 5, streetCred: 2 }, result: 'The rival is shocked by your decency. A truce forms around mutual respect. Who knew dogs could broker peace?' },
-      { label: 'Ransom for $10K', effects: { cash: 10000, fear: 2 }, result: 'They pay without hesitation. $10K for a dog. The power of emotional leverage.' },
-      { label: 'Keep it (psychological warfare)', effects: { fear: 5, trust: -3 }, result: 'You post photos of yourself with their dog. They\'re furious. Brilliant psychological torment.' },
-      { label: 'Adopt it genuinely', effects: { stress: -3, trust: -2 }, result: 'You actually bond with the dog. It\'s a really good dog. Your rival plots revenge but you don\'t care.' }
+      { label: 'Return for goodwill', effects: { trust: 5, streetCred: 2, consequences: { traits: { community_minded: 1, charitable: 1 }, stats: { reputation: 2 }, message: 'Returning a rival\'s pet. Honor among thieves still means something.' } }, result: 'The rival is shocked by your decency. A truce forms around mutual respect. Who knew dogs could broker peace?' },
+      { label: 'Ransom for $10K', effects: { cash: 10000, fear: 2, consequences: { traits: { opportunistic: 1, criminal: 1 }, message: 'Ransoming a dog. You\'ll monetize anything with emotional value.' } }, result: 'They pay without hesitation. $10K for a dog. The power of emotional leverage.' },
+      { label: 'Keep it (psychological warfare)', effects: { fear: 5, trust: -3, consequences: { traits: { criminal: 1, predatory: 1 }, message: 'Psychological torment through pet theft. Cruel and effective.' } }, result: 'You post photos of yourself with their dog. They\'re furious. Brilliant psychological torment.' },
+      { label: 'Adopt it genuinely', effects: { stress: -3, trust: -2, consequences: { traits: { community_minded: 1 }, message: 'You found an unlikely friend. Even in this life, a good dog is a good dog.' } }, result: 'You actually bond with the dog. It\'s a really good dog. Your rival plots revenge but you don\'t care.' }
     ]
   },
   {
@@ -1878,10 +1878,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'You\'re caller number 10 on a local radio station. You\'ve won a prize package!',
     outcomes: [
-      { label: 'Claim the prize', effects: { cash: 1000, publicImage: 1 }, result: 'Concert tickets, restaurant vouchers, $1K cash. Not bad for pressing redial.' },
-      { label: 'Give it to a crew member', effects: { trust: 3 }, result: 'You hand the prize to someone who deserves a break. Small gesture, big loyalty.' },
-      { label: 'Donate to charity', effects: { publicImage: 3, communityRep: 2 }, result: 'You donate the winnings live on air. The DJ talks about the "generous anonymous caller." PR gold.' },
-      { label: 'Decline (stay anonymous)', effects: {}, result: 'Prizes mean paperwork. Paperwork means identity. You hang up.' }
+      { label: 'Claim the prize', effects: { cash: 1000, publicImage: 1, consequences: { traits: { adventurous: 1 }, message: 'Lucky caller. You take what the universe offers.' } }, result: 'Concert tickets, restaurant vouchers, $1K cash. Not bad for pressing redial.' },
+      { label: 'Give it to a crew member', effects: { trust: 3, consequences: { traits: { charitable: 1, community_minded: 1 }, message: 'Generosity builds loyalty stronger than money ever could.' } }, result: 'You hand the prize to someone who deserves a break. Small gesture, big loyalty.' },
+      { label: 'Donate to charity', effects: { publicImage: 3, communityRep: 2, consequences: { traits: { community_minded: 1, charitable: 1 }, stats: { reputation: 2 }, message: 'Public charity on live radio. Your reputation as a community figure grows.' } }, result: 'You donate the winnings live on air. The DJ talks about the "generous anonymous caller." PR gold.' },
+      { label: 'Decline (stay anonymous)', effects: { consequences: { traits: { cautious: 1 }, message: 'Anonymity over prizes. You can\'t spend freedom.' } }, result: 'Prizes mean paperwork. Paperwork means identity. You hang up.' }
     ]
   },
   {
@@ -1889,10 +1889,10 @@ const RANDOM_ENCOUNTERS = [
     condition: { minDay: 30 },
     description: 'The mayor is being recalled. Political chaos. Your connections and investments may be at risk.',
     outcomes: [
-      { label: 'Fund your candidate ($20K)', effects: { cash: -20000, streetCred: 3 }, result: 'Your candidate wins. A friendly mayor who owes you. The most valuable investment you\'ve ever made.' },
-      { label: 'Play both sides', effects: { cash: -10000, trust: -1 }, result: 'You fund both candidates. Whoever wins, you have a seat at the table.' },
-      { label: 'Stay neutral', effects: {}, result: 'Politics is messy. You let it play out and adapt to whoever wins.' },
-      { label: 'Use the chaos', effects: { cash: 5000, heat: -5 }, result: 'While city hall fights itself, enforcement relaxes. Perfect window for expanded operations.' }
+      { label: 'Fund your candidate ($20K)', effects: { cash: -20000, streetCred: 3, consequences: { traits: { criminal: 1 }, message: 'Buying political influence. You\'re playing the long game at the highest levels.' } }, result: 'Your candidate wins. A friendly mayor who owes you. The most valuable investment you\'ve ever made.' },
+      { label: 'Play both sides', effects: { cash: -10000, trust: -1, consequences: { traits: { deceptive: 1 }, message: 'Hedging your political bets. No loyalty, only strategy.' } }, result: 'You fund both candidates. Whoever wins, you have a seat at the table.' },
+      { label: 'Stay neutral', effects: { consequences: { traits: { cautious: 1 }, message: 'Political neutrality. You adapt to whoever holds power.' } }, result: 'Politics is messy. You let it play out and adapt to whoever wins.' },
+      { label: 'Use the chaos', effects: { cash: 5000, heat: -5, consequences: { traits: { opportunistic: 1 }, message: 'Political chaos creates operational windows. You exploit every vacuum.' } }, result: 'While city hall fights itself, enforcement relaxes. Perfect window for expanded operations.' }
     ]
   },
   {
@@ -1900,10 +1900,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Construction at your property uncovers historical artifacts. The site could become protected — freezing your development.',
     outcomes: [
-      { label: 'Pocket the artifacts ($30K)', effects: { cash: 30000, heat: 3 }, result: 'You sell to private collectors. $30K for pottery and bones. Archaeology meets hustle.' },
-      { label: 'Report it properly', effects: { publicImage: 5, communityRep: 3 }, result: 'The site becomes a landmark. Your name is on the plaque. Historical preservation meets PR.' },
-      { label: 'Bury them deeper', effects: { cash: -1000 }, result: 'What artifacts? You pour concrete over history. Development continues unimpeded.' },
-      { label: 'Negotiate with the city', effects: { cash: 10000, publicImage: 2 }, result: 'You get a tax break and historical preservation grant. Profit from doing the right thing.' }
+      { label: 'Pocket the artifacts ($30K)', effects: { cash: 30000, heat: 3, consequences: { traits: { criminal: 1, opportunistic: 1 }, message: 'Looting historical artifacts for profit. The past belongs to whoever finds it first.' } }, result: 'You sell to private collectors. $30K for pottery and bones. Archaeology meets hustle.' },
+      { label: 'Report it properly', effects: { publicImage: 5, communityRep: 3, consequences: { traits: { community_minded: 1, charitable: 1 }, stats: { reputation: 2 }, message: 'Preserving history for the community. A genuinely noble choice.' } }, result: 'The site becomes a landmark. Your name is on the plaque. Historical preservation meets PR.' },
+      { label: 'Bury them deeper', effects: { cash: -1000, consequences: { traits: { criminal: 1 }, message: 'Destroying historical evidence for convenience. Progress over preservation.' } }, result: 'What artifacts? You pour concrete over history. Development continues unimpeded.' },
+      { label: 'Negotiate with the city', effects: { cash: 10000, publicImage: 2, consequences: { traits: { creative: 1 }, message: 'Working the system to profit from civic duty. Elegant hustle.' } }, result: 'You get a tax break and historical preservation grant. Profit from doing the right thing.' }
     ]
   },
   {
@@ -1911,10 +1911,10 @@ const RANDOM_ENCOUNTERS = [
     condition: {},
     description: 'Community beach cleanup event this weekend. Simple question: do you show up?',
     outcomes: [
-      { label: 'Attend', effects: { publicImage: 3, communityRep: 2, stress: -1 }, result: 'You pick up trash alongside families. Fresh air, honest work. Feels good. People notice.' },
-      { label: 'Sponsor ($5K)', effects: { cash: -5000, publicImage: 8, communityRep: 5 }, result: 'Branded t-shirts, catered lunch, media coverage. Your name associated with community service.' },
-      { label: 'Ignore', effects: {}, result: 'Not your thing. The beach gets cleaned without you.' },
-      { label: 'Use as cover for waterfront deal', effects: { cash: 3000, heat: -2 }, result: 'You "volunteer" near the marina. A quick exchange under cover of civic duty.' }
+      { label: 'Attend', effects: { publicImage: 3, communityRep: 2, stress: -1, consequences: { traits: { community_minded: 1, charitable: 1 }, stats: { reputation: 2 }, message: 'Honest community service. Sometimes the simplest gestures matter most.' } }, result: 'You pick up trash alongside families. Fresh air, honest work. Feels good. People notice.' },
+      { label: 'Sponsor ($5K)', effects: { cash: -5000, publicImage: 8, communityRep: 5, consequences: { traits: { community_minded: 1, charitable: 1 }, stats: { reputation: 3 }, message: 'Major community sponsorship. Your name associated with civic good.' } }, result: 'Branded t-shirts, catered lunch, media coverage. Your name associated with community service.' },
+      { label: 'Ignore', effects: { consequences: { traits: { cautious: 1 }, message: 'Not every event needs your presence. You stayed out of it.' } }, result: 'Not your thing. The beach gets cleaned without you.' },
+      { label: 'Use as cover for waterfront deal', effects: { cash: 3000, heat: -2, consequences: { traits: { deceptive: 1, opportunistic: 1 }, message: 'Using a charity event as cover for drug deals. Peak cynicism.' } }, result: 'You "volunteer" near the marina. A quick exchange under cover of civic duty.' }
     ]
   },
 
