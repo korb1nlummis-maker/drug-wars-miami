@@ -3120,8 +3120,27 @@ function travel(state, destinationId, transportId) {
   // Pay for transport
   state.cash -= transportCost;
 
-  // Advance days
-  const daysUsed = transport.timeDays;
+  // Advance days (modified by driver crew and vehicle speed)
+  var daysUsed = transport.timeDays;
+  // Driver crew reduces travel time
+  if (state._driverBonus && state._driverBonus > 0) {
+    daysUsed = Math.max(1, Math.round(daysUsed * (1 - state._driverBonus)));
+  }
+  // Active vehicle speed bonus (fast vehicles reduce travel by 1 day for 3+ day trips)
+  if (state.vehicleState && state.vehicleState.activeVehicleIndex !== null && state.vehicleState.garage) {
+    var activeV = state.vehicleState.garage[state.vehicleState.activeVehicleIndex];
+    if (activeV) {
+      var vDef = typeof VEHICLES !== 'undefined' ? VEHICLES.find(function(v) { return v.id === activeV.vehicleId; }) : null;
+      if (vDef && vDef.speed >= 80 && daysUsed >= 3) daysUsed = Math.max(1, daysUsed - 1); // Fast vehicle: -1 day on long trips
+    }
+  }
+  // Weather slows travel
+  if (typeof getWeatherEffects === 'function') {
+    var wxTravel = getWeatherEffects(state);
+    if (wxTravel.travelSpeed && wxTravel.travelSpeed < 1) {
+      daysUsed = Math.max(1, Math.ceil(daysUsed / wxTravel.travelSpeed));
+    }
+  }
   state.day += daysUsed;
 
   // Apply daily interest, crew management, and investigation for each day traveled
@@ -4897,13 +4916,42 @@ function processCrewDaily(state) {
     state._frontWorkerBonus = Math.min(0.5, frontWorkers * 0.1);
   }
 
-  // Drug runners: passive income from distribution ($200-500 per runner per day)
+  // Drug runners: sell from inventory OR earn passive income
   if (drugRunners > 0) {
-    var runnerIncome = drugRunners * (200 + Math.floor(Math.random() * 300));
+    var runnerIncome = 0;
+    var drugsSoldByRunners = 0;
+    // Try to sell from inventory first (actual product moved)
+    if (state.inventory) {
+      var invKeys = Object.keys(state.inventory);
+      for (var ri = 0; ri < drugRunners && invKeys.length > 0; ri++) {
+        var drugToSell = invKeys[Math.floor(Math.random() * invKeys.length)];
+        var qtyToSell = Math.min(state.inventory[drugToSell] || 0, 1 + Math.floor(Math.random() * 3));
+        if (qtyToSell > 0 && state.prices && state.prices[drugToSell]) {
+          var runnerPrice = Math.round((state.prices[drugToSell] || 100) * 0.7); // Runners sell at 70% market
+          var revenue = runnerPrice * qtyToSell;
+          state.inventory[drugToSell] -= qtyToSell;
+          if (state.inventory[drugToSell] <= 0) {
+            delete state.inventory[drugToSell];
+            invKeys = Object.keys(state.inventory);
+          }
+          runnerIncome += revenue;
+          drugsSoldByRunners += qtyToSell;
+        }
+      }
+    }
+    // If no inventory, runners earn from street connections (smaller amount)
+    if (runnerIncome === 0) {
+      runnerIncome = drugRunners * (100 + Math.floor(Math.random() * 200));
+    }
     state.cash += runnerIncome;
-    if (runnerIncome > 500) messages.push('💊 Drug runners earned $' + runnerIncome.toLocaleString() + ' today.');
-    // Small heat increase
-    state.heat = Math.min(100, (state.heat || 0) + drugRunners * 0.5);
+    state.dirtyMoney = (state.dirtyMoney || 0) + runnerIncome;
+    if (drugsSoldByRunners > 0) {
+      messages.push('💊 Runners sold ' + drugsSoldByRunners + ' units for $' + runnerIncome.toLocaleString() + ' (70% market rate).');
+    } else if (runnerIncome > 300) {
+      messages.push('💊 Drug runners hustled $' + runnerIncome.toLocaleString() + ' from street connects.');
+    }
+    // Heat scales with volume
+    state.heat = Math.min(100, (state.heat || 0) + drugRunners * 0.5 + drugsSoldByRunners * 0.2);
   }
 
   // Body disposers: auto-dispose 1 body per disposer per day

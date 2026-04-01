@@ -218,7 +218,10 @@ function generateSingleMessage(state, day, heat) {
     case 'supplier_alert': return generateSupplierMessage(state, day);
     case 'crew_checkin': return generateCrewMessage(state, day);
     case 'buyer_request': return generateBuyerMessage(state, day);
-    case 'npc_story': return generateNpcStoryMessage(state, day);
+    case 'npc_story':
+      // 40% chance of personal message instead of generic NPC story
+      if (Math.random() < 0.4) return generatePersonalMessage(state, day);
+      return generateNpcStoryMessage(state, day);
     case 'news_alert': return generateNewsMessage(state, day);
     case 'threat': return generateThreatMessage(state, day);
     case 'lawyer': return generateLawyerMessage(state, day);
@@ -279,6 +282,88 @@ function weightedRandomCategory(weights) {
 // ============================================================
 // MESSAGE GENERATORS BY CATEGORY
 // ============================================================
+
+function generatePersonalMessage(state, day) {
+  // Generate messages that reference the player's ACTUAL life state
+  var msgs = [];
+  var cash = state.cash || 0;
+  var children = state.relationships && state.relationships.children ? state.relationships.children : [];
+  var traits = state.playerTraits || {};
+  var scars = state.scars || [];
+  var crew = state.henchmen || [];
+  var heat = state.heat || 0;
+  var dirtyMoney = state.dirtyMoney || 0;
+
+  // Kid messages
+  if (children.length > 0) {
+    var kid = children[Math.floor(Math.random() * children.length)];
+    var kidMsgs = [
+      { from: kid.motherName || 'Ex', text: kid.name + ' asked about you today. "Where\'s daddy?" What do I tell them?' },
+      { from: kid.motherName || 'Ex', text: kid.name + '\'s school needs $500 for a field trip. Are you going to step up or not?' },
+      { from: 'School', text: 'Parent-teacher conference for ' + kid.name + ' next week. Will you be attending?' },
+      { from: kid.motherName || 'Ex', text: kid.name + ' drew a picture of your family today. You weren\'t in it.' },
+      { from: kid.motherName || 'Ex', text: 'The child support check bounced. Again. I\'m calling my lawyer.' },
+      { from: kid.motherName || 'Ex', text: kid.name + ' said their first word: "money." I wonder where they learned that.' },
+    ];
+    msgs.push(...kidMsgs);
+  }
+
+  // Reputation-based messages
+  if (traits.ruthless && traits.ruthless >= 3) {
+    msgs.push({ from: 'Unknown', text: 'People whisper your name in fear. Even the hardest OGs cross the street when they see you coming.' });
+    msgs.push({ from: 'Reporter', text: 'I\'m doing a piece on violent crime in Miami. Your name keeps coming up. Care to comment?' });
+  }
+  if (traits.charitable && traits.charitable >= 3) {
+    msgs.push({ from: 'Community Center', text: 'Thank you for your continued generosity. The kids ask about you. You\'re making a difference.' });
+    msgs.push({ from: 'Local Pastor', text: 'God bless you. The families you\'ve helped are praying for you. Stay safe out there.' });
+  }
+  if (traits.feared && traits.feared >= 3) {
+    msgs.push({ from: 'Unknown', text: 'I\'m not going to say who I am. Just know — people are afraid to even talk about you. That\'s power.' });
+  }
+  if (traits.diplomatic && traits.diplomatic >= 2) {
+    msgs.push({ from: 'Business Contact', text: 'Your reputation as a negotiator precedes you. I have a deal that requires... finesse. Interested?' });
+  }
+
+  // Financial messages
+  if (dirtyMoney > 50000) {
+    msgs.push({ from: 'Accountant', text: 'You have $' + dirtyMoney.toLocaleString() + ' in unexplained cash. The IRS WILL notice. Launder it. Now.' });
+  }
+  if (cash > 500000) {
+    msgs.push({ from: 'Real Estate Agent', text: 'With your resources, have you considered investing in property? I have some... discreet listings.' });
+  }
+  if (cash < 1000 && crew.length > 3) {
+    msgs.push({ from: crew[0].name || 'Crew', text: 'Boss, we need to talk about pay. The crew is getting restless. We need cash.' });
+  }
+
+  // Scar messages
+  if (scars.length > 0) {
+    msgs.push({ from: 'Doctor', text: 'Your old injuries need follow-up. That ' + scars[0].type + ' isn\'t healing right. Come in for a checkup.' });
+  }
+
+  // Heat messages
+  if (heat > 70) {
+    msgs.push({ from: 'Concerned Friend', text: 'Bro. The feds have your photo on a board somewhere. I saw it. You need to lay LOW.' });
+    msgs.push({ from: 'Lawyer', text: 'My sources say there\'s a sealed indictment with your name on it. We need to talk. Urgently.' });
+  }
+
+  // High crew count
+  if (crew.length > 15) {
+    msgs.push({ from: 'Street Source', text: 'Word on the street is you\'re running a small army. That kind of power makes people nervous — friends AND enemies.' });
+  }
+
+  if (msgs.length === 0) return generateSpamMessage(state, day);
+
+  var picked = msgs[Math.floor(Math.random() * msgs.length)];
+  return {
+    id: null,
+    category: 'npc_story',
+    from: picked.from,
+    text: picked.text,
+    day: day,
+    read: false,
+    responses: null,
+  };
+}
 
 function generateSpamMessage(state, day) {
   const template = SPAM_MESSAGES[Math.floor(Math.random() * SPAM_MESSAGES.length)];
