@@ -1475,3 +1475,90 @@ function getConsequenceMultiplier(state, consequenceType) {
 
   return Math.max(0.1, mult); // Floor at 10% to prevent zero-effect
 }
+
+/**
+ * Get mechanical gameplay bonuses from accumulated traits.
+ * Called by game-engine.js systems to apply trait effects to actual numbers.
+ * Returns an object of bonus values (percentages as decimals, e.g., 0.05 = 5%).
+ */
+function getTraitBonuses(state) {
+  if (!state || !state.playerTraits) return {};
+  var t = state.playerTraits;
+  var bonuses = {};
+
+  // === TRADING ===
+  // Entrepreneurial/businessman traits: better prices
+  var bizLevel = (t.entrepreneurial || 0) + (t.businessman || 0);
+  if (bizLevel >= 3) bonuses.buyDiscount = 0.05;  // 5% buy discount
+  if (bizLevel >= 6) bonuses.buyDiscount = 0.10;   // 10% buy discount
+  if (bizLevel >= 3) bonuses.sellBonus = 0.03;     // 3% sell premium
+  if (bizLevel >= 6) bonuses.sellBonus = 0.07;     // 7% sell premium
+
+  // Cunning/strategic: better deal detection
+  var cunning = (t.cunning || 0) + (t.strategic || 0);
+  if (cunning >= 3) bonuses.priceIntel = true;     // See price trends more accurately
+  if (cunning >= 5) bonuses.ambushAvoidance = 0.25; // 25% less likely to be ambushed
+
+  // === COMBAT ===
+  // Violent/ruthless: more damage
+  var violence = (t.violent || 0) + (t.ruthless || 0);
+  if (violence >= 3) bonuses.combatDamage = 0.10;  // +10% combat damage
+  if (violence >= 6) bonuses.combatDamage = 0.20;  // +20% combat damage
+  if (violence >= 10) bonuses.combatDamage = 0.30; // +30% combat damage
+
+  // Brave/heroic: better in fights, crew morale
+  var bravery = (t.brave || 0) + (t.heroic || 0);
+  if (bravery >= 3) bonuses.crewMorale = 3;        // +3 crew loyalty per day
+  if (bravery >= 5) bonuses.combatAccuracy = 0.05;  // +5% hit chance
+
+  // === SOCIAL ===
+  // Diplomatic/networker: better faction relations
+  var social = (t.diplomatic || 0) + (t.networker || 0);
+  if (social >= 3) bonuses.factionGain = 0.20;     // +20% faction standing gains
+  if (social >= 5) bonuses.bribeCostReduction = 0.15; // 15% cheaper bribes
+
+  // Charitable/community_minded: community shield
+  var charity = (t.charitable || 0) + (t.community_minded || 0) + (t.philanthropist || 0);
+  if (charity >= 3) bonuses.heatReduction = 0.05;   // -5% daily heat
+  if (charity >= 6) bonuses.heatReduction = 0.10;   // -10% daily heat
+  if (charity >= 3) bonuses.communityProtection = true; // Community warns you about raids
+
+  // Feared/ruthless: intimidation
+  var fear = (t.feared || 0) + (t.ruthless || 0);
+  if (fear >= 3) bonuses.intimidation = 10;         // +10 intimidation score
+  if (fear >= 6) bonuses.intimidation = 20;         // +20 intimidation score
+  if (fear >= 3) bonuses.territoryDefense = 5;      // +5 territory defense
+
+  // === CRIMINAL ===
+  // Criminal/predatory: better at illegal ops
+  var criminal = (t.criminal || 0) + (t.predatory || 0);
+  if (criminal >= 3) bonuses.heistSuccess = 0.05;   // +5% heist success
+  if (criminal >= 5) bonuses.heistSuccess = 0.10;   // +10% heist success
+
+  // Elusive/fugitive: escape artist
+  var evasion = (t.elusive || 0) + (t.fugitive || 0) + (t.cautious || 0);
+  if (evasion >= 3) bonuses.escapeChance = 0.10;    // +10% flee chance
+  if (evasion >= 5) bonuses.escapeChance = 0.20;    // +20% flee chance
+
+  // Leader/protector: crew management
+  var leadership = (t.leader || 0) + (t.protector || 0);
+  if (leadership >= 3) bonuses.crewSlots = 2;       // +2 crew slots
+  if (leadership >= 6) bonuses.crewSlots = 5;       // +5 crew slots
+  if (leadership >= 3) bonuses.crewLoyaltyDecay = -0.15; // 15% slower loyalty decay
+
+  // Corruptor: cheaper bribes
+  if ((t.corruptor || 0) >= 3) bonuses.bribeCostReduction = (bonuses.bribeCostReduction || 0) + 0.10;
+
+  // Gambler/risk_taker: bigger payoffs but more variance
+  var gambling = (t.gambler || 0) + (t.risk_taker || 0);
+  if (gambling >= 3) bonuses.gamblingLuck = 0.10;   // +10% gambling outcomes
+  if (gambling >= 5) bonuses.futuresBonus = 0.05;   // +5% futures profits
+
+  // Snitch/cooperator: law enforcement benefits but street penalties
+  if (t.snitch || t.cooperator || t.police_cooperator) {
+    bonuses.courtBonus = 0.15;     // +15% court success
+    bonuses.factionPenalty = -0.10; // -10% faction standing gains (streets don't trust you)
+  }
+
+  return bonuses;
+}

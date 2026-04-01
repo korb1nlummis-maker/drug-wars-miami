@@ -2538,6 +2538,26 @@ function waitDay(state) {
   recordPriceHistory(state);
   snapshotNetWorth(state);
 
+  // Trait bonuses: daily passive effects
+  if (typeof getTraitBonuses === 'function') {
+    var tbDaily = getTraitBonuses(state);
+    // Charitable/community traits reduce heat daily
+    if (tbDaily.heatReduction && state.heat > 0) {
+      state.heat = Math.max(0, state.heat - state.heat * tbDaily.heatReduction);
+    }
+    // Community protection: warn about raids
+    if (tbDaily.communityProtection && Math.random() < 0.1 && state.heat > 40) {
+      msgs.push('🤝 Community tip: "Cops are sniffing around your area. Be careful today." (-3 heat)');
+      state.heat = Math.max(0, state.heat - 3);
+    }
+    // Leader traits: crew morale boost
+    if (tbDaily.crewMorale && state.henchmen) {
+      for (var cli = 0; cli < state.henchmen.length; cli++) {
+        state.henchmen[cli].loyalty = Math.min(100, (state.henchmen[cli].loyalty || 50) + 1);
+      }
+    }
+  }
+
   // Safety: prevent negative cash from any source
   if (state.cash < 0) state.cash = 0;
 
@@ -2717,6 +2737,11 @@ function buyDrug(state, drugId, amount) {
       price = Math.round(price * (1 - tp.effects.dealDiscount));
     }
   }
+  // Trait bonuses: entrepreneurial/businessman traits give buy discounts
+  if (typeof getTraitBonuses === 'function') {
+    var tb = getTraitBonuses(state);
+    if (tb.buyDiscount) price = Math.round(price * (1 - tb.buyDiscount));
+  }
   // Bulk discount: buying 10+ units gets 5% discount
   if (amount >= 10) price = Math.round(price * 0.95);
   // Market reputation: frequent trading at a location gives better prices
@@ -2859,6 +2884,11 @@ function sellDrug(state, drugId, amount) {
   // No character currently has a sell passive, but future-proofed:
   const charSellBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'sellBonus') : 0;
   if (charSellBonus > 0) price = Math.round(price * (1 + charSellBonus));
+  // Trait bonuses: entrepreneurial/businessman traits give sell premiums
+  if (typeof getTraitBonuses === 'function') {
+    var tb2 = getTraitBonuses(state);
+    if (tb2.sellBonus) price = Math.round(price * (1 + tb2.sellBonus));
+  }
   // Bulk premium: selling 10+ units at once gets 5% premium
   if (amount >= 10) price = Math.round(price * 1.05);
   // Market reputation: frequent trading at a location gives better prices
@@ -3471,6 +3501,12 @@ function resolveCombatRound(state, action, event) {
     // Character passive: Veteran +25% combat damage
     const charCombatMod = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'combatDamageMod') : 0;
     if (charCombatMod > 0) playerPower = Math.round(playerPower * (1 + charCombatMod));
+    // Trait bonuses: violent/ruthless traits increase combat damage
+    if (typeof getTraitBonuses === 'function') {
+      var tbCombat = getTraitBonuses(state);
+      if (tbCombat.combatDamage) playerPower = Math.round(playerPower * (1 + tbCombat.combatDamage));
+      if (tbCombat.combatAccuracy) hitChance = Math.min(0.95, hitChance + tbCombat.combatAccuracy);
+    }
     // Skill tree: brawler damage boost
     const damageMod = getSkillEffect(state, 'damageMod');
     if (damageMod > 0) playerPower = Math.round(playerPower * (1 + damageMod));
@@ -3659,6 +3695,11 @@ function resolveCombatRound(state, action, event) {
     // Consequence engine: ability escape bonus (e.g. Escape Artist)
     const abilityEscapeBonus = typeof getAbilityBonus === 'function' ? getAbilityBonus(state, 'chase_escape') : 0;
     if (abilityEscapeBonus > 0) escapeChance += abilityEscapeBonus / 100;
+    // Trait bonuses: elusive/fugitive/cautious traits improve escape
+    if (typeof getTraitBonuses === 'function') {
+      var tbEscape = getTraitBonuses(state);
+      if (tbEscape.escapeChance) escapeChance += tbEscape.escapeChance;
+    }
     if (Math.random() < escapeChance) {
       results.msg = 'You escaped!';
       results.resolved = true;

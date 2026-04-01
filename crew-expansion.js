@@ -63,6 +63,11 @@ function getMaxCrewSize(state) {
   if (typeof getAbilityBonus === 'function') {
     max += Math.floor(getAbilityBonus(state, 'crew_slots') || 0);
   }
+  // Trait bonuses: leader/protector traits add crew slots
+  if (typeof getTraitBonuses === 'function') {
+    var tbCrew = getTraitBonuses(state);
+    if (tbCrew.crewSlots) max += tbCrew.crewSlots;
+  }
   // NG+ bonus
   if (state.newGamePlus && state.newGamePlus.active) {
     max += 5 * (state.newGamePlus.tier || 1);
