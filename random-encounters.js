@@ -42,6 +42,11 @@ function processEncountersDaily(state) {
   // Check if encounter triggers (35% base chance, modified by weather/lookouts)
   if (enc.activeEncounter) return msgs;
   var encounterChance = 0.35;
+  // Game day scaling: encounters get more frequent over time
+  if (typeof getGameDayScaling === 'function') {
+    var encScale = getGameDayScaling(state);
+    encounterChance *= (encScale.encounterChanceMod || 1.0);
+  }
   // Weather: stealth bonus and patrol chance affect encounters
   if (typeof getWeatherEffects === 'function') {
     var wx = getWeatherEffects(state);

@@ -68,10 +68,15 @@ function processTurfWarsDaily(state) {
     const gang = typeof getTerritoryGang === 'function' ? getTerritoryGang(terr) : null;
     if (!gang) continue;
 
-    // Calculate attack chance
+    // Calculate attack chance (scales with game day)
     let attackChance = TURF_WAR_CONFIG.baseAttackChance;
     attackChance += (state.heat || 0) * TURF_WAR_CONFIG.heatMultiplier / 100;
-    attackChance = Math.min(TURF_WAR_CONFIG.maxAttackChance, attackChance);
+    // Game day scaling: territory attacks increase over 5000 days
+    if (typeof getGameDayScaling === 'function') {
+      var turfScale = getGameDayScaling(state);
+      attackChance *= (turfScale.combatDifficulty || 1.0);
+    }
+    attackChance = Math.min(TURF_WAR_CONFIG.maxAttackChance * 1.5, attackChance); // Higher cap for scaled game
 
     // More territories = slightly higher chance (spread thin)
     attackChance += territories.length * 0.005;

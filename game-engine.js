@@ -1977,6 +1977,14 @@ function generatePrices(state) {
       price *= getProcessedDrugPriceMod(state, drug.id);
     }
 
+    // Game day scaling: price volatility increases over 5000 days
+    if (typeof getGameDayScaling === 'function') {
+      var priceScale = getGameDayScaling(state);
+      if (priceScale.priceVolatility > 1.0) {
+        price = midPrice * location.priceModifier + (price - midPrice * location.priceModifier) * priceScale.priceVolatility;
+      }
+    }
+
     // NG+ price volatility
     if (state.newGamePlus && state.newGamePlus.active) {
       const vol = getNgPlusMod(state, 'priceVolatility', 1);

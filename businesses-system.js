@@ -386,8 +386,13 @@ function processBusinessesDaily(state) {
     if (typeof state.cash === 'number') state.cash -= operatingCost;
     owned.totalOperatingCosts = (owned.totalOperatingCosts || 0) + operatingCost;
 
-    // === POLICE RAID RISK (scales with heat and investigation) ===
+    // === POLICE RAID RISK (scales with heat, investigation, AND game day) ===
     var raidChance = 0.005; // 0.5% base daily chance
+    // Game day scaling: raids get more frequent over 5000 days
+    if (typeof getGameDayScaling === 'function') {
+      var bizScale = getGameDayScaling(state);
+      raidChance *= (bizScale.raidChanceMod || 1.0);
+    }
     if (state.heat > 50) raidChance += 0.01;
     if (state.heat > 80) raidChance += 0.02;
     if (state.investigation && state.investigation.level >= 3) raidChance += 0.015;
