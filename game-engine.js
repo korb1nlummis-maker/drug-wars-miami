@@ -2814,6 +2814,119 @@ function waitDay(state) {
     }
   }
 
+  // === ACT 3 CHARACTER STORIES (Day 1500-2500) ===
+  if (charId && day >= 1500 && day <= 2500 && bt) {
+    if (day >= 1500 && !bt.act3_begins) {
+      bt.act3_begins = true;
+      var nw3 = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      msgs.push('📖 ACT 3: THE EMPIRE. Net worth: $' + nw3.toLocaleString() + '. You\'ve built something real. Now everyone wants a piece — the feds, the rivals, the cartels. Even the people closest to you.');
+    }
+
+    // DROPOUT: Act 3 - The empire of chemistry
+    if (charId === 'dropout' && day >= 1550 && !bt.dropout_a3_dea_chemist) {
+      bt.dropout_a3_dea_chemist = true;
+      msgs.push('🔬 The DEA hired a forensic chemist to reverse-engineer your formula. They call it "Operation Periodic Table." Every batch you produce is being analyzed. They\'re getting closer.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 10);
+    }
+    if (charId === 'dropout' && day >= 1800 && !bt.dropout_a3_student_od) {
+      bt.dropout_a3_student_od = true;
+      msgs.push('💀 A college student died from "College." National news. Parents crying on camera. Senators calling for action. Your product is famous — and now it has a body count on CNN.');
+      state.heat = Math.min(100, (state.heat || 0) + 15);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { mass_producer: 1, public_enemy: 1 }, stats: { stress: 20 } }, 'backstory', 'dropout_a3_cnn');
+    }
+    if (charId === 'dropout' && day >= 2050 && !bt.dropout_a3_chemistry_addiction) {
+      bt.dropout_a3_chemistry_addiction = true;
+      msgs.push('💊 You started sampling your own product. "Just to test purity," you tell yourself. The chemistry student became the chemist became the user. Classic trajectory.');
+      state.health = Math.max(50, (state.health || 100) - 10);
+    }
+    if (charId === 'dropout' && day >= 2300 && !bt.dropout_a3_mother_discovers) {
+      bt.dropout_a3_mother_discovers = true;
+      msgs.push('📞 Your mother saw the CNN segment. She recognized the formula name. She called screaming. "MY SON IS A DRUG DEALER?!" She hung up. She hasn\'t called back.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { disowned: 1 }, stats: { stress: 25 } }, 'backstory', 'dropout_a3_mother');
+    }
+    if (charId === 'dropout' && day >= 2450 && !bt.dropout_a3_cure) {
+      bt.dropout_a3_cure = true;
+      msgs.push('💭 Late at night in the lab, you had a thought: what if you used your skills for something else? Pharmaceuticals. Medicine. A cure instead of a curse. But the money...');
+    }
+
+    // CORNER KID: Act 3 - King of the block, prisoner of the crown
+    if (charId === 'corner_kid' && day >= 1550 && !bt.corner_a3_empire_weight) {
+      bt.corner_a3_empire_weight = true;
+      msgs.push('👑 The crown is heavy. Everyone wants something. Crew needs pay. Territory needs defending. Suppliers need assurance. You haven\'t slept more than 4 hours in weeks.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { stats: { stress: 15 } }, 'backstory', 'corner_a3_weight');
+    }
+    if (charId === 'corner_kid' && day >= 1800 && !bt.corner_a3_deshawn_shot) {
+      bt.corner_a3_deshawn_shot = true;
+      msgs.push('🔫 Deshawn is dead. Drive-by at the corner where you both grew up. He was 23. You were supposed to protect him. The block lost another one. Your fault.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { survivor_guilt: 1, rage: 1 }, stats: { stress: 20 } }, 'backstory', 'corner_a3_deshawn');
+      // Remove Deshawn from crew if present
+      if (state.henchmen) {
+        var dIdx = state.henchmen.findIndex(function(h) { return h.name === 'Deshawn'; });
+        if (dIdx >= 0) state.henchmen.splice(dIdx, 1);
+      }
+    }
+    if (charId === 'corner_kid' && day >= 2100 && !bt.corner_a3_rico_lieutenant) {
+      bt.corner_a3_rico_lieutenant = true;
+      msgs.push('⭐ Lil Rico is your right hand now. Lieutenant. He runs the day-to-day while you strategize. "I got you, boss. Since day one." The kid from the corner became your general.');
+    }
+    if (charId === 'corner_kid' && day >= 2300 && !bt.corner_a3_gentrification) {
+      bt.corner_a3_gentrification = true;
+      msgs.push('🏗️ Developers are buying up your block. Coffee shops where trap houses used to be. Your corner is now a yoga studio. The neighborhood that made you is being erased.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { nostalgic: 1 } }, 'backstory', 'corner_a3_gentrify');
+    }
+    if (charId === 'corner_kid' && day >= 2480 && !bt.corner_a3_mama_sick) {
+      bt.corner_a3_mama_sick = true;
+      msgs.push('🏥 Mama is sick. Seriously sick. The best doctors cost money you have but can\'t explain. The house you bought her? She might not live to enjoy it.');
+      state.cash = Math.max(0, state.cash - 25000);
+    }
+
+    // EX-CON: Act 3 - The institution crumbles
+    if (charId === 'ex_con' && day >= 1550 && !bt.excon_a3_old_enemies) {
+      bt.excon_a3_old_enemies = true;
+      msgs.push('⚔️ Men you put away are getting out. They remember. Three released this month alone. "I did 8 years because of YOU," one of them said outside a bar. The past is assembling against you.');
+    }
+    if (charId === 'ex_con' && day >= 1800 && !bt.excon_a3_big_mike_dilemma) {
+      bt.excon_a3_big_mike_dilemma = true;
+      msgs.push('⚖️ Big Mike killed a man in broad daylight. Your most loyal soldier, your oldest friend. Witnesses saw everything. He\'s looking at life. "Boss, I need you. Like you needed me."');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { loyalty_tested: 1 } }, 'backstory', 'excon_a3_mike');
+    }
+    if (charId === 'ex_con' && day >= 2100 && !bt.excon_a3_prison_uprising) {
+      bt.excon_a3_prison_uprising = true;
+      msgs.push('🔥 A riot at your old prison. Your contacts inside are in danger. The warden calls YOU — the former inmate — for help negotiating. "You\'re the only one they\'ll listen to."');
+    }
+    if (charId === 'ex_con' && day >= 2350 && !bt.excon_a3_sons_question) {
+      bt.excon_a3_sons_question = true;
+      msgs.push('👦 A boy showed up at your door. 12 years old. "Are you my father?" Five years in prison. You did the math. He\'s the right age. His mother sent him.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { unknown_child: 1 }, stats: { stress: 15 } }, 'backstory', 'excon_a3_son');
+    }
+
+    // HUSTLER: Act 3 - The con unravels
+    if (charId === 'hustler' && day >= 1550 && !bt.hustler_a3_ponzi_opportunity) {
+      bt.hustler_a3_ponzi_opportunity = true;
+      msgs.push('💰 A Wall Street connection offers a Ponzi scheme opportunity. $2M potential. The hustle of a lifetime. But Ponzi schemes always collapse. The question is: can you get out before it does?');
+    }
+    if (charId === 'hustler' && day >= 1800 && !bt.hustler_a3_partner_betrayal) {
+      bt.hustler_a3_partner_betrayal = true;
+      msgs.push('🗡️ Your business partner emptied a shared account. $150,000 gone. "Business is business," he texted. You taught him too well. The hustler got hustled.');
+      state.cash = Math.max(0, state.cash - 150000);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { betrayed: 1, vengeful: 1 } }, 'backstory', 'hustler_a3_betrayal');
+    }
+    if (charId === 'hustler' && day >= 2100 && !bt.hustler_a3_political_connection) {
+      bt.hustler_a3_political_connection = true;
+      msgs.push('🏛️ A state senator needs campaign financing. Off the books. In exchange: zoning approvals, police protection, regulatory immunity. The government is just another game to play.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { politically_connected: 1 }, ability: 'political_immunity' }, 'backstory', 'hustler_a3_senator');
+    }
+    if (charId === 'hustler' && day >= 2350 && !bt.hustler_a3_bookie_confrontation) {
+      bt.hustler_a3_bookie_confrontation = true;
+      msgs.push('⚔️ You finally confronted the bookie. Face to face. "You want war with me? I own senators. I own cops. I own this city." He backed down. Or did he? His eyes said otherwise.');
+      if (typeof adjustRep === 'function') { adjustRep(state, 'fear', 10); adjustRep(state, 'streetCred', 5); }
+    }
+    if (charId === 'hustler' && day >= 2480 && !bt.hustler_a3_mirror) {
+      bt.hustler_a3_mirror = true;
+      msgs.push('💭 You caught your reflection in a window. Three-card monte kid. Fake Rolex hustler. Now you launder millions and dine with senators. Same hustle. Bigger table. Same empty feeling.');
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
