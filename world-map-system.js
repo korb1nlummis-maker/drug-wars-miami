@@ -405,7 +405,30 @@ function renderRegionMapView(regionId) {
     }
   }
 
-  // District nodes
+  // === GANG TERRITORY COLOR MAP ===
+  const GANG_COLORS = {
+    zoe_pound: 'rgba(0,200,0,0.12)', los_cubanos: 'rgba(255,165,0,0.12)',
+    colombian_connection: 'rgba(255,255,0,0.10)', cartel_remnants: 'rgba(255,0,0,0.10)',
+    eastern_bloc: 'rgba(100,100,255,0.12)', haitian_crew: 'rgba(128,0,128,0.10)',
+    port_authority: 'rgba(100,200,200,0.10)', southern_boys: 'rgba(139,69,19,0.10)',
+  };
+
+  // Territory area circles (larger colored zones behind district dots)
+  let areaSvg = '';
+  for (const [distId, pos] of Object.entries(coords)) {
+    const isControlled = controlledTerritories.includes(distId);
+    // Find gang presence for this district
+    var gangId = null;
+    if (typeof MIAMI_DISTRICTS !== 'undefined') {
+      var md = MIAMI_DISTRICTS.find(function(d) { return d.id === distId; });
+      if (md && md.gangPresence && md.gangPresence.length > 0) gangId = md.gangPresence[0];
+    }
+    // Territory zone
+    var zoneColor = isControlled ? 'rgba(255,0,170,0.15)' : (gangId && GANG_COLORS[gangId] ? GANG_COLORS[gangId] : 'rgba(30,30,50,0.3)');
+    areaSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="45" fill="${zoneColor}" stroke="none"/>`;
+  }
+
+  // District nodes (enhanced)
   for (const [distId, pos] of Object.entries(coords)) {
     const loc = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(l => l.id === distId) : null;
     const isCurrent = currentLoc === distId;
@@ -424,20 +447,48 @@ function renderRegionMapView(regionId) {
     const onclick = isCurrent ? '' : `selectDestination('${distId}')`;
     const cursor = onclick ? 'cursor:pointer' : '';
 
-    // Node circle
-    nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="10" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1.5" ${glowFilter} style="${cursor}" ${onclick ? `onclick="${onclick}"` : ''}/>`;
+    // Node circle (larger, more visible)
+    nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="13" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" ${glowFilter} style="${cursor}" ${onclick ? `onclick="${onclick}"` : ''}/>`;
 
-    // Pulsing for current
+    // Pulsing for current location
     if (isCurrent) {
-      nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="10" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.5">
-        <animate attributeName="r" values="10;18;10" dur="2s" repeatCount="indefinite"/>
+      nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="13" fill="none" stroke="#00f0ff" stroke-width="2.5" opacity="0.5">
+        <animate attributeName="r" values="13;22;13" dur="2s" repeatCount="indefinite"/>
         <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite"/>
       </circle>`;
+      // "YOU ARE HERE" marker
+      nodesSvg += `<text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" fill="#00f0ff" font-size="9" font-weight="700" font-family="Orbitron,sans-serif">▼</text>`;
     }
 
-    // Label
-    const labelColor = isCurrent ? '#00f0ff' : isVisited ? '#aaddcc' : '#778';
-    nodesSvg += `<text x="${pos.x}" y="${pos.y - 16}" text-anchor="middle" fill="${labelColor}" font-size="12" font-family="'Rajdhani',sans-serif" font-weight="${isCurrent ? '700' : '400'}" style="${cursor}" ${onclick ? `onclick="${onclick}"` : ''}>${name}</text>`;
+    // Territory flag for controlled districts
+    if (isControlled && !isCurrent) {
+      nodesSvg += `<text x="${pos.x + 15}" y="${pos.y - 5}" fill="#ff00aa" font-size="12">🏴</text>`;
+    }
+
+    // Gang presence marker
+    var gangId2 = null;
+    if (typeof MIAMI_DISTRICTS !== 'undefined') {
+      var md2 = MIAMI_DISTRICTS.find(function(d) { return d.id === distId; });
+      if (md2 && md2.gangPresence && md2.gangPresence.length > 0) gangId2 = md2.gangPresence[0];
+    }
+    if (gangId2 && !isControlled) {
+      nodesSvg += `<text x="${pos.x + 15}" y="${pos.y - 5}" fill="rgba(255,255,255,0.4)" font-size="8" font-family="Rajdhani,sans-serif">⚔</text>`;
+    }
+
+    // Player assets indicators
+    var hasBusinessHere = state && state.frontBusinesses && state.frontBusinesses.some(function(b) { return b.location === distId; });
+    var hasCrewHere = state && state.henchmen && state.henchmen.some(function(h) { return h.assignedTo === 'territory_guard'; }) && isControlled;
+    if (hasBusinessHere) nodesSvg += `<text x="${pos.x - 16}" y="${pos.y - 5}" fill="#00ff88" font-size="10">🏢</text>`;
+    if (hasCrewHere) nodesSvg += `<text x="${pos.x - 16}" y="${pos.y + 10}" fill="#ffaa00" font-size="9">👥</text>`;
+
+    // Heat indicator for district
+    if (locHeat > 30) {
+      nodesSvg += `<text x="${pos.x + 15}" y="${pos.y + 10}" fill="#ff4400" font-size="8" font-family="Rajdhani">🔥${Math.round(locHeat)}</text>`;
+    }
+
+    // Label (name)
+    const labelColor = isCurrent ? '#00f0ff' : isControlled ? '#ff88cc' : isVisited ? '#aaddcc' : '#778';
+    nodesSvg += `<text x="${pos.x}" y="${pos.y - 20}" text-anchor="middle" fill="${labelColor}" font-size="11" font-family="'Rajdhani',sans-serif" font-weight="${isCurrent || isControlled ? '700' : '400'}" style="${cursor}" ${onclick ? `onclick="${onclick}"` : ''}>${name}</text>`;
   }
 
   // Active world event for this region
@@ -457,15 +508,19 @@ function renderRegionMapView(regionId) {
           <filter id="availGlow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <rect width="1000" height="500" fill="#060610"/>
+        ${areaSvg}
         ${linesSvg}
         ${nodesSvg}
       </svg>
-      <div style="display:flex;gap:0.8rem;padding:0.3rem 0.7rem;background:rgba(0,15,30,0.8);border-top:1px solid rgba(0,240,255,0.1);flex-wrap:wrap;">
-        <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#00f0ff;box-shadow:0 0 6px #00f0ff;display:inline-block;"></span> Current</span>
-        <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#ff00aa;display:inline-block;"></span> Territory</span>
+      <div style="display:flex;gap:0.6rem;padding:0.3rem 0.7rem;background:rgba(0,15,30,0.8);border-top:1px solid rgba(0,240,255,0.1);flex-wrap:wrap;">
+        <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#00f0ff;box-shadow:0 0 6px #00f0ff;display:inline-block;"></span> You</span>
+        <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#ff00aa;display:inline-block;"></span> Your Territory</span>
         <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#00cc66;display:inline-block;"></span> Visited</span>
-        <span style="font-size:0.6rem;color:#888;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#333;display:inline-block;"></span> Unknown</span>
-        <span style="font-size:0.6rem;color:#556;margin-left:auto;">Click district to travel</span>
+        <span style="font-size:0.6rem;color:#888;">🏢 Business</span>
+        <span style="font-size:0.6rem;color:#888;">👥 Crew</span>
+        <span style="font-size:0.6rem;color:#888;">⚔ Gang</span>
+        <span style="font-size:0.6rem;color:#888;">🔥 Heat</span>
+        <span style="font-size:0.6rem;color:#556;margin-left:auto;">Tap district to travel</span>
       </div>
     </div>
   `;
