@@ -3055,6 +3055,111 @@ function waitDay(state) {
     }
   }
 
+  // === ACT 4 CHARACTER STORIES (Day 2500-3500) ===
+  if (charId && day >= 2500 && day <= 3500 && bt) {
+    if (day >= 2500 && !bt.act4_begins) {
+      bt.act4_begins = true;
+      msgs.push('📖 ACT 4: THE RECKONING. The feds know your name. Your enemies are circling. The people you trusted are breaking. This is where empires survive — or fall.');
+    }
+
+    // DROPOUT: Act 4 - The walls close in
+    if (charId === 'dropout' && day >= 2550 && !bt.dropout_a4_rehab) {
+      bt.dropout_a4_rehab = true;
+      msgs.push('💊 You checked yourself into a private rehab. Three days. Nobody knows. The irony: the chemist who cooks for a city can\'t stop using his own product. Day 1 is the hardest.');
+      state.health = Math.min(state.maxHealth || 100, (state.health || 50) + 20);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { recovery: 1 } }, 'backstory', 'dropout_a4_rehab');
+    }
+    if (charId === 'dropout' && day >= 2800 && !bt.dropout_a4_operation_periodic) {
+      bt.dropout_a4_operation_periodic = true;
+      msgs.push('🚨 "Operation Periodic Table" went live. 47 arrests across Miami. Your suppliers. Your distributors. Your name is on the indictment — but they don\'t have enough evidence. Yet.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 20);
+      state.heat = Math.min(100, (state.heat || 0) + 25);
+    }
+    if (charId === 'dropout' && day >= 3050 && !bt.dropout_a4_mother_visit) {
+      bt.dropout_a4_mother_visit = true;
+      msgs.push('📞 Your mother called. First time in months. "I\'m dying. Cancer. I want to see you before..." She doesn\'t know you funded the hospital that\'s treating her. She never will.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { redemption_chance: 1 }, stats: { stress: 20 } }, 'backstory', 'dropout_a4_mother_dying');
+    }
+    if (charId === 'dropout' && day >= 3300 && !bt.dropout_a4_choice) {
+      bt.dropout_a4_choice = true;
+      msgs.push('⚖️ The DA offered a deal: testify against the cartel, enter witness protection, start over. New name. New life. But everyone you know — Tito, your crew, your contacts — they all go to prison.');
+    }
+    if (charId === 'dropout' && day >= 3480 && !bt.dropout_a4_close) {
+      bt.dropout_a4_close = true;
+      msgs.push('📖 The chemistry of survival: combine pressure, heat, and time. What\'s left is either diamond or dust. Which one are you?');
+    }
+
+    // CORNER KID: Act 4 - The king's dilemma
+    if (charId === 'corner_kid' && day >= 2550 && !bt.corner_a4_rico_arrested) {
+      bt.corner_a4_rico_arrested = true;
+      msgs.push('🚔 Lil Rico — your lieutenant, your day one — arrested. RICO charges. They\'re squeezing him for everything. "He\'s strong, boss," Deshawn\'s replacement says. But everyone has a breaking point.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { losing_brothers: 1 } }, 'backstory', 'corner_a4_rico');
+    }
+    if (charId === 'corner_kid' && day >= 2800 && !bt.corner_a4_little_bro_deep) {
+      bt.corner_a4_little_bro_deep = true;
+      msgs.push('💊 Your little brother is running his own crew now. 19 years old with a gun and an attitude. He won\'t listen to you. "You can\'t tell me nothing — you started just like me." He\'s right. That\'s the problem.');
+    }
+    if (charId === 'corner_kid' && day >= 3050 && !bt.corner_a4_mama_last_wish) {
+      bt.corner_a4_mama_last_wish = true;
+      msgs.push('🏥 Mama\'s last wish: "Get out. Take your brother and get out of this life." She said it with oxygen tubes in her nose. You promised. You both know it might be a lie.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { promise_keeper: 1 }, stats: { stress: 25 } }, 'backstory', 'corner_a4_mama_wish');
+    }
+    if (charId === 'corner_kid' && day >= 3300 && !bt.corner_a4_block_shooting) {
+      bt.corner_a4_block_shooting = true;
+      msgs.push('🔫 Mass shooting at the basketball court. Your court. Three dead, seven wounded, including two kids. Your war spilled into innocent lives. The CNN cameras are here. So are the feds.');
+      state.heat = Math.min(100, (state.heat || 0) + 30);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { blood_on_hands: 1 }, stats: { stress: 30 } }, 'backstory', 'corner_a4_shooting');
+    }
+    if (charId === 'corner_kid' && day >= 3480 && !bt.corner_a4_close) {
+      bt.corner_a4_close = true;
+      msgs.push('📖 The block that raised you is burning. The question isn\'t whether you can save it. The question is whether you should.');
+    }
+
+    // EX-CON: Act 4 - Freedom's price
+    if (charId === 'ex_con' && day >= 2550 && !bt.excon_a4_son_joins) {
+      bt.excon_a4_son_joins = true;
+      msgs.push('👦 Your son — the one who showed up at your door — wants in. "I want to know my father\'s world." He\'s smart. He\'s angry. He\'s everything you were at his age. That terrifies you.');
+    }
+    if (charId === 'ex_con' && day >= 2800 && !bt.excon_a4_big_mike_trial) {
+      bt.excon_a4_big_mike_trial = true;
+      msgs.push('⚖️ Big Mike\'s trial. You\'re called as a character witness. If you testify, you expose yourself. If you don\'t, your oldest friend dies in prison. Again.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { loyalty_tested: 1 } }, 'backstory', 'excon_a4_mike_trial');
+    }
+    if (charId === 'ex_con' && day >= 3100 && !bt.excon_a4_prison_flashback) {
+      bt.excon_a4_prison_flashback = true;
+      msgs.push('😰 The flashbacks are getting worse. You can\'t eat in rooms without windows. Can\'t sleep without a light on. Five years in a cell changed your brain chemistry permanently.');
+      state.health = Math.max(40, (state.health || 100) - 5);
+    }
+    if (charId === 'ex_con' && day >= 3350 && !bt.excon_a4_darnell_confirmed) {
+      bt.excon_a4_darnell_confirmed = true;
+      msgs.push('🐀 Confirmed: Darnell is cooperating with the FBI. Your old cellmate. The man you protected inside. He\'s wearing a wire. Everything you said to him — they have it all.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 25);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { ultimate_betrayal: 1 } }, 'backstory', 'excon_a4_darnell');
+    }
+
+    // HUSTLER: Act 4 - The long con collapses
+    if (charId === 'hustler' && day >= 2550 && !bt.hustler_a4_ponzi_collapse) {
+      bt.hustler_a4_ponzi_collapse = true;
+      msgs.push('💥 The Ponzi scheme collapsed. $1.2 million in losses. Angry investors. SEC investigation. Your Wall Street friend disappeared. Guess who\'s left holding the bag?');
+      state.heat = Math.min(100, (state.heat || 0) + 15);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { scam_fallout: 1 } }, 'backstory', 'hustler_a4_ponzi');
+    }
+    if (charId === 'hustler' && day >= 2800 && !bt.hustler_a4_senator_arrested) {
+      bt.hustler_a4_senator_arrested = true;
+      msgs.push('🏛️ Your pet senator was arrested. Campaign finance violations. And he\'s talking. About off-books donations. About favors. About YOU. "I don\'t know any such person," he said on camera. Liar.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 15);
+    }
+    if (charId === 'hustler' && day >= 3100 && !bt.hustler_a4_wife_returns) {
+      bt.hustler_a4_wife_returns = true;
+      msgs.push('📞 Your ex-wife/partner called. "I know what you did. I know everything. And I want half — or I go to the feds." Blackmail from the person who once loved you.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { blackmailed: 1 }, stats: { stress: 20 } }, 'backstory', 'hustler_a4_blackmail');
+    }
+    if (charId === 'hustler' && day >= 3400 && !bt.hustler_a4_final_hustle) {
+      bt.hustler_a4_final_hustle = true;
+      msgs.push('💭 One last hustle. The biggest one. Fake your own death, take the offshore millions, disappear. You\'ve been planning it for months. The documents are ready. But leaving means leaving EVERYTHING.');
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
