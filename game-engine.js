@@ -51,6 +51,34 @@ const LOCATIONS = [
 // ============================================================
 // DRUGS - expanded from original 6 to 12
 // ============================================================
+// === INJECT MIAMI DISTRICTS INTO LOCATIONS ===
+// Miami districts from miami-districts.js need to be in LOCATIONS for travel to work
+if (typeof MIAMI_DISTRICTS !== 'undefined') {
+  for (var _di = 0; _di < MIAMI_DISTRICTS.length; _di++) {
+    var _md = MIAMI_DISTRICTS[_di];
+    // Only add if not already in LOCATIONS
+    if (!LOCATIONS.find(function(l) { return l.id === _md.id; })) {
+      LOCATIONS.push({
+        id: _md.id,
+        name: _md.name,
+        region: 'miami',
+        desc: _md.desc,
+        flavor: _md.flavorText || _md.desc,
+        hasBank: !!_md.hasBank,
+        hasLoanShark: !!_md.hasLoanShark,
+        hasHospital: !!_md.hasHospital,
+        hasBlackMarket: !!_md.hasBlackMarket,
+        dangerLevel: _md.dangerLevel || 3,
+        priceModifier: _md.priceModifier || 1.0,
+        drugSpecialty: _md.drugSpecialty || null,
+        gangPresence: _md.gangPresence || [],
+        emoji: _md.emoji || '',
+        policeIntensity: _md.policeIntensity || 'moderate',
+      });
+    }
+  }
+}
+
 const DRUGS = [
   // === STARTER DRUGS (available day 1) ===
   { id: 'weed', name: 'Weed', minPrice: 300, maxPrice: 1000, volatility: 0.25, category: 'low', emoji: '🌿', minLevel: 1, minDay: 1 },
