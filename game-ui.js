@@ -7557,9 +7557,18 @@ function renderRomance() {
           '</div>' +
           (stage === 'stranger' ? '<button class="btn btn-sm btn-buy" style="margin-top:4px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'meet\')">MEET</button>' :
             '<div style="margin-top:4px;">' +
-              '<button class="btn btn-sm btn-secondary" style="border-color:' + stageColor + ';color:' + stageColor + ';margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'date\')">Date</button>' +
-              '<button class="btn btn-sm btn-secondary" style="border-color:var(--neon-yellow);color:var(--neon-yellow);margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'gift\')">Gift</button>' +
-              '<button class="btn btn-sm btn-secondary" style="border-color:var(--neon-cyan);color:var(--neon-cyan);margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'call\')">Call</button>' +
+              '<button class="btn btn-sm btn-secondary" style="border-color:var(--neon-cyan);color:var(--neon-cyan);margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'call\')">📞 Call</button>' +
+              (stageIdx >= 1 ? '<button class="btn btn-sm btn-secondary" style="border-color:var(--neon-yellow);color:var(--neon-yellow);margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'gift\')">🎁 Gift $2K</button>' : '') +
+              (stageIdx >= 1 ? '<button class="btn btn-sm btn-secondary" style="border-color:' + stageColor + ';color:' + stageColor + ';margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'date\')">💕 Date</button>' : '') +
+              (stageIdx >= 2 ? '<button class="btn btn-sm btn-secondary" style="border-color:var(--neon-purple);color:var(--neon-purple);margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'secret\')">🤫 Secret</button>' : '') +
+              (rel && rel.pendingEvent && (rel.pendingEvent.id === 'kidnapped' || rel.pendingEvent.id === 'threatened') ? '<button class="btn btn-sm btn-danger" style="margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'protect\')">🛡️ PROTECT</button>' : '') +
+              (points >= (nextThreshold || 999) ? '<button class="btn btn-sm btn-buy" style="margin:1px;" onclick="doAdvanceRelationship(\'' + npc.id + '\',\'advance\')">⬆️ Advance</button>' : '') +
+            '</div>' +
+            '<div style="font-size:0.6rem;color:#666;margin-top:2px">' +
+              (stageIdx < 1 ? 'Call to build trust before dating' : '') +
+              (stageIdx === 1 ? 'Date and gift to deepen the relationship' : '') +
+              (stageIdx === 2 ? 'Share secrets to build deep trust' : '') +
+              (stageIdx >= 3 ? 'Partner level. Protect them when threatened.' : '') +
             '</div>') +
         '</div>' +
       '</div>' +

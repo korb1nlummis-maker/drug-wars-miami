@@ -475,6 +475,17 @@ function shareSecret(state, npcId) {
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
+  // Cooldown: 1 secret per person per 7 days (you don't overshare)
+  if (rel.lastSecretDay !== undefined && (state._currentDay || 0) - rel.lastSecretDay < 7) {
+    return { success: false, message: `Too soon to share another secret with ${npc.name}. Give it time.` };
+  }
+  rel.lastSecretDay = state._currentDay || 0;
+
+  // Requires dating stage minimum
+  if (RELATIONSHIP_STAGES.indexOf(rel.stage) < 2) {
+    return { success: false, message: `You don't trust ${npc.name} enough to share secrets yet. Need dating stage.` };
+  }
+
   rel.secretsShared++;
   const trustGain = 5;
   rel.points += trustGain;
@@ -483,13 +494,18 @@ function shareSecret(state, npcId) {
   const leakRisk = Math.min(0.30, rel.secretsShared * 0.05);
   const leaked = Math.random() < leakRisk;
 
+  // If leaked, actual consequences
+  if (leaked && typeof state.heat === 'number') {
+    state.heat = Math.min(100, state.heat + 5);
+  }
+
   return {
     success: true,
     relationshipGain: trustGain,
     leaked,
     leakRisk,
     message: leaked
-      ? `You confide in ${npc.name}... but this one gets out. (+${trustGain} relationship, but intel leaked!)`
+      ? `You confide in ${npc.name}... but this one gets out. (+${trustGain} relationship, but intel leaked! +5 heat)`
       : `You share something personal with ${npc.name}. She appreciates the trust. (+${trustGain} relationship)`
   };
 }
@@ -503,17 +519,31 @@ function protectPartner(state, npcId) {
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
+  // Protect can only happen during specific events (not on demand)
+  // Check if there's a pending threat event for this NPC
+  if (!rel.pendingEvent || (rel.pendingEvent.id !== 'kidnapped' && rel.pendingEvent.id !== 'threatened')) {
+    return { success: false, message: `${npc.name} isn't in danger right now. Protect is only available during threat events.` };
+  }
+
   rel.timesProtected++;
   const gain = 15;
   rel.points += gain;
   state.daysSinceContact[npcId] = 0;
+
+  // Clear the threat event
+  rel.pendingEvent = null;
+
+  // Costs health - you took a risk
+  if (typeof state.health === 'number') {
+    state.health = Math.max(20, state.health - 10);
+  }
 
   rel.stage = calculateStage(rel.points);
 
   return {
     success: true,
     relationshipGain: gain,
-    message: `You put yourself on the line for ${npc.name}. She won't forget it. (+${gain} relationship)`
+    message: `You put yourself on the line for ${npc.name}. She won't forget it. (+${gain} relationship, -10 HP)`
   };
 }
 
