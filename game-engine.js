@@ -8,7 +8,7 @@ const GAME_CONFIG = {
   startingDebt: 5000,
   debtInterestRate: 0.008, // 0.8% per day — loan sharks are ruthless
   bankInterestRate: 0.002, // 0.2% per day
-  startingInventory: 200,
+  startingInventory: 500,
   startingHealth: 100,
   startingHeat: 0,
   maxHeat: 100,
@@ -3843,11 +3843,8 @@ function getInventoryCount(state) {
     }
     count += qty;
   }
-  // Weapons take space
-  for (const wId of state.weapons) {
-    const w = WEAPONS.find(wp => wp.id === wId);
-    if (w) count += w.space;
-  }
+  // Weapons NO LONGER take drug inventory space — they're carried separately
+  // A gun doesn't go in the same bag as product
   return count;
 }
 
@@ -5083,7 +5080,9 @@ function buyWeapon(state, weaponId) {
   const location = LOCATIONS.find(l => l.id === state.currentLocation);
   if (!location.hasBlackMarket) return { success: false, msg: 'No black market here.' };
   if (state.cash < weapon.price) return { success: false, msg: 'Can\'t afford it.' };
-  if (weapon.space > getFreeSpace(state)) return { success: false, msg: 'Not enough inventory space.' };
+  // Weapons are carried separately from drugs — no space check needed
+  // Limit: max 5 weapons (realistic carry limit)
+  if (state.weapons.length >= 5) return { success: false, msg: 'Already carrying max weapons (5). Sell one first.' };
 
   state.cash -= weapon.price;
   state.weapons.push(weaponId);
@@ -5194,7 +5193,7 @@ function acceptOffer(state, event) {
   if (event.offerType === 'weapon') {
     if (state.cash < event.price) return { success: false, msg: 'Can\'t afford it.' };
     const weapon = WEAPONS.find(w => w.id === event.weaponId);
-    if (weapon.space > getFreeSpace(state)) return { success: false, msg: 'Not enough space.' };
+    if (state.weapons.length >= 5) return { success: false, msg: 'Already carrying max weapons (5).' };
     state.cash -= event.price;
     state.weapons.push(event.weaponId);
     return { success: true, msg: `Bought ${weapon.name} for $${event.price.toLocaleString()}.` };
