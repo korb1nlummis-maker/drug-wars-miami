@@ -1730,32 +1730,30 @@ body::before {
 /* Tutorial System */
 .tutorial-overlay {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 10000;
-  animation: fadeIn 0.3s ease;
+  top: 8px; right: 8px;
+  z-index: 9000;
   pointer-events: none;
-  padding-bottom: 70px; /* space for bottom nav */
+  animation: fadeIn 0.3s ease;
 }
 .tutorial-card {
   background: var(--bg-panel, #111128);
   border: 2px solid var(--neon-cyan, #00f0ff);
-  border-radius: 12px 12px 0 0;
-  padding: 1rem 1.2rem;
-  max-width: 440px;
-  width: 95%;
-  box-shadow: 0 -4px 40px rgba(0, 240, 255, 0.3);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  max-width: 320px;
+  width: auto;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.3);
   text-align: center;
   pointer-events: auto;
   max-height: 40vh;
   overflow-y: auto;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  pointer-events: auto;
+  max-height: 250px;
+  overflow-y: auto;
 }
 .tutorial-step-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #888;
   letter-spacing: 0.15em;
   margin-bottom: 0.5rem;

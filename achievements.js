@@ -6,54 +6,58 @@
 // KINGPIN LEVEL SYSTEM
 // ============================================================
 const KINGPIN_LEVELS = [
+  // XP scaled for 5000-day game. ~150 XP/day avg = 750K total possible XP
+  // Level 20 at 600K means only dedicated players max out around day 4000
   { level: 1, title: 'Street Punk', xpRequired: 0, emoji: '🐀', perk: null, perkDesc: 'Starting out. Survive.' },
-  { level: 2, title: 'Corner Boy', xpRequired: 200, emoji: '🧢', perk: 'haggle', perkDesc: '5% discount on all drug purchases' },
-  { level: 3, title: 'Hustler', xpRequired: 600, emoji: '💊', perk: 'extra_carry', perkDesc: '+1,000 inventory capacity' },
-  { level: 4, title: 'Dealer', xpRequired: 1400, emoji: '🔫', perk: 'street_cred', perkDesc: '-10% encounter chance when traveling' },
-  { level: 5, title: 'Supplier', xpRequired: 3000, emoji: '📦', perk: 'bulk_buyer', perkDesc: '10% discount on all drug purchases' },
-  { level: 6, title: 'Distributor', xpRequired: 5500, emoji: '🚐', perk: 'crew_loyalty', perkDesc: 'Crew loyalty decays 50% slower' },
-  { level: 7, title: 'Lieutenant', xpRequired: 9000, emoji: '⭐', perk: 'extra_carry_2', perkDesc: '+3,000 inventory capacity' },
-  { level: 8, title: 'Underboss', xpRequired: 14000, emoji: '🎖️', perk: 'intimidation', perkDesc: '+15% sell price on all drugs' },
-  { level: 9, title: 'Boss', xpRequired: 21000, emoji: '👑', perk: 'connections', perkDesc: '-20% transport costs' },
-  { level: 10, title: 'Kingpin', xpRequired: 30000, emoji: '🏆', perk: 'heat_resist', perkDesc: 'Heat decays 2x faster' },
-  { level: 11, title: 'Cartel Leader', xpRequired: 42000, emoji: '🦅', perk: 'muscle', perkDesc: '+25% combat damage' },
-  { level: 12, title: 'Drug Lord', xpRequired: 58000, emoji: '💎', perk: 'empire_discount', perkDesc: '15% discount on all purchases' },
-  { level: 13, title: 'Narco Emperor', xpRequired: 78000, emoji: '🌐', perk: 'investigation_shield', perkDesc: 'Investigation gains reduced by 30%' },
-  { level: 14, title: 'Shadow King', xpRequired: 105000, emoji: '👁️', perk: 'max_carry', perkDesc: '+10,000 inventory capacity' },
-  { level: 15, title: 'Legendary', xpRequired: 140000, emoji: '🔥', perk: 'untouchable', perkDesc: 'Bust chance halved, +20% all income' },
-  { level: 16, title: 'Mythic', xpRequired: 175000, emoji: '⚡', perk: 'mythic_haggle', perkDesc: '20% discount on all drug purchases' },
-  { level: 17, title: 'Phantom', xpRequired: 210000, emoji: '👻', perk: 'ghost', perkDesc: 'Investigation gains reduced by 50%' },
-  { level: 18, title: 'Overlord', xpRequired: 245000, emoji: '🏰', perk: 'overlord_income', perkDesc: '+50% territory and distribution income' },
-  { level: 19, title: 'Godfather', xpRequired: 280000, emoji: '🎩', perk: 'godfather', perkDesc: 'Court contacts 20% cheaper, +15% success' },
-  { level: 20, title: 'Immortal', xpRequired: 320000, emoji: '💀', perk: 'immortal', perkDesc: 'All perks enhanced. You are untouchable.' },
+  { level: 2, title: 'Corner Boy', xpRequired: 500, emoji: '🧢', perk: 'haggle', perkDesc: '5% discount on all drug purchases' },
+  { level: 3, title: 'Hustler', xpRequired: 1500, emoji: '💊', perk: 'extra_carry', perkDesc: '+1,000 inventory capacity' },
+  { level: 4, title: 'Dealer', xpRequired: 4000, emoji: '🔫', perk: 'street_cred', perkDesc: '-10% encounter chance when traveling' },
+  { level: 5, title: 'Supplier', xpRequired: 8000, emoji: '📦', perk: 'bulk_buyer', perkDesc: '10% discount on all drug purchases' },
+  { level: 6, title: 'Distributor', xpRequired: 15000, emoji: '🚐', perk: 'crew_loyalty', perkDesc: 'Crew loyalty decays 50% slower' },
+  { level: 7, title: 'Lieutenant', xpRequired: 25000, emoji: '⭐', perk: 'extra_carry_2', perkDesc: '+3,000 inventory capacity' },
+  { level: 8, title: 'Underboss', xpRequired: 40000, emoji: '🎖️', perk: 'intimidation', perkDesc: '+15% sell price on all drugs' },
+  { level: 9, title: 'Boss', xpRequired: 60000, emoji: '👑', perk: 'connections', perkDesc: '-20% transport costs' },
+  { level: 10, title: 'Kingpin', xpRequired: 85000, emoji: '🏆', perk: 'heat_resist', perkDesc: 'Heat decays 2x faster' },
+  { level: 11, title: 'Cartel Leader', xpRequired: 120000, emoji: '🦅', perk: 'muscle', perkDesc: '+25% combat damage' },
+  { level: 12, title: 'Drug Lord', xpRequired: 165000, emoji: '💎', perk: 'empire_discount', perkDesc: '15% discount on all purchases' },
+  { level: 13, title: 'Narco Emperor', xpRequired: 220000, emoji: '🌐', perk: 'investigation_shield', perkDesc: 'Investigation gains reduced by 30%' },
+  { level: 14, title: 'Shadow King', xpRequired: 285000, emoji: '👁️', perk: 'max_carry', perkDesc: '+10,000 inventory capacity' },
+  { level: 15, title: 'Legendary', xpRequired: 350000, emoji: '🔥', perk: 'untouchable', perkDesc: 'Bust chance halved, +20% all income' },
+  { level: 16, title: 'Mythic', xpRequired: 420000, emoji: '⚡', perk: 'mythic_haggle', perkDesc: '20% discount on all drug purchases' },
+  { level: 17, title: 'Phantom', xpRequired: 490000, emoji: '👻', perk: 'ghost', perkDesc: 'Investigation gains reduced by 50%' },
+  { level: 18, title: 'Overlord', xpRequired: 540000, emoji: '🏰', perk: 'overlord_income', perkDesc: '+50% territory and distribution income' },
+  { level: 19, title: 'Godfather', xpRequired: 580000, emoji: '🎩', perk: 'godfather', perkDesc: 'Court contacts 20% cheaper, +15% success' },
+  { level: 20, title: 'Immortal', xpRequired: 620000, emoji: '💀', perk: 'immortal', perkDesc: 'All perks enhanced. You are untouchable.' },
 ];
 
 // XP rewards for actions
 const XP_REWARDS = {
-  buy_drug: 3,
-  sell_drug: 5,
-  sell_profit_1k: 15,
-  sell_profit_10k: 50,
-  sell_profit_100k: 200,
-  sell_profit_1m: 500,
-  travel: 8,
-  win_combat: 60,
-  win_territory: 300,
-  survive_dea: 150,
-  not_guilty: 80,
-  hire_crew: 10,
-  visit_new_city: 25,
-  complete_achievement: 50,
-  complete_mission: 75,
-  complete_main_mission: 200,
-  pay_debt: 15,
-  bank_deposit: 2,
-  buy_property: 40,
-  buy_front: 40,
-  buy_safehouse: 50,
-  upgrade_safehouse: 25,
-  daily_empire: 5,         // passive XP per day for owning territory/fronts/distribution
-  daily_territory_bonus: 2, // +2 XP per territory owned per day
+  // Scaled for 5000-day game. Target: ~150 XP/day average, level 20 around day 4000
+  buy_drug: 1,             // was 3 — buying is trivial
+  sell_drug: 2,            // was 5 — selling is the core loop but shouldn't power-level
+  sell_profit_1k: 5,       // was 15
+  sell_profit_10k: 15,     // was 50
+  sell_profit_100k: 50,    // was 200
+  sell_profit_1m: 150,     // was 500
+  travel: 3,               // was 8
+  win_combat: 25,          // was 60
+  win_territory: 100,      // was 300
+  survive_dea: 75,         // was 150
+  not_guilty: 40,          // was 80
+  hire_crew: 5,            // was 10
+  visit_new_city: 15,      // was 25
+  complete_achievement: 25, // was 50
+  complete_mission: 40,    // was 75
+  complete_main_mission: 100, // was 200
+  complete_side_mission: 20, // new
+  pay_debt: 5,             // was 15
+  bank_deposit: 1,         // was 2
+  buy_property: 15,        // was 40
+  buy_front: 15,           // was 40
+  buy_safehouse: 20,       // was 50
+  upgrade_safehouse: 10,   // was 25
+  daily_empire: 3,         // was 5 — passive XP per day for owning territory/fronts
+  daily_territory_bonus: 1, // was 2 — +1 XP per territory per day
 };
 
 function getKingpinLevel(xp) {
@@ -127,9 +131,10 @@ function awardXP(state, action, amount) {
   const newLevel = getKingpinLevel(state.xp);
 
   if (newLevel.level > oldLevel.level) {
-    // Award skill points on level up (5 pts per level)
+    // Award skill points on level up (2 pts per level — total 40 across 20 levels)
+    // This means maxing all skills takes nearly the full 5000-day game
     const levelsGained = newLevel.level - oldLevel.level;
-    const pointsGained = levelsGained * 5;
+    const pointsGained = levelsGained * 2;
     state.skillPoints = (state.skillPoints || 0) + pointsGained;
     return {
       levelUp: true,
