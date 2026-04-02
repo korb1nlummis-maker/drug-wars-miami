@@ -1595,7 +1595,8 @@ function renderGame() {
     const actionCell = showActions ?
       (drugLocked ? `<span style="color:#666;font-size:0.7rem">🔒 Lvl ${drug.minLevel}</span>` :
         (price !== null ? `<button class="btn btn-sm btn-buy" onclick="openTrade('${drug.id}', 'buy')">BUY</button>` : '') +
-        (owned > 0 ? ` <button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : '')) +
+        (owned > 0 ? ` <button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : '') +
+        (price === null && owned <= 0 ? `<span style="color:#555;font-size:0.65rem">No supply</span>` : '')) +
       (drugLocked && owned > 0 ? `<button class="btn btn-sm btn-sell" onclick="openTrade('${drug.id}', 'sell')">SELL</button>` : '') : '';
     // Up/down arrow from previous price and P&L indicator
     let trendArrow = '';
