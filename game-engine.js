@@ -3273,6 +3273,121 @@ function waitDay(state) {
     }
   }
 
+  // === ACT 5 CHARACTER STORIES (Day 3500-5000) - THE ENDGAME ===
+  if (charId && day >= 3500 && bt) {
+    if (day >= 3500 && !bt.act5_begins) {
+      bt.act5_begins = true;
+      var nw5 = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      var kills5 = state.peopleKilled || 0;
+      var days5 = state.day;
+      msgs.push('📖 ACT 5: THE ENDGAME. ' + days5 + ' days. $' + nw5.toLocaleString() + ' empire. ' + kills5 + ' bodies. This is the final chapter. How does YOUR story end?');
+    }
+
+    // DROPOUT: Act 5 - Redemption or ruin
+    if (charId === 'dropout' && day >= 3600 && !bt.dropout_a5_lab_explosion) {
+      bt.dropout_a5_lab_explosion = true;
+      msgs.push('💥 Your main lab exploded. Chemical fire. Two workers dead. The formula you perfected destroyed them. The fire department found drug residue. It\'s on every news channel.');
+      state.heat = Math.min(100, (state.heat || 0) + 20);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { maker_of_death: 1 } }, 'backstory', 'dropout_a5_explosion');
+    }
+    if (charId === 'dropout' && day >= 3900 && !bt.dropout_a5_cure_or_cook) {
+      bt.dropout_a5_cure_or_cook = true;
+      msgs.push('💭 A pharmaceutical company offered you a job. Legitimate research. $200K salary. They don\'t know your past. You could walk away from everything and save lives instead of taking them.');
+    }
+    if (charId === 'dropout' && day >= 4200 && !bt.dropout_a5_mother_death) {
+      bt.dropout_a5_mother_death = true;
+      msgs.push('💀 Your mother passed. At the funeral, nobody knew who you really were. "He\'s in pharmaceuticals," they said. You stood over her casket knowing the truth she died not knowing.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { orphaned: 1, final_guilt: 1 }, stats: { stress: 30 } }, 'backstory', 'dropout_a5_mother');
+    }
+    if (charId === 'dropout' && day >= 4500 && !bt.dropout_a5_legacy) {
+      bt.dropout_a5_legacy = true;
+      msgs.push('📖 The dropout who learned chemistry to pay tuition. The chemist who cooked for a city. The kingpin who funded hospitals with blood money. The story writes itself. But who writes the ending?');
+    }
+    if (charId === 'dropout' && day >= 4800 && !bt.dropout_a5_final) {
+      bt.dropout_a5_final = true;
+      var nwD = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      if (nwD > 1000000) {
+        msgs.push('🏆 The formula made you a millionaire. The formula killed your professor. The formula poisoned a generation. But the formula is all you have left. Is it worth it?');
+      } else {
+        msgs.push('💭 In the end, the chemistry was never the problem. The problem was you. A brilliant mind with no moral compass. The periodic table doesn\'t care about right and wrong.');
+      }
+    }
+
+    // CORNER KID: Act 5 - The block's final chapter
+    if (charId === 'corner_kid' && day >= 3600 && !bt.corner_a5_rico_snitch) {
+      bt.corner_a5_rico_snitch = true;
+      msgs.push('🐀 Lil Rico talked. Everything. Names, dates, shipments, bodies. Your day one. Your lieutenant. Your brother in everything but blood. He chose 10 years over life.');
+      if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 30);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { betrayed_by_family: 1 } }, 'backstory', 'corner_a5_rico');
+    }
+    if (charId === 'corner_kid' && day >= 3900 && !bt.corner_a5_brother_war) {
+      bt.corner_a5_brother_war = true;
+      msgs.push('⚔️ Your little brother started a war you can\'t finish. Three rival crews united against your family. "I did this for US," he screamed. He did it for himself. Just like you did.');
+    }
+    if (charId === 'corner_kid' && day >= 4200 && !bt.corner_a5_mama_dies) {
+      bt.corner_a5_mama_dies = true;
+      msgs.push('💀 Mama\'s gone. In the house you bought her. Surrounded by family. She held your hand at the end. "Promise me," she whispered. "Promise me you\'ll stop." You promised. You lied.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { broken_promise: 1 }, stats: { stress: 30 } }, 'backstory', 'corner_a5_mama');
+    }
+    if (charId === 'corner_kid' && day >= 4500 && !bt.corner_a5_block_gone) {
+      bt.corner_a5_block_gone = true;
+      msgs.push('🏗️ The block is gone. Demolished. Condos going up where the basketball court used to be. The corner where you sold your first dime bag is now a Starbucks. Nothing left but memories and bodies.');
+    }
+    if (charId === 'corner_kid' && day >= 4800 && !bt.corner_a5_final) {
+      bt.corner_a5_final = true;
+      msgs.push('📖 You were born on the block. You built your empire on the block. And the block is gone. Everything you fought for is concrete and steel with someone else\'s name on it. What was it all for?');
+    }
+
+    // EX-CON: Act 5 - The institutional man's reckoning
+    if (charId === 'ex_con' && day >= 3600 && !bt.excon_a5_son_choice) {
+      bt.excon_a5_son_choice = true;
+      msgs.push('👦 Your son ran his first operation. Clean. Professional. Better than you were at his age. You feel pride and horror in equal measure. You created another you.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { cycle_continues: 1 } }, 'backstory', 'excon_a5_son');
+    }
+    if (charId === 'ex_con' && day >= 3900 && !bt.excon_a5_indictment) {
+      bt.excon_a5_indictment = true;
+      msgs.push('📋 Federal indictment. 47 counts. RICO. Murder. Conspiracy. Drug trafficking. Money laundering. Tax evasion. Darnell\'s testimony is the backbone. This is it.');
+      if (state.investigation) state.investigation.points = 100;
+      state.heat = 100;
+    }
+    if (charId === 'ex_con' && day >= 4200 && !bt.excon_a5_big_mike_letter) {
+      bt.excon_a5_big_mike_letter = true;
+      msgs.push('✉️ Letter from Big Mike in prison. "Don\'t let them take you alive, boss. Go out on your terms. Not theirs. You taught me that." The loyalty of the damned.');
+    }
+    if (charId === 'ex_con' && day >= 4500 && !bt.excon_a5_cycle) {
+      bt.excon_a5_cycle = true;
+      msgs.push('💭 You did 5 years. Built an empire. Might do the rest of your life. The system that locked you up made you what you are. And what you are might send you back. The cycle never breaks.');
+    }
+    if (charId === 'ex_con' && day >= 4800 && !bt.excon_a5_final) {
+      bt.excon_a5_final = true;
+      msgs.push('📖 The ex-con. The institutional man. The one who did his time and came out harder. In the end, the prison was never the bars. The prison was the life. And there\'s no parole from this.');
+    }
+
+    // HUSTLER: Act 5 - The final con
+    if (charId === 'hustler' && day >= 3600 && !bt.hustler_a5_fbi_raids) {
+      bt.hustler_a5_fbi_raids = true;
+      msgs.push('🚨 FBI raided all your properties. Every shell company. Every front. $2.3 million in assets frozen. "The most sophisticated financial crime network we\'ve seen in Miami," the agent said on TV.');
+      state.cash = Math.max(0, Math.round(state.cash * 0.3));
+      state.bank = Math.max(0, Math.round(state.bank * 0.2));
+    }
+    if (charId === 'hustler' && day >= 3900 && !bt.hustler_a5_bookie_resolved) {
+      bt.hustler_a5_bookie_resolved = true;
+      msgs.push('💀 The bookie is dead. Heart attack. Natural causes. After all these years of threats and dead cats, he died in his sleep. Anti-climactic. But the relief is overwhelming.');
+    }
+    if (charId === 'hustler' && day >= 4200 && !bt.hustler_a5_one_last_con) {
+      bt.hustler_a5_one_last_con = true;
+      msgs.push('🎭 The documents are ready. New identity. New country. $4M in untraceable crypto. You could walk away tonight. Become someone else. But the hustler in you whispers: "One more score..."');
+    }
+    if (charId === 'hustler' && day >= 4500 && !bt.hustler_a5_empty_table) {
+      bt.hustler_a5_empty_table = true;
+      msgs.push('🃏 You\'re at a poker table alone. The cards are dealt but there\'s no one to play against. The game was always about the people, not the money. And everyone\'s gone.');
+    }
+    if (charId === 'hustler' && day >= 4800 && !bt.hustler_a5_final) {
+      bt.hustler_a5_final = true;
+      msgs.push('📖 Three-card monte on Biscayne Boulevard. That\'s where it started. Shell companies and offshore millions. That\'s where it ended. The hustle never changed. Only the stakes. And the emptiness.');
+    }
+  }
+
   msgs.push(...processCrewDaily(state));
   msgs.push(...processInvestigationDaily(state));
   const terIncome = processTerritoryIncome(state);
