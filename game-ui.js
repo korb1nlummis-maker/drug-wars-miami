@@ -2903,6 +2903,12 @@ function renderTravel() {
           <div class="travel-card-desc">${loc.desc}</div>
           <div class="travel-card-danger">Danger: ${'★'.repeat(Math.min(loc.dangerLevel, 10))}${'☆'.repeat(Math.max(0, 10 - loc.dangerLevel))}</div>
           ${loc.drugSpecialty ? `<div class="travel-card-specialty">Known for: ${DRUGS.find(d => d.id === loc.drugSpecialty)?.name || loc.drugSpecialty}</div>` : ''}
+          <div style="font-size:0.7rem;color:${loc.priceModifier < 0.7 ? 'var(--neon-green)' : loc.priceModifier > 1.2 ? 'var(--neon-red)' : 'var(--text-dim)'}">
+            💰 Prices: ${loc.priceModifier < 0.5 ? 'Very Cheap' : loc.priceModifier < 0.8 ? 'Cheap' : loc.priceModifier < 1.1 ? 'Normal' : loc.priceModifier < 1.3 ? 'Expensive' : 'Very Expensive'} (${Math.round(loc.priceModifier * 100)}%)
+          </div>
+          <div style="font-size:0.65rem;color:var(--text-dim);display:flex;gap:0.3rem;flex-wrap:wrap;">
+            ${loc.hasBank ? '<span>🏦</span>' : ''}${loc.hasHospital ? '<span>🏥</span>' : ''}${loc.hasBlackMarket ? '<span>🏪</span>' : ''}${loc.hasLoanShark ? '<span>🦈</span>' : ''}
+          </div>
           ${visited ? '<span class="visited-badge">✓ Visited</span>' : ''}
           ${typeof isTerritory === 'function' && isTerritory(gameState, loc.id) ? '<span style="color:var(--neon-purple);font-size:0.7rem;font-weight:700">🏴 YOUR TURF</span>' : ''}
         </div>
