@@ -7479,16 +7479,19 @@ function doAdvanceRelationship(npcId, action) {
   } else if (action === 'gift') {
     if (typeof giveGift === 'function') {
       var giftValue = 2000;
-      if ((gameState.cash || 0) < giftValue) {
-        showNotification('Not enough cash for a gift!', 'error');
+      romState._currentDay = gameState.day || 0;
+      var giftResult = giveGift(romState, npcId, giftValue, gameState.cash || 0);
+      if (giftResult.success) {
+        gameState.cash = Math.max(0, (gameState.cash || 0) - giftValue);
+        playSound('cash');
+        showNotification(giftResult.message + (giftResult.stageUp ? ' 💕 Stage Up: ' + giftResult.newStage + '!' : ''), 'success');
       } else {
-        gameState.cash -= giftValue;
-        var giftResult = giveGift(romState, npcId, giftValue);
-        showNotification(giftResult.message + (giftResult.stageUp ? ' 💕 Stage Up: ' + giftResult.newStage + '!' : ''), giftResult.success ? 'success' : 'error');
+        showNotification(giftResult.message, 'error');
       }
     }
   } else if (action === 'call') {
     if (typeof phoneCall === 'function') {
+      romState._currentDay = gameState.day || 0;
       var callResult = phoneCall(romState, npcId);
       showNotification(callResult.message, callResult.success ? 'success' : 'error');
     }

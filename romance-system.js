@@ -342,17 +342,31 @@ function goOnDate(state, npcId, tierIndex, playerCash) {
 
 // ---- Gifts ----
 
-function giveGift(state, npcId, giftValue) {
+function giveGift(state, npcId, giftValue, playerCash) {
   const npc = ROMANCE_NPCS.find(n => n.id === npcId);
   if (!npc) return { success: false, message: 'Unknown person.' };
 
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
+  // Cash check
+  var cash = typeof playerCash === 'number' ? playerCash : 0;
+  if (cash < giftValue) return { success: false, message: `Not enough cash. Need $${giftValue.toLocaleString()}.` };
+
+  // Cooldown: max 1 gift per person per day
+  if (rel.lastGiftDay !== undefined && rel.lastGiftDay === (state._currentDay || 0)) {
+    return { success: false, message: `You already gave ${npc.name} a gift today. Give it time.` };
+  }
+  rel.lastGiftDay = state._currentDay || 0;
+
   const pref = GIFT_PREFERENCES[npc.giftPreference] || { base: 1.0, matchBonus: 1.0 };
   const baseGain = Math.floor(giftValue / 1000);
   const multiplier = pref.base * pref.matchBonus;
-  const gain = Math.max(1, Math.floor(baseGain * multiplier));
+
+  // Diminishing returns: after 10 gifts, each gift is worth less
+  var totalGifts = (state.gifts[npcId] || 0) / giftValue;
+  var diminish = totalGifts > 20 ? 0.3 : totalGifts > 10 ? 0.5 : totalGifts > 5 ? 0.75 : 1.0;
+  const gain = Math.max(1, Math.floor(baseGain * multiplier * diminish));
 
   rel.points += gain;
   state.daysSinceContact[npcId] = 0;
@@ -362,13 +376,15 @@ function giveGift(state, npcId, giftValue) {
   rel.stage = calculateStage(rel.points);
   const stageUp = RELATIONSHIP_STAGES.indexOf(rel.stage) > RELATIONSHIP_STAGES.indexOf(prevStage);
 
+  var dimMsg = diminish < 1 ? ' (diminishing returns - gifts alone won\'t win her heart)' : '';
+
   return {
     success: true,
     cost: giftValue,
     relationshipGain: gain,
     stageUp,
     newStage: rel.stage,
-    message: `You give ${npc.name} a gift worth $${giftValue.toLocaleString()}. (+${gain} relationship)`
+    message: `You give ${npc.name} a gift worth $${giftValue.toLocaleString()}. (+${gain} relationship)${dimMsg}`
   };
 }
 
@@ -416,10 +432,38 @@ function phoneCall(state, npcId) {
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
-  rel.points += 1;
+  // Cooldown: max 1 call per person per day
+  if (rel.lastCallDay !== undefined && rel.lastCallDay === (state._currentDay || 0)) {
+    return { success: false, message: `You already called ${npc.name} today. Don't be clingy.` };
+  }
+  rel.lastCallDay = state._currentDay || 0;
+
+  // Call content depends on relationship stage - not just "+1"
+  var gain = 1;
+  var callMsg = '';
+  var roll = Math.random();
+  if (RELATIONSHIP_STAGES.indexOf(rel.stage) >= 3) {
+    // Partner level: meaningful conversations
+    if (roll < 0.3) { gain = 3; callMsg = 'You talked for an hour about the future. She feels closer to you.'; }
+    else if (roll < 0.6) { gain = 2; callMsg = '"I miss you," she says. You miss her too. Somehow that matters.'; }
+    else { gain = 1; callMsg = 'Quick check-in. "Stay safe out there." She worries about you.'; }
+  } else if (RELATIONSHIP_STAGES.indexOf(rel.stage) >= 2) {
+    // Dating level
+    if (roll < 0.25) { gain = 2; callMsg = 'Good conversation. You made her laugh. That\'s worth something.'; }
+    else if (roll < 0.5) { gain = 2; callMsg = 'She told you about her day. You actually listened. (+2 relationship)'; }
+    else if (roll < 0.8) { gain = 1; callMsg = 'Casual chat. Nothing deep but she picked up on the first ring.'; }
+    else { gain = 0; callMsg = 'She didn\'t pick up. Left a voicemail.'; }
+  } else {
+    // Acquaintance level
+    if (roll < 0.4) { gain = 1; callMsg = 'Brief call. She seemed surprised you called. "Oh, hey... what\'s up?"'; }
+    else if (roll < 0.7) { gain = 1; callMsg = 'You chatted for a few minutes. Building familiarity.'; }
+    else { gain = 0; callMsg = 'Went to voicemail. She\'s busy. Try again tomorrow.'; }
+  }
+
+  rel.points += gain;
   state.daysSinceContact[npcId] = 0;
 
-  return { success: true, relationshipGain: 1, message: `You call ${npc.name}. Small talk, but it counts. (+1 relationship)` };
+  return { success: true, relationshipGain: gain, message: `📞 ${npc.name}: ${callMsg}${gain > 0 ? ' (+' + gain + ')' : ''}` };
 }
 
 // ---- Share Secret ----
