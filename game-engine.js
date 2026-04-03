@@ -466,6 +466,7 @@ function buyFrontBusiness(state, businessId) {
   state.cash -= biz.cost;
   state.frontBusinesses.push({
     id: biz.id,
+    location: state.currentLocation, // Track where the business was purchased
     dayBought: state.day,
     totalLaundered: 0,
     totalIncome: 0,
