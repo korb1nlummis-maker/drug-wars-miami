@@ -498,7 +498,7 @@ function renderRegionMapView(regionId) {
   return `
     <div class="world-map-container" style="position:relative;border:1px solid rgba(0,240,255,0.15);border-radius:0.5rem;overflow:hidden;background:#060610;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.7rem;background:rgba(0,15,30,0.8);border-bottom:1px solid rgba(0,240,255,0.1);gap:0.5rem;flex-wrap:wrap;">
-        <button onclick="mapZoomLevel='world'; mapCurrentRegion=null; render();" style="background:rgba(0,240,255,0.1);border:1px solid rgba(0,240,255,0.3);color:#00f0ff;padding:0.2rem 0.5rem;border-radius:0.3rem;font-size:0.65rem;cursor:pointer;font-family:Rajdhani,sans-serif;">← World Map</button>
+        <button onclick="mapZoomLevel='world'; mapCurrentRegion=null; render();" style="background:rgba(0,240,255,0.15);border:2px solid rgba(0,240,255,0.4);color:#00f0ff;padding:0.5rem 1rem;border-radius:0.4rem;font-size:0.85rem;cursor:pointer;font-family:Rajdhani,sans-serif;font-weight:bold;min-height:40px;">← BACK TO WORLD MAP</button>
         <span style="color:#00f0ff;font-family:Orbitron,sans-serif;font-size:0.8rem;font-weight:700;">${regionEmoji} ${regionName.toUpperCase()}</span>
         ${eventHtml}
       </div>

@@ -2966,9 +2966,41 @@ function selectDestination(destId) {
     </div>`;
   }
 
+  // Build district detail info
+  var gangInfo = '';
+  if (dest.gangPresence && dest.gangPresence.length > 0) {
+    gangInfo = dest.gangPresence.map(function(gId) {
+      var standing = gameState.factions && gameState.factions.standings ? (gameState.factions.standings[gId] || 0) : 0;
+      var standingLabel = standing > 30 ? 'Friendly' : standing > 0 ? 'Neutral' : standing > -30 ? 'Unfriendly' : 'Hostile';
+      var standingColor = standing > 30 ? 'var(--neon-green)' : standing > 0 ? 'var(--text-dim)' : standing > -30 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+      return '<span style="color:' + standingColor + '">' + gId.replace(/_/g, ' ') + ' (' + standingLabel + ')</span>';
+    }).join(', ');
+  }
+  var priceLabel = dest.priceModifier < 0.5 ? 'Very Cheap' : dest.priceModifier < 0.8 ? 'Cheap' : dest.priceModifier < 1.1 ? 'Normal' : dest.priceModifier < 1.3 ? 'Expensive' : 'Very Expensive';
+  var priceColor = dest.priceModifier < 0.8 ? 'var(--neon-green)' : dest.priceModifier > 1.2 ? 'var(--neon-red)' : 'var(--text-dim)';
+  var services = [];
+  if (dest.hasBank) services.push('🏦 Bank');
+  if (dest.hasHospital) services.push('🏥 Hospital');
+  if (dest.hasBlackMarket) services.push('🏪 Black Market');
+  if (dest.hasLoanShark) services.push('🦈 Loan Shark');
+  var isTerr = typeof isTerritory === 'function' && isTerritory(gameState, destId);
+
   const html = `
     <div class="transport-panel">
       <h3>Travel to <span class="neon-pink">${dest.emoji || ''} ${dest.name}</span> ${isCrossRegion ? `<span class="neon-cyan" style="font-size:0.7rem">✈️ Cross-Region</span>` : ''}</h3>
+      <div style="padding:0.5rem;margin:0.3rem 0;background:rgba(0,240,255,0.05);border:1px solid rgba(0,240,255,0.15);border-radius:6px;font-size:0.8rem;">
+        <div style="color:var(--text-dim);margin-bottom:0.3rem;">${dest.desc || dest.flavor || ''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.3rem;">
+          <span>💰 Prices: <b style="color:${priceColor}">${priceLabel} (${Math.round(dest.priceModifier * 100)}%)</b></span>
+          <span>⚠️ Danger: <b>${'★'.repeat(Math.min(dest.dangerLevel || 3, 10))}</b></span>
+          ${dest.drugSpecialty ? '<span>💊 Specialty: <b class="neon-yellow">' + (DRUGS.find(function(d){ return d.id === dest.drugSpecialty; }) || {}).name + '</b></span>' : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.3rem;font-size:0.75rem;">
+          ${services.join(' · ')}
+        </div>
+        ${gangInfo ? '<div style="font-size:0.75rem;">⚔️ Gang: ' + gangInfo + '</div>' : '<div style="font-size:0.75rem;color:var(--text-dim)">No gang presence</div>'}
+        ${isTerr ? '<div style="color:var(--neon-purple);font-weight:bold;font-size:0.8rem;">🏴 YOUR TERRITORY</div>' : ''}
+      </div>
       ${contactHtml}
       <div class="transport-grid">
         ${allTransports.map(t => `
