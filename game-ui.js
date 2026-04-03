@@ -1995,7 +1995,12 @@ function renderGame() {
         ${loc.hasLoanShark ? `<button class="btn btn-sidebar btn-secondary" onclick="openLoanShark()">🦈 Loan Shark</button>` : ''}
         ${loc.hasHospital && gameState.health < gameState.maxHealth ? `<button class="btn btn-sidebar btn-secondary" onclick="doHospital()">🏥 Hospital</button>` : ''}
         ${loc.hasBlackMarket ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='blackmarket'; render();">🏴 Black Market</button>` : ''}
-        ${_isUnlocked('stash') ? ((typeof getStashCapacity === 'function' && getStashCapacity(gameState, gameState.currentLocation) > 0) ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : (gameState.currentLocation === 'miami' ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stash'; render();">📦 Stash</button>` : '')) : _lockedBtn('📦', 'Stash', 'stash')}
+        ${_isUnlocked('stash') ? (() => {
+          var _stashLoc = LOCATIONS.find(l => l.id === gameState.currentLocation);
+          var _inMiami = _stashLoc && (_stashLoc.region === 'miami' || gameState.currentLocation === 'miami');
+          return (_inMiami || (typeof getStashCapacity === 'function' && getStashCapacity(gameState, gameState.currentLocation) > 0)) ?
+            '<button class="btn btn-sidebar btn-secondary" onclick="currentScreen=\'stash\'; render();">📦 Stash</button>' : '';
+        })() : _lockedBtn('📦', 'Stash', 'stash')}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🎯 MISSIONS</div>
@@ -2860,10 +2865,13 @@ function renderTravel() {
   const currentLoc = LOCATIONS.find(l => l.id === gameState.currentLocation);
   const daysLeft = GAME_CONFIG.totalDays - gameState.day + 1;
 
-  // Build region groups
+  // Build region groups (hide generic 'miami' hub when districts exist)
   const regions = {};
+  var hasMiamiDistricts = typeof MIAMI_DISTRICTS !== 'undefined' && MIAMI_DISTRICTS.length > 0;
   for (const loc of LOCATIONS) {
     if (loc.id === gameState.currentLocation) continue;
+    // Hide generic 'miami' entry when we have specific district entries
+    if (loc.id === 'miami' && hasMiamiDistricts) continue;
     const r = loc.region || 'miami';
     if (!regions[r]) regions[r] = [];
     regions[r].push(loc);
