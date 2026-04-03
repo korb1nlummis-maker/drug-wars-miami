@@ -629,14 +629,22 @@ window.renderTutorialOverlay = function() {
   var t = getTutorial();
   if (!t) return '';
 
-  // First-open hint popup (smaller, dismissible)
+  // First-open hint - thin auto-dismissing banner (non-blocking)
   if (t.pendingHint && !t.active) {
     var hint = t.pendingHint;
-    return '<div class="tutorial-hint-overlay" onclick="dismissTutorialHint()">' +
-      '<div class="tutorial-hint-card" onclick="event.stopPropagation()">' +
-        '<div class="tutorial-hint-title">' + hint.title + '</div>' +
-        '<div class="tutorial-hint-text">' + hint.text + '</div>' +
-        '<button class="btn btn-primary" onclick="dismissTutorialHint()" style="margin-top:0.8rem;width:100%">Got it!</button>' +
+    // Auto-dismiss after 4 seconds
+    if (!t._hintTimer) {
+      t._hintTimer = true;
+      setTimeout(function() {
+        if (typeof dismissTutorialHint === 'function') dismissTutorialHint();
+        if (typeof render === 'function') render();
+      }, 4000);
+    }
+    return '<div style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:9500;pointer-events:none;max-width:350px;width:90%;">' +
+      '<div style="background:rgba(17,17,40,0.95);border:1px solid var(--neon-pink,#ff2d95);border-radius:8px;padding:0.4rem 0.7rem;pointer-events:auto;display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;box-shadow:0 2px 12px rgba(255,45,149,0.2);" onclick="dismissTutorialHint();render();">' +
+        '<span style="color:var(--neon-pink);font-weight:bold;white-space:nowrap;">' + hint.title + '</span>' +
+        '<span style="color:var(--text-dim);flex:1;">' + hint.text.substring(0, 60) + (hint.text.length > 60 ? '...' : '') + '</span>' +
+        '<span style="color:#888;font-size:0.65rem;cursor:pointer;">✕</span>' +
       '</div>' +
     '</div>';
   }
@@ -800,9 +808,9 @@ window.dismissTutorialHint = function() {
   var t = getTutorial();
   if (!t) return;
   t.pendingHint = null;
+  t._hintTimer = false; // Reset timer flag
   var injected = document.getElementById('tutorial-hint-inject');
   if (injected) injected.remove();
-  render();
 };
 
 
@@ -939,13 +947,15 @@ window.render = function() {
     if (!existing) {
       var div = document.createElement('div');
       div.id = 'tutorial-hint-inject';
-      div.innerHTML = '<div class="tutorial-hint-overlay" onclick="dismissTutorialHint()">' +
-        '<div class="tutorial-hint-card" onclick="event.stopPropagation()">' +
-          '<div class="tutorial-hint-title">' + hint.title + '</div>' +
-          '<div class="tutorial-hint-text">' + hint.text + '</div>' +
-          '<button class="btn btn-primary" onclick="dismissTutorialHint()" style="margin-top:0.8rem;width:100%">Got it!</button>' +
+      div.innerHTML = '<div style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:9500;pointer-events:none;max-width:350px;width:90%;">' +
+        '<div style="background:rgba(17,17,40,0.95);border:1px solid var(--neon-pink,#ff2d95);border-radius:8px;padding:0.4rem 0.7rem;pointer-events:auto;display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;box-shadow:0 2px 12px rgba(255,45,149,0.2);" onclick="dismissTutorialHint();render();">' +
+          '<span style="color:var(--neon-pink);font-weight:bold;white-space:nowrap;">' + hint.title + '</span>' +
+          '<span style="color:var(--text-dim);flex:1;">' + hint.text.substring(0, 60) + '</span>' +
+          '<span style="color:#888;font-size:0.65rem;cursor:pointer;">✕</span>' +
         '</div></div>';
       document.body.appendChild(div);
+      // Auto-dismiss after 4 seconds
+      setTimeout(function() { dismissTutorialHint(); if (typeof render === 'function') render(); }, 4000);
     }
   }
 };
