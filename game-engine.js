@@ -3414,6 +3414,126 @@ function waitDay(state) {
       bt.hustler_a5_final = true;
       msgs.push('📖 Three-card monte on Biscayne Boulevard. That\'s where it started. Shell companies and offshore millions. That\'s where it ended. The hustle never changed. Only the stakes. And the emptiness.');
     }
+
+    // CONNECTED KID: Act 5 - Blood and legacy
+    if (charId === 'connected_kid' && day >= 3600 && !bt.connected_a5_father_war) {
+      bt.connected_a5_father_war = true;
+      msgs.push('⚔️ Your father made his move. He rallied the old guard — men who remember HIS era. Half the Miami underworld is choosing sides. Father vs. son. The city bleeds.');
+      state.heat = Math.min(100, (state.heat || 0) + 20);
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { civil_war: 1 } }, 'backstory', 'connected_a5_war');
+    }
+    if (charId === 'connected_kid' && day >= 3900 && !bt.connected_a5_father_falls) {
+      bt.connected_a5_father_falls = true;
+      msgs.push('💀 Your father was shot. Not by you — by the cartel. They chose you. He\'s alive but broken. In a wheelchair. "You win, mijo," he whispered. Victory never tasted so bitter.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { pyrrhic_victory: 1 }, stats: { stress: 25 } }, 'backstory', 'connected_a5_father_shot');
+    }
+    if (charId === 'connected_kid' && day >= 4200 && !bt.connected_a5_cartel_demands) {
+      bt.connected_a5_cartel_demands = true;
+      msgs.push('💀 The cartel wants more. Always more. "Your father understood: we OWN you. You just manage the franchise." The throne has chains. They always did.');
+    }
+    if (charId === 'connected_kid' && day >= 4500 && !bt.connected_a5_mother_dies) {
+      bt.connected_a5_mother_dies = true;
+      msgs.push('💀 Your mother passed in her sleep. The hospital said her heart gave out. But you know: it was a broken heart. Her husband in a wheelchair. Her son a cartel puppet. She died of this family.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { orphaned: 1, family_destroyed: 1 }, stats: { stress: 30 } }, 'backstory', 'connected_a5_mother');
+    }
+    if (charId === 'connected_kid' && day >= 4800 && !bt.connected_a5_final) {
+      bt.connected_a5_final = true;
+      msgs.push('📖 The connected kid. Heir to an empire of blood. You defeated your father, lost your mother, and sold your soul to the cartel. The throne was always a cage. Your children will inherit it. The cycle continues.');
+    }
+
+    // CLEANSKIN: Act 5 - The final number
+    if (charId === 'cleanskin' && day >= 3600 && !bt.cleanskin_a5_vance_deal) {
+      bt.cleanskin_a5_vance_deal = true;
+      msgs.push('🕵️ Agent Vance offered a deal. Cooperate and she\'ll recommend leniency. "You\'re smart enough to know how this ends. Most of them aren\'t." She respects you. That makes it worse.');
+    }
+    if (charId === 'cleanskin' && day >= 3900 && !bt.cleanskin_a5_kid_visit) {
+      bt.cleanskin_a5_kid_visit = true;
+      msgs.push('👦 Your youngest showed up unannounced. "Dad, I want to be an accountant. Like you used to be." The innocence in those words. The weight of what they don\'t know.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { legacy_guilt: 1 }, stats: { stress: 20 } }, 'backstory', 'cleanskin_a5_kid');
+    }
+    if (charId === 'cleanskin' && day >= 4200 && !bt.cleanskin_a5_trial_begins) {
+      bt.cleanskin_a5_trial_begins = true;
+      msgs.push('⚖️ Trial date set. United States v. YOU. 23 counts of financial crime. Agent Vance on the witness stand. Seven years of evidence. Your own spreadsheets will convict you.');
+      if (state.investigation) state.investigation.points = 100;
+    }
+    if (charId === 'cleanskin' && day >= 4500 && !bt.cleanskin_a5_last_numbers) {
+      bt.cleanskin_a5_last_numbers = true;
+      var cleanNW = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      msgs.push('📊 You ran the numbers one last time. $' + cleanNW.toLocaleString() + ' in assets. $' + (state.bank || 0).toLocaleString() + ' in accounts the feds can\'t reach. The final spreadsheet of your criminal career.');
+    }
+    if (charId === 'cleanskin' && day >= 4800 && !bt.cleanskin_a5_final) {
+      bt.cleanskin_a5_final = true;
+      msgs.push('📖 The numbers always added up. That was the problem — and the gift. You turned a CPA license into a criminal empire, and a criminal empire into... this. The final balance sheet is written in red ink.');
+    }
+
+    // VETERAN: Act 5 - The last soldier's requiem
+    if (charId === 'veteran' && day >= 3600 && !bt.veteran_a5_grandchild_born) {
+      bt.veteran_a5_grandchild_born = true;
+      msgs.push('👶 Your grandchild is born. 7 pounds, 4 ounces. You held her in the hospital. Your hands — the same hands that have done terrible things — holding something pure. "Hi, little one. I\'m your grandpa."');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { grandfather: 1, hope: 1 } }, 'backstory', 'veteran_a5_grandchild');
+    }
+    if (charId === 'veteran' && day >= 3900 && !bt.veteran_a5_razor_retires) {
+      bt.veteran_a5_razor_retires = true;
+      msgs.push('👋 Razor is leaving. "30 years, boss. I\'m done. Got a place in the Keys. Gonna fish." Your last soldier. The last one who remembers the beginning. "Thank you," you say. You mean it.');
+      if (state.henchmen) {
+        var razIdx = state.henchmen.findIndex(function(h) { return h.name === 'Razor'; });
+        if (razIdx >= 0) state.henchmen.splice(razIdx, 1);
+      }
+    }
+    if (charId === 'veteran' && day >= 4200 && !bt.veteran_a5_second_heart_attack) {
+      bt.veteran_a5_second_heart_attack = true;
+      msgs.push('❤️ Second heart attack. This one was worse. Three days in the ICU. Your daughter held your hand. Your grandchild slept in a carrier beside the bed. The game almost took you.');
+      state.health = Math.max(20, (state.health || 100) - 25);
+      state.maxHealth = Math.max(40, (state.maxHealth || 100) - 15);
+    }
+    if (charId === 'veteran' && day >= 4500 && !bt.veteran_a5_letter) {
+      bt.veteran_a5_letter = true;
+      msgs.push('✉️ You wrote a letter. To your daughter. To your grandchild. Everything. Names, dates, locations. What you did. Why you did it. Sealed in an envelope marked "After I\'m gone."');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { confession_written: 1 } }, 'backstory', 'veteran_a5_letter');
+    }
+    if (charId === 'veteran' && day >= 4800 && !bt.veteran_a5_final) {
+      bt.veteran_a5_final = true;
+      msgs.push('📖 The old soldier sits in a garden. His grandchild plays at his feet. Somewhere a phone rings but he doesn\'t answer. The war is over. Not because he won. Because he\'s too tired to fight. And maybe — just maybe — that\'s enough.');
+    }
+
+    // IMMIGRANT: Act 5 - The bridge burns
+    if (charId === 'immigrant' && day >= 3600 && !bt.immigrant_a5_deported_cousin) {
+      bt.immigrant_a5_deported_cousin = true;
+      msgs.push('✈️ Your cousin was deported. They survived the overdose but ICE was waiting at the hospital. Gone. Back to the country they fled. Because of you. Because of what you brought here.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { enabler_consequence: 1 }, stats: { stress: 20 } }, 'backstory', 'immigrant_a5_cousin');
+    }
+    if (charId === 'immigrant' && day >= 3900 && !bt.immigrant_a5_community_forgives) {
+      bt.immigrant_a5_community_forgives = true;
+      var trust = state.rep ? (state.rep.trust || 0) : 0;
+      if (trust > 20) {
+        msgs.push('🤝 The community center unveils a new mural. Your face again — but this time with the words "Flawed Hero" underneath. They know what you are. They choose to remember the good.');
+      } else {
+        msgs.push('😞 The community center closed. No funding. No support. The neighborhood you tried to save remembers only the poison you brought. The mural was painted over.');
+      }
+    }
+    if (charId === 'immigrant' && day >= 4200 && !bt.immigrant_a5_mother_final) {
+      bt.immigrant_a5_mother_final = true;
+      msgs.push('📞 Your mother\'s last call. "Come home. I don\'t care what you\'ve done. Come home." You can hear her crying. The ocean between you feels wider than ever.');
+      if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { mothers_call: 1 }, stats: { stress: 20 } }, 'backstory', 'immigrant_a5_mother_call');
+    }
+    if (charId === 'immigrant' && day >= 4500 && !bt.immigrant_a5_passport) {
+      bt.immigrant_a5_passport = true;
+      msgs.push('🛂 You hold two passports. One American. One from home. Two identities. Two lives. Both built on lies. Neither feels real anymore.');
+    }
+    if (charId === 'immigrant' && day >= 4800 && !bt.immigrant_a5_final) {
+      bt.immigrant_a5_final = true;
+      msgs.push('📖 You crossed the ocean with nothing. You built everything. You destroyed some of it. The bridge between two worlds is burning, and you\'re standing in the middle. Which shore do you swim to? Or do you just... let go?');
+    }
+
+    // === ALL CHARACTERS: Final game day message ===
+    if (day >= 4900 && !bt.final_countdown) {
+      bt.final_countdown = true;
+      var finalNW = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+      var finalKills = state.peopleKilled || 0;
+      var finalCrew = (state.henchmen || []).length;
+      var finalTerr = typeof getControlledTerritories === 'function' ? getControlledTerritories(state).length : 0;
+      msgs.push('🏁 THE END IS NEAR. Day ' + day + ' of 5000. Net worth: $' + finalNW.toLocaleString() + '. ' + finalKills + ' bodies. ' + finalCrew + ' crew. ' + finalTerr + ' territories. 100 days to write your ending.');
+    }
   }
 
   msgs.push(...processCrewDaily(state));
