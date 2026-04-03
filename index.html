@@ -1861,24 +1861,22 @@ body::before {
 /* First-open hint popup */
 .tutorial-hint-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 15vh;
-  z-index: 10000;
+  top: 60px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 9500;
   animation: fadeIn 0.3s ease;
+  pointer-events: none;
 }
 .tutorial-hint-card {
   background: var(--bg-panel, #111128);
   border: 2px solid var(--neon-pink, #ff2d95);
   border-radius: 10px;
-  padding: 1.2rem 1.5rem;
-  max-width: 380px;
-  width: 85%;
-  box-shadow: 0 0 30px rgba(255, 45, 149, 0.3);
+  padding: 0.8rem 1rem;
+  max-width: 320px;
+  width: auto;
+  box-shadow: 0 0 20px rgba(255, 45, 149, 0.3);
   text-align: center;
+  pointer-events: auto;
 }
 .tutorial-hint-title {
   font-size: 1.1rem;
