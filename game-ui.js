@@ -6656,6 +6656,23 @@ function migrateGameState(state) {
 
   if (!state.version || state.version < 7) state.version = 7;
 
+  // === V8 Migration: District system ===
+  // Move old 'miami' location to a specific district
+  if (state.currentLocation === 'miami' && typeof MIAMI_DISTRICTS !== 'undefined' && MIAMI_DISTRICTS.length > 0) {
+    // Try to place player in their character's home district
+    var charHome = MIAMI_DISTRICTS.find(function(d) { return d.startingCharacter === state.characterId; });
+    if (charHome) {
+      state.currentLocation = charHome.id;
+    } else {
+      state.currentLocation = 'downtown'; // Default fallback
+    }
+    if (!state.citiesVisited.includes(state.currentLocation)) {
+      state.citiesVisited.push(state.currentLocation);
+    }
+  }
+
+  if (!state.version || state.version < 8) state.version = 8;
+
   return state;
 }
 

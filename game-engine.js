@@ -1939,7 +1939,8 @@ function createGameState() {
 // PRICE ENGINE
 // ============================================================
 function generatePrices(state) {
-  const location = LOCATIONS.find(l => l.id === state.currentLocation);
+  const location = LOCATIONS.find(l => l.id === state.currentLocation) || LOCATIONS[0];
+  if (!location) return { prices: {}, events: [] }; // Safety: no locations loaded
   const prices = {};
   const events = [];
 
@@ -4364,6 +4365,7 @@ function retrieveDrugs(state, drugId, amount) {
 function getAvailableTransport(state, destinationId) {
   const from = LOCATIONS.find(l => l.id === state.currentLocation);
   const to = LOCATIONS.find(l => l.id === destinationId);
+  if (!from || !to) return [];
   const sameRegion = from.region === to.region;
   const results = [];
 
