@@ -1949,6 +1949,12 @@ function generatePrices(state) {
   const prevPrices = state.prices || {};
 
   for (const drug of DRUGS) {
+    // Skip drugs that haven't been discovered yet (minDay not reached)
+    if (drug.minDay && (state.day || 1) < drug.minDay) {
+      prices[drug.id] = null;
+      continue;
+    }
+
     const range = drug.maxPrice - drug.minPrice;
     const midPrice = (drug.minPrice + drug.maxPrice) / 2;
 
@@ -1977,8 +1983,9 @@ function generatePrices(state) {
     // Clamp to min/max bounds (with location modifier)
     price = Math.max(drug.minPrice * 0.5, Math.min(drug.maxPrice * 2.5 * location.priceModifier, price));
 
-    // Check for price events (big moves like news)
-    for (const event of PRICE_EVENTS) {
+    // Check for price events (big moves like news) - max 2 events per day
+    if (events.length >= 2) { /* skip - enough events for today */ }
+    else for (const event of PRICE_EVENTS) {
       if (Math.random() < event.chance) {
         price *= event.multiplier;
         const msg = event.msg.replace('{drug}', drug.name);
@@ -2029,11 +2036,7 @@ function generatePrices(state) {
       price = midPrice + (price - midPrice) * vol;
     }
 
-    // Day-based drug availability: drugs unlock over time
-    if (drug.minDay && (state.day || 1) < drug.minDay) {
-      prices[drug.id] = null; // Not available yet - haven't discovered this drug
-      continue;
-    }
+    // (minDay check moved to top of loop - drugs skip entirely before their unlock day)
 
     // NG+ drug availability check (e.g., Fentanyl requires Tier 2+)
     if (drug.ngPlus && !isDrugAvailableNGPlus(state, drug)) {
@@ -3808,8 +3811,9 @@ function waitDay(state) {
     const drift = 0.80 + Math.random() * 0.40; // 0.80 to 1.20
     let newPrice = Math.round(current * drift);
 
-    // Check for new price events (lower chance than full regen)
-    for (const event of PRICE_EVENTS) {
+    // Check for new price events (lower chance than full regen, max 2 per day)
+    if (events.length >= 2) { /* enough events */ }
+    else for (const event of PRICE_EVENTS) {
       if (Math.random() < event.chance * 0.5) {
         newPrice = Math.round(newPrice * event.multiplier);
         const msg = event.msg.replace('{drug}', drug.name);
