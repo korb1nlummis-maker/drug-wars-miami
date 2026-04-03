@@ -4173,9 +4173,12 @@ function withdraw(state, amount) {
 
 function payDebt(state, amount) {
   if (amount > state.cash) return { success: false, msg: 'Not enough cash.' };
+  if (state.debt <= 0) return { success: false, msg: 'No debt to pay.' };
   const payment = Math.min(amount, state.debt);
   state.cash -= payment;
   state.debt -= payment;
+  // Prevent same-day pay-and-reborrow cycling
+  state.lastPayDay = state.day;
   return { success: true, msg: `Paid $${payment.toLocaleString()} on your debt. Remaining: $${state.debt.toLocaleString()}` };
 }
 
@@ -4183,9 +4186,12 @@ function borrowMoney(state, amount) {
   const maxBorrow = 50000;
   if (state.debt + amount > maxBorrow) return { success: false, msg: `Loan shark won't lend more than $${maxBorrow.toLocaleString()} total.` };
 
-  // Cooldown: can only borrow once per day
+  // Cooldown: can only borrow once per day, can't borrow same day you paid
   if (state.lastBorrowDay === state.day) {
     return { success: false, msg: 'The loan shark says come back tomorrow. One loan per day.' };
+  }
+  if (state.lastPayDay === state.day) {
+    return { success: false, msg: 'You just paid off debt today. The shark needs a day to process. Come back tomorrow.' };
   }
 
   // Escalating risk: higher debt = loan shark sends enforcers
@@ -5043,6 +5049,17 @@ function hireHenchman(state, typeId) {
 
   const location = LOCATIONS.find(l => l.id === state.currentLocation);
   if (!location.hasBlackMarket) return { success: false, msg: 'No black market here to find crew.' };
+
+  // Max 2 hires per day (you can't recruit an army in one afternoon)
+  if (!state._hiresThisDay) state._hiresThisDay = { day: 0, count: 0 };
+  if (state._hiresThisDay.day === state.day) {
+    if (state._hiresThisDay.count >= 2) {
+      return { success: false, msg: 'Already hired 2 people today. The black market is tapped out. Come back tomorrow.' };
+    }
+    state._hiresThisDay.count++;
+  } else {
+    state._hiresThisDay = { day: state.day, count: 1 };
+  }
 
   state.cash -= type.cost;
   const traits = typeof generateCrewTraits === 'function' ? generateCrewTraits(typeId) : [];
@@ -5932,6 +5949,13 @@ function challengeTerritory(state) {
 
   const gang = getTerritoryGang(locId);
   if (!gang) return { success: false, msg: 'No gang controls this area.' };
+
+  // Cooldown: 3 days between territory challenges
+  if (state.lastChallengeDay && (state.day - state.lastChallengeDay) < 3) {
+    var daysLeft = 3 - (state.day - state.lastChallengeDay);
+    return { success: false, msg: 'Your crew needs to recover. Wait ' + daysLeft + ' more day' + (daysLeft > 1 ? 's' : '') + ' before challenging again.' };
+  }
+  state.lastChallengeDay = state.day;
 
   // Need at least 2 crew to challenge
   const activeCrew = state.henchmen.filter(h => !h.injured);
