@@ -174,7 +174,7 @@ const MIAMI_CHARACTERS = [
     baseSkills: { combat: 0, driving: 0, persuasion: 0, chemistry: 0, business: 1, stealth: 0, leadership: 2, streetwise: 1 },
     startingInventory: 200,
     startingItems: [],
-    startingWeapon: 'pistol',
+    startingWeapon: 'beretta',
     friendlyFactions: ['los_cubanos', 'cartel_remnants'],
     hostileFactions: ['southern_boys'],
     difficulty: 'Medium',
@@ -256,7 +256,7 @@ const MIAMI_CHARACTERS = [
     baseSkills: { combat: 4, driving: 2, persuasion: 0, chemistry: 0, business: 0, stealth: 1, leadership: 0, streetwise: 0 },
     startingInventory: 150,
     startingItems: ['body_armor'],
-    startingWeapon: 'glock_17',
+    startingWeapon: 'magnum',
     friendlyFactions: ['dixie_mafia', 'southern_boys', 'cartel_remnants'],
     hostileFactions: ['zoe_pound', 'eastern_bloc'],
     difficulty: 'Hard',
@@ -445,6 +445,11 @@ function applyCharacterToState(state, charId) {
   // Weapon
   if (char.startingWeapon) {
     state.equippedWeapon = char.startingWeapon;
+    // Also add to weapons inventory
+    if (!state.weapons) state.weapons = ['fists'];
+    if (!state.weapons.includes(char.startingWeapon)) {
+      state.weapons.push(char.startingWeapon);
+    }
   }
 
   // Items

@@ -4985,7 +4985,7 @@ function resolveCombatRound(state, action, event) {
       if (hasItem(state, 'silencer')) {
         results.msg += ' 🔇 Silencer kept things quiet.';
       } else {
-        state.heat += 15;
+        state.heat = Math.min(100, (state.heat || 0) + 15);
       }
       state.peopleKilled += event.enemyCount;
       // Body disposal system — bodies accumulate from kills
@@ -7324,6 +7324,11 @@ function getEffectiveSpeech(state) {
 }
 
 // ============================================================
+// SAFE HEAT ADDITION - always clamps to 0-100
+function addHeat(state, amount) {
+  state.heat = Math.min(100, Math.max(0, (state.heat || 0) + amount));
+}
+
 // GAME DAY SCALING - Makes everything harder over 5000 days
 // ============================================================
 
