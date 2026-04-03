@@ -70,7 +70,7 @@ const MusicEngine = (() => {
     if (!url) return null;
 
     const audio = new Audio();
-    audio.crossOrigin = 'anonymous';
+    // Don't set crossOrigin - Squarespace CDN blocks CORS but allows normal playback
     audio.preload = 'auto';
 
     const entry = { audio, loaded: false, error: false };
