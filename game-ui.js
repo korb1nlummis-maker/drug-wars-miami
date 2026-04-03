@@ -426,6 +426,16 @@ function confirmCharacterSelection(characterId) {
   if (typeof applyCharacterToState === 'function') {
     applyCharacterToState(gameState, characterId);
   }
+  // Set starting district based on character's home turf
+  if (typeof MIAMI_DISTRICTS !== 'undefined') {
+    var homeDistrict = MIAMI_DISTRICTS.find(function(d) { return d.startingCharacter === characterId; });
+    if (homeDistrict) {
+      gameState.currentLocation = homeDistrict.id;
+      if (!gameState.citiesVisited.includes(homeDistrict.id)) {
+        gameState.citiesVisited.push(homeDistrict.id);
+      }
+    }
+  }
   // Apply New Game+ modifiers if applicable
   if (pendingNewGamePlus) {
     applyNewGamePlusModifiers(gameState);
@@ -1571,6 +1581,8 @@ function renderGame() {
     const price = gameState.prices[drug.id] != null ? gameState.prices[drug.id] : null;
     const owned = gameState.inventory[drug.id] || 0;
     const drugLocked = drug.minLevel && playerLevel < drug.minLevel;
+    // Hide drugs that haven't been discovered yet (minDay not reached and not owned)
+    if (drug.minDay && (gameState.day || 1) < drug.minDay && owned <= 0) return '';
     const supplyIndicator = (typeof getMarketCondition === 'function' && price !== null) ?
       (() => { const cond = getMarketCondition(gameState, drug.id, gameState.currentLocation);
         return cond.label !== 'STABLE' ? `<span style="font-size:0.55rem;margin-left:0.3rem;color:${cond.color}">${cond.label}</span>` : '';
