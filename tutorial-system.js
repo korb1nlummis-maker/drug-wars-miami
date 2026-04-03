@@ -141,11 +141,9 @@ var TUTORIAL_STEPS = [
   // === STEP 0: Welcome ===
   {
     id: 'welcome',
-    title: 'WELCOME TO MIAMI',
+    title: 'WELCOME',
     getText: function() {
-      return 'You just arrived in Miami with <b>$' + (gameState ? gameState.cash.toLocaleString() : '1,500') + '</b> in cash and <b>$5,000</b> in debt to a loan shark. ' +
-        'Your goal? Build a drug empire from nothing. The character you chose determines your starting bonuses and play style. ' +
-        'Let me walk you through everything you need to survive.';
+      return '<b>$' + (gameState ? gameState.cash.toLocaleString() : '1,500') + '</b> cash, <b>$5,000</b> debt. Buy drugs cheap, sell high. Build your empire.';
     },
     action: 'next',
     highlight: null,
@@ -154,10 +152,9 @@ var TUTORIAL_STEPS = [
   // === STEP 1: The Market ===
   {
     id: 'read_market',
-    title: 'THE MARKET',
+    title: 'BUY / SELL TAB',
     getText: function() {
-      return 'Click the <b>Buy / Sell</b> tab above the main area. This is where you see current drug prices at your location. ' +
-        'Prices change every day and every location has different rates. Watch for <b>price events</b> -- busts crash prices, shortages spike them.';
+      return 'Click <b>Buy / Sell</b> tab to see drug prices. Prices change daily and vary by district.';
     },
     action: 'wait',
     waitFor: function() { return typeof mainTab !== 'undefined' && mainTab === 'buysell'; },
@@ -168,10 +165,9 @@ var TUTORIAL_STEPS = [
   // === STEP 2: Buying Drugs ===
   {
     id: 'buy_drug',
-    title: 'BUYING DRUGS',
+    title: 'BUY DRUGS',
     getText: function() {
-      return 'See the drug list? Each row shows the drug name, current price, and your inventory. ' +
-        'Find an affordable drug and click the <b>BUY</b> button next to it. <b>' + getTutorialDrugName() + '</b> is a good starter choice.';
+      return 'Click <b>BUY</b> on any drug. <b>' + getTutorialDrugName() + '</b> is cheap and easy to start with.';
     },
     action: 'wait',
     interactive: true,
@@ -182,10 +178,9 @@ var TUTORIAL_STEPS = [
   // === STEP 3: Confirm Purchase (interactive) ===
   {
     id: 'confirm_buy',
-    title: 'COMPLETE YOUR PURCHASE',
+    title: 'CONFIRM BUY',
     getText: function() {
-      return 'Set the amount you want to buy (try spending about <b>half your cash</b> -- never go all-in). ' +
-        'Then click the <b>BUY</b> button in the trade dialog to confirm. This is your first deal!';
+      return 'Set amount (spend about <b>half your cash</b>), then confirm. First deal!';
     },
     action: 'wait',
     interactive: true,
@@ -205,11 +200,10 @@ var TUTORIAL_STEPS = [
   // === STEP 4: Selling Drugs (interactive) ===
   {
     id: 'sell_drug',
-    title: 'SELLING FOR PROFIT',
+    title: 'SELL DRUGS',
     getText: function() {
       var name = tutorialBoughtDrug ? getDrugDisplayName(tutorialBoughtDrug) : 'your drug';
-      return 'Now click the <b>SELL</b> button next to <b>' + name + '</b> in the drug list. ' +
-        'Selling at a higher price than you bought is how you make money. Prices change every day, so timing matters!';
+      return 'Click <b>SELL</b> on <b>' + name + '</b>. Sell higher than you bought = profit.';
     },
     action: 'wait',
     interactive: true,
@@ -220,10 +214,9 @@ var TUTORIAL_STEPS = [
   // === STEP 5: Travel (interactive) ===
   {
     id: 'travel',
-    title: 'TRAVEL TO A NEW DISTRICT',
+    title: 'TRAVEL',
     getText: function() {
-      return 'Different locations have different prices. Click the <b>Travel</b> button in the sidebar to see available destinations. ' +
-        'Moving to a new area costs one day but opens new opportunities. Buy low here, sell high there!';
+      return 'Click <b>Travel</b> in the sidebar. Each district has different prices and gangs.';
     },
     action: 'wait',
     interactive: true,
@@ -231,14 +224,25 @@ var TUTORIAL_STEPS = [
     highlightSelector: '.btn-sidebar.btn-primary.btn-glow',
     arrowText: 'Click Travel',
   },
+  // === STEP 5b: On the Travel Screen ===
+  {
+    id: 'travel_screen',
+    title: 'CHOOSE DESTINATION',
+    getText: function() {
+      return 'Click a district to see details. <b>Cheap districts</b> (green prices) = buy there. <b>Expensive districts</b> (red prices) = sell there. Taxi is instant, walking takes 1 day.';
+    },
+    action: 'wait',
+    interactive: true,
+    waitFor: function() { return typeof currentScreen !== 'undefined' && currentScreen === 'game' && gameState && gameState.day >= 1; },
+    highlight: null,
+    arrowText: 'Pick a district and travel',
+  },
   // === STEP 6: Buy Low Sell High ===
   {
     id: 'buy_low_sell_high',
-    title: 'THE CORE LOOP: BUY LOW, SELL HIGH',
+    title: 'BUY LOW, SELL HIGH',
     getText: function() {
-      return 'This is the heart of the game. Every location prices drugs differently, and prices fluctuate daily. ' +
-        '<b>Buy drugs where they are cheap</b> (source cities like Bogota, Kabul) and <b>sell where demand is high</b> (rich cities like Tokyo, London). ' +
-        'Watch for price events -- a <b>bust</b> crashes a drug\'s price (buy!), a <b>shortage</b> spikes it (sell!).';
+      return '<b>Buy where cheap → sell where expensive.</b> Check the Price Intel tab for remembered prices. Busts crash prices (buy!), shortages spike them (sell!).';
     },
     action: 'next',
     highlight: null,

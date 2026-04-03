@@ -2567,20 +2567,22 @@ function renderStash() {
 }
 
 function doStash(action, drugId, amount) {
-  const usePropertyStash = typeof stashDrugsAtLocation === 'function';
   let result;
-  if (usePropertyStash) {
+  // Try property stash first, then fall back to basic Miami stash
+  if (typeof stashDrugsAtLocation === 'function') {
     result = action === 'store'
       ? stashDrugsAtLocation(gameState, drugId, amount)
       : retrieveDrugsFromLocation(gameState, drugId, amount);
-  } else {
+  }
+  // If property stash failed (no property), try basic stash
+  if ((!result || !result.success) && typeof stashDrugs === 'function') {
     result = action === 'store' ? stashDrugs(gameState, drugId, amount) : retrieveDrugs(gameState, drugId, amount);
   }
-  if (result.success) {
+  if (result && result.success) {
     playSound('click');
     gameState.messageLog.push(result.msg);
   } else {
-    alert(result.msg);
+    showNotification(result ? result.msg : 'Cannot stash here', 'error');
   }
   render();
 }
