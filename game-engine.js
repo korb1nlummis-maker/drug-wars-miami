@@ -4166,12 +4166,19 @@ function sellDrug(state, drugId, amount) {
   if (typeof getFactionSellBonus === 'function') {
     price = Math.round(price * getFactionSellBonus(state, state.currentLocation));
   }
-  // Reputation penalty — low-level dealers get worse prices
+  // Reputation penalty — only kicks in for premium drugs at low levels
+  // New players can always profit on basic drugs; penalty only affects high-value products
   const playerLevel = typeof getKingpinLevel === 'function' ? getKingpinLevel(state.xp || 0).level : 1;
-  if (playerLevel <= 3) price = Math.round(price * 0.70);       // Street punk: 30% penalty
-  else if (playerLevel <= 5) price = Math.round(price * 0.82);  // Hustler/Dealer: 18% penalty
-  else if (playerLevel <= 7) price = Math.round(price * 0.90);  // Supplier/Dist: 10% penalty
-  else if (playerLevel <= 10) price = Math.round(price * 0.95); // Lt/Boss: 5% penalty
+  const drugDef2 = DRUGS.find(d => d.id === drugId);
+  const isPremium = drugDef2 && (drugDef2.category === 'premium' || drugDef2.category === 'mid');
+  if (isPremium) {
+    // Premium/mid drugs have a reputation penalty at low levels
+    if (playerLevel <= 3) price = Math.round(price * 0.85);       // Street punk: 15% penalty on premium
+    else if (playerLevel <= 5) price = Math.round(price * 0.92);  // Hustler/Dealer: 8% penalty
+    else if (playerLevel <= 7) price = Math.round(price * 0.96);  // Supplier/Dist: 4% penalty
+    // Level 8+: no penalty on any drug
+  }
+  // Low/bulk category drugs: NO penalty at any level (basic street dealing)
   // Perk: sell bonus
   if (typeof getPerkSellBonus === 'function') {
     const bonus = getPerkSellBonus(state);
