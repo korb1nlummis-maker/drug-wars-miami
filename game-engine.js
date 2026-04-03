@@ -4210,7 +4210,11 @@ function borrowMoney(state, amount) {
 // STASH (Miami only)
 // ============================================================
 function stashDrugs(state, drugId, amount) {
-  if (state.currentLocation !== 'miami') return { success: false, msg: 'Your stash is in Miami.' };
+  // Stash works in any Miami district or the miami hub
+  var loc = LOCATIONS.find(function(l) { return l.id === state.currentLocation; });
+  if (!loc || (loc.region !== 'miami' && loc.region !== 'Americas' && state.currentLocation !== 'miami')) {
+    return { success: false, msg: 'Your stash is in Miami. Travel to a Miami district first.' };
+  }
   if (!state.inventory[drugId] || state.inventory[drugId] < amount) return { success: false, msg: 'You don\'t have that much.' };
   state.inventory[drugId] -= amount;
   if (state.inventory[drugId] === 0) delete state.inventory[drugId];
@@ -4219,7 +4223,10 @@ function stashDrugs(state, drugId, amount) {
 }
 
 function retrieveDrugs(state, drugId, amount) {
-  if (state.currentLocation !== 'miami') return { success: false, msg: 'Your stash is in Miami.' };
+  var loc2 = LOCATIONS.find(function(l) { return l.id === state.currentLocation; });
+  if (!loc2 || (loc2.region !== 'miami' && loc2.region !== 'Americas' && state.currentLocation !== 'miami')) {
+    return { success: false, msg: 'Your stash is in Miami. Travel to a Miami district first.' };
+  }
   if (!state.stash[drugId] || state.stash[drugId] < amount) return { success: false, msg: 'Not enough in your stash.' };
   if (amount > getFreeSpace(state)) return { success: false, msg: 'Not enough inventory space.' };
   state.stash[drugId] -= amount;
