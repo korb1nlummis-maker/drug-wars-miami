@@ -339,7 +339,10 @@ function getItemCount(state, itemId) {
 // TRANSPORT TYPES
 // ============================================================
 const TRANSPORT = {
-  // Budget
+  // Local (within-city district travel)
+  walk: { name: 'Walk', emoji: '🚶', costPerRegion: 0, timeDays: 1, riskMod: 1.0, inventoryLimit: 100, sameRegionOnly: true, tier: 'budget', desc: 'Free but slow. Low carry capacity.' },
+  taxi: { name: 'Taxi', emoji: '🚕', costPerRegion: 50, timeDays: 0, riskMod: 0.3, inventoryLimit: 300, sameRegionOnly: true, tier: 'budget', desc: 'Quick ride across town. Same day arrival.' },
+  // Budget (city-to-city)
   bus: { name: 'Greyhound Bus', emoji: '🚌', costPerRegion: 200, timeDays: 2, riskMod: 0.5, inventoryLimit: 500, sameRegionOnly: true, tier: 'budget' },
   car: { name: 'Muscle Car', emoji: '🚗', costPerRegion: 500, timeDays: 1, riskMod: 0.8, inventoryLimit: 1000, sameRegionOnly: true, tier: 'budget' },
   motorcycle: { name: 'Motorcycle', emoji: '🏍️', costPerRegion: 300, timeDays: 1, riskMod: 0.9, inventoryLimit: 200, sameRegionOnly: true, tier: 'budget' },
@@ -4451,6 +4454,9 @@ function travel(state, destinationId, transportId) {
 
   // Advance days (modified by driver crew and vehicle speed)
   var daysUsed = transport.timeDays;
+  // Same-day local travel (taxi, etc.) = 0 days, skip all modifiers
+  var isLocalTravel = daysUsed === 0;
+  if (!isLocalTravel) {
   // Driver crew reduces travel time
   if (state._driverBonus && state._driverBonus > 0) {
     daysUsed = Math.max(1, Math.round(daysUsed * (1 - state._driverBonus)));
@@ -4470,6 +4476,7 @@ function travel(state, destinationId, transportId) {
       daysUsed = Math.max(1, Math.ceil(daysUsed / wxTravel.travelSpeed));
     }
   }
+  } // end if (!isLocalTravel)
   state.day += daysUsed;
 
   // Apply daily interest, crew management, and investigation for each day traveled
