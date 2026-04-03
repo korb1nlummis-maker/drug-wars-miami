@@ -406,7 +406,8 @@ function applyCharacterToState(state, charId) {
   const char = getCharacterById(charId);
   if (!char) return;
 
-  state.character = charId;
+  state.characterId = charId;
+  state.character = charId; // Legacy compatibility
   state.characterData = {
     id: char.id,
     name: char.name,
@@ -486,6 +487,36 @@ function applyCharacterToState(state, charId) {
       suspicion: 0,
       level: 1,
     }));
+  }
+
+  // Bridge: set characterFlags from specialCondition for backstory event compatibility
+  state.characterFlags = {};
+  if (char.specialCondition) {
+    if (char.specialCondition.id === 'probation') state.characterFlags.onProbation = true;
+    if (char.specialCondition.id === 'bounty') state.characterFlags.activeBounty = true;
+    if (char.specialCondition.id === 'debt') state.characterFlags.familyDependent = true;
+  }
+  // Map character-specific flags based on ID
+  var flagMap = {
+    dropout: { cleanRecord: true },
+    corner_kid: { knownOnStreets: true },
+    ex_con: { onProbation: true, prisonRecord: true },
+    hustler: { smoothTalker: true },
+    connected_kid: { cartelConnection: true, activeBounty: true },
+    cleanskin: { cleanRecord: true, legitimateCover: true },
+    veteran: { oldInjury: true, knownEnforcer: true },
+    immigrant: { internationalContact: true, familyDependent: true },
+  };
+  if (flagMap[charId]) {
+    for (var flagKey in flagMap[charId]) {
+      state.characterFlags[flagKey] = flagMap[charId][flagKey];
+    }
+  }
+
+  // Also set characterPassive from the old system for compatibility
+  var oldChar = typeof CHARACTER_ARCHETYPES !== 'undefined' ? CHARACTER_ARCHETYPES.find(function(c) { return c.id === charId; }) : null;
+  if (oldChar && oldChar.passiveEffect) {
+    state.characterPassive = oldChar.passiveEffect;
   }
 }
 
