@@ -7786,10 +7786,11 @@ function renderDefense() {
       '<td>' +
         (controlledTerritories.length > 0 ?
           controlledTerritories.map(function(t) {
-            var distId = t.id || t.districtId || t.name;
+            var distId = typeof t === 'string' ? t : (t && t.id ? t.id : 'unknown');
+            var distName = String(distId).replace(/_/g, ' ').substring(0, 12);
             var existing = ((defState.structures || {})[distId] || []).indexOf(s.id) !== -1;
-            return existing ? '<span class="neon-green" style="font-size:0.65rem;margin-right:4px;">' + (t.name || distId).substr(0, 8) + '✓</span>' :
-              '<button class="btn btn-sm btn-secondary" style="font-size:0.6rem;margin:1px;border-color:var(--neon-cyan);color:var(--neon-cyan);" onclick="doBuildStructure(\'' + distId + '\',\'' + s.id + '\')">' + (t.name || distId).substr(0, 8) + '</button>';
+            return existing ? '<span class="neon-green" style="font-size:0.65rem;margin-right:4px;">' + distName + '✓</span>' :
+              '<button class="btn btn-sm btn-secondary" style="font-size:0.6rem;margin:1px;border-color:var(--neon-cyan);color:var(--neon-cyan);" onclick="doBuildStructure(\'' + distId + '\',\'' + s.id + '\')">' + distName + '</button>';
           }).join('') : '<span style="color:var(--text-dim);font-size:0.65rem;">No territories</span>') +
       '</td>' +
     '</tr>';

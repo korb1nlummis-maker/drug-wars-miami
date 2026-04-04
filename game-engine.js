@@ -664,7 +664,7 @@ function processDistributionDaily(state) {
   const result = { revenue: 0, messages: [] };
   if (!state.distribution) return result;
 
-  const hasLawyer = state.henchmen.some(h => h.type === 'lawyer' && !h.injured);
+  const hasLawyer = (state.henchmen || []).some(h => h.type === 'lawyer' && !h.injured);
 
   for (const [locId, dist] of Object.entries(state.distribution)) {
     if (!dist.active || dist.dealers.length === 0) continue;

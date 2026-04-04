@@ -11,12 +11,13 @@ const CAMPAIGN_ACTS = [
     desc: 'You\'re nobody. Build your name, make your first real money, and find your crew.',
     dayRange: [1, 500],
     milestones: [
-      { id: 'first_10k', name: 'First $10K', desc: 'Accumulate $10,000 total profit', check: s => (s.stats ? s.stats.totalEarnedFromDrugs : 0) >= 10000, reward: 'Unlocks bulk trading' },
-      { id: 'first_territory', name: 'Claim Territory', desc: 'Take over your first location', check: s => Object.keys(s.territory || {}).length >= 1, reward: 'Territory income begins' },
-      { id: 'first_crew', name: 'Build a Crew', desc: 'Hire your first crew member', check: s => (s.henchmen || []).length >= 1, reward: 'Crew bonuses active' },
-      { id: 'visit_3_cities', name: 'Expand Horizons', desc: 'Visit 3 different cities', check: s => (s.citiesVisited || []).length >= 3, reward: 'Trade route knowledge' },
+      { id: 'first_10k', name: 'First $10K Profit', desc: 'Earn $10,000 from drug sales', check: s => (s.stats ? s.stats.totalEarnedFromDrugs : 0) >= 10000, reward: 'Unlocks bulk trading' },
+      { id: 'first_territory', name: 'Claim Territory', desc: 'Win a territory war', check: s => Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 1, reward: 'Territory income begins' },
+      { id: 'crew_3', name: 'Build a Crew', desc: 'Hire 3 crew members', check: s => (s.henchmen || []).length >= 3, reward: 'Crew bonuses active' },
+      { id: 'visit_5_districts', name: 'Explore Miami', desc: 'Visit 5 different districts', check: s => (s.citiesVisited || []).length >= 5, reward: 'Trade route knowledge' },
+      { id: 'survive_30_days', name: 'Survive 30 Days', desc: 'Stay alive and free for 30 days', check: s => (s.day || 0) >= 30 && !s.gameOver, reward: 'Street cred established' },
     ],
-    requiredMilestones: 2,
+    requiredMilestones: 3,
     modifiers: { encounterDifficulty: 0.7, heatGainMod: 0.8, priceVolatility: 0.8 },
   },
   {

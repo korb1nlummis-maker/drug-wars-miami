@@ -93,7 +93,7 @@ function processTurfWarsDaily(state) {
     }
 
     // Calculate defense strength
-    const activeCrew = state.henchmen.filter(h => !h.injured).length;
+    const activeCrew = (state.henchmen || []).filter(h => !h.injured).length;
     let defensePower = activeCrew * 15; // base crew combat power
 
     // Weapon power
@@ -150,7 +150,7 @@ function processTurfWarsDaily(state) {
       state.reputation = Math.max(-100, (state.reputation || 0) + TURF_WAR_CONFIG.losses.repPerLoss);
       state.heat = Math.min(100, (state.heat || 0) + TURF_WAR_CONFIG.losses.heatPerLoss);
       // Some crew may get injured
-      const activeCrew2 = state.henchmen.filter(h => !h.injured);
+      const activeCrew2 = (state.henchmen || []).filter(h => !h.injured);
       if (activeCrew2.length > 0 && Math.random() < 0.4) {
         const idx = state.henchmen.indexOf(activeCrew2[Math.floor(Math.random() * activeCrew2.length)]);
         if (idx >= 0) {

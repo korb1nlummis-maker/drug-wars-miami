@@ -178,8 +178,8 @@ function processRivalsDaily(state) {
     var baseGrowth = rival.growth === 'slow' ? 0.01 : rival.growth === 'moderate' ? 0.03 : rival.growth === 'fast' ? 0.05 : 0.08;
     var rivalDayScale = typeof getGameDayScaling === 'function' ? getGameDayScaling(state).rivalPowerMod || 1.0 : 1.0;
     const growthMod = baseGrowth * rivalDayScale;
-    rival.cash *= (1 + growthMod);
-    rival.power = rival.cash / 100 * rivalDayScale;
+    rival.cash = Math.min(10000000, rival.cash * (1 + growthMod));
+    rival.power = Math.min(100000, rival.cash / 100 * rivalDayScale);
     rival.crew = Math.min(rival.maxTerritory * 5, rival.crew + (Math.random() < growthMod * 5 ? 1 : 0));
 
     // Territory expansion

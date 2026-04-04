@@ -212,7 +212,7 @@ function declareWar(state, factionId, playerInitiated) {
   adjustFactionStanding(state, factionId, -40);
 
   // Allied factions of the enemy also lose standing
-  for (const [fId, alliance] of Object.entries(state.factions.alliances)) {
+  for (const [fId, alliance] of Object.entries(state.factions.alliances || {})) {
     if (fId !== factionId) {
       const f = FACTIONS.find(ff => ff.id === fId);
       if (f && f.territory.some(t => faction.territory.includes(t))) {
@@ -474,7 +474,7 @@ function processFactionDaily(state) {
   }
 
   // Alliance benefits
-  for (const [factionId, allianceType] of Object.entries(state.factions.alliances)) {
+  for (const [factionId, allianceType] of Object.entries(state.factions.alliances || {})) {
     if (allianceType === 'trade') {
       // Small passive income from trade agreement
       if (Math.random() < 0.1) {
