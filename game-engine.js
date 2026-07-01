@@ -87,25 +87,25 @@ const DRUGS = [
   { id: 'ludes', name: 'Ludes', minPrice: 10, maxPrice: 70, volatility: 0.4, category: 'bulk', emoji: '💤', minLevel: 1, minDay: 1 },
   { id: 'peyote', name: 'Peyote', minPrice: 30, maxPrice: 250, volatility: 0.45, category: 'bulk', emoji: '🌵', minLevel: 1, minDay: 1 },
   { id: 'adderall', name: 'Adderall/Rx Pills', minPrice: 400, maxPrice: 1800, volatility: 0.30, category: 'low', emoji: '📋', minLevel: 1, minDay: 1 },
-  // === EARLY GAME DRUGS (unlock day 20-60) ===
-  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1, minDay: 20 },
-  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2, minDay: 30 },
-  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2, minDay: 40 },
-  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2, minDay: 50 },
-  // === MID GAME DRUGS (unlock day 80-200) ===
-  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3, minDay: 80 },
-  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3, minDay: 100 },
-  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4, minDay: 120 },
-  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4, minDay: 150 },
-  // === EMPIRE DRUGS (unlock day 200-500) ===
-  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5, minDay: 200 },
-  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5, minDay: 250 },
-  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5, minDay: 300 },
-  // === KINGPIN DRUGS (unlock day 400-1000) ===
-  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6, minDay: 400 },
-  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8, minDay: 600 },
+  // === EARLY GAME DRUGS (unlock day 60-400) ===
+  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1, minDay: 60 },
+  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2, minDay: 150 },
+  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2, minDay: 250 },
+  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2, minDay: 400 },
+  // === MID GAME DRUGS (unlock day 600-1300) ===
+  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3, minDay: 600 },
+  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3, minDay: 800 },
+  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4, minDay: 1000 },
+  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4, minDay: 1300 },
+  // === EMPIRE DRUGS (unlock day 1600-2200) ===
+  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5, minDay: 1600 },
+  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5, minDay: 1900 },
+  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5, minDay: 2200 },
+  // === KINGPIN DRUGS (unlock day 2600-3200) ===
+  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6, minDay: 2600 },
+  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8, minDay: 3200 },
   // === ENDGAME DRUGS (NG+ or very late game) ===
-  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, minDay: 1000, ngPlus: true },
+  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, minDay: 4000, ngPlus: true },
 ];
 
 // ============================================================
@@ -446,14 +446,14 @@ const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
 // MONEY LAUNDERING / FRONT COMPANIES
 // ============================================================
 const FRONT_BUSINESSES = [
-  { id: 'taco_stand', name: 'Taco Stand', emoji: '🌮', cost: 5000, dailyIncome: 150, launderRate: 0.05, launderMax: 2000, heatReduction: 0, desc: 'Small but discreet' },
-  { id: 'laundromat', name: 'Laundromat', emoji: '👕', cost: 15000, dailyIncome: 400, launderRate: 0.08, launderMax: 5000, heatReduction: 2, desc: 'The classic front' },
-  { id: 'car_wash', name: 'Car Wash', emoji: '🚗', cost: 25000, dailyIncome: 600, launderRate: 0.10, launderMax: 8000, heatReduction: 3, desc: 'Cash business, no questions' },
-  { id: 'nightclub', name: 'Nightclub', emoji: '🎵', cost: 75000, dailyIncome: 1500, launderRate: 0.15, launderMax: 20000, heatReduction: 5, desc: 'High volume cash flow' },
-  { id: 'restaurant', name: 'Restaurant Chain', emoji: '🍕', cost: 120000, dailyIncome: 2500, launderRate: 0.12, launderMax: 15000, heatReduction: 5, desc: 'Multiple locations' },
-  { id: 'construction', name: 'Construction Co.', emoji: '🏗️', cost: 200000, dailyIncome: 3000, launderRate: 0.20, launderMax: 30000, heatReduction: 8, desc: 'Big invoices, no trail' },
-  { id: 'shell_corp', name: 'Shell Corporation', emoji: '🏢', cost: 500000, dailyIncome: 1000, launderRate: 0.30, launderMax: 100000, heatReduction: 10, desc: 'Offshore accounts, max laundering' },
-  { id: 'real_estate', name: 'Real Estate LLC', emoji: '🏠', cost: 350000, dailyIncome: 4000, launderRate: 0.18, launderMax: 50000, heatReduction: 7, desc: 'Property flips hide cash' },
+  { id: 'taco_stand', name: 'Taco Stand', emoji: '🌮', cost: 5000, dailyIncome: 50, launderRate: 0.05, launderMax: 2000, heatReduction: 0, desc: 'Small but discreet' },
+  { id: 'laundromat', name: 'Laundromat', emoji: '👕', cost: 20000, dailyIncome: 130, launderRate: 0.08, launderMax: 5000, heatReduction: 2, desc: 'The classic front' },
+  { id: 'car_wash', name: 'Car Wash', emoji: '🚗', cost: 40000, dailyIncome: 200, launderRate: 0.10, launderMax: 8000, heatReduction: 3, desc: 'Cash business, no questions' },
+  { id: 'nightclub', name: 'Nightclub', emoji: '🎵', cost: 150000, dailyIncome: 500, launderRate: 0.15, launderMax: 20000, heatReduction: 5, desc: 'High volume cash flow' },
+  { id: 'restaurant', name: 'Restaurant Chain', emoji: '🍕', cost: 300000, dailyIncome: 800, launderRate: 0.12, launderMax: 15000, heatReduction: 5, desc: 'Multiple locations' },
+  { id: 'construction', name: 'Construction Co.', emoji: '🏗️', cost: 600000, dailyIncome: 1000, launderRate: 0.20, launderMax: 30000, heatReduction: 8, desc: 'Big invoices, no trail' },
+  { id: 'shell_corp', name: 'Shell Corporation', emoji: '🏢', cost: 1500000, dailyIncome: 400, launderRate: 0.30, launderMax: 100000, heatReduction: 10, desc: 'Offshore accounts, max laundering' },
+  { id: 'real_estate', name: 'Real Estate LLC', emoji: '🏠', cost: 1000000, dailyIncome: 1300, launderRate: 0.18, launderMax: 50000, heatReduction: 7, desc: 'Property flips hide cash' },
 ];
 
 function buyFrontBusiness(state, businessId) {
@@ -559,8 +559,8 @@ const DISTRIBUTION_ROLES = [
 
 const DISTRIBUTION_TIERS = [
   { tier: 1, name: 'Street Operation', emoji: '🚬', upgradeCost: 0, maxDealers: 2, maxStockPerDrug: 50, demandMult: 1.0, bustChance: 0.08, rivalAttackChance: 0.05 },
-  { tier: 2, name: 'Organized Network', emoji: '🕸️', upgradeCost: 25000, maxDealers: 4, maxStockPerDrug: 150, demandMult: 1.25, bustChance: 0.05, rivalAttackChance: 0.08 },
-  { tier: 3, name: 'Empire', emoji: '👑', upgradeCost: 100000, maxDealers: 6, maxStockPerDrug: 300, demandMult: 1.5, bustChance: 0.03, rivalAttackChance: 0.12 },
+  { tier: 2, name: 'Organized Network', emoji: '🕸️', upgradeCost: 100000, maxDealers: 4, maxStockPerDrug: 150, demandMult: 1.25, bustChance: 0.05, rivalAttackChance: 0.08 },
+  { tier: 3, name: 'Empire', emoji: '👑', upgradeCost: 500000, maxDealers: 6, maxStockPerDrug: 300, demandMult: 1.5, bustChance: 0.03, rivalAttackChance: 0.12 },
 ];
 
 const DISTRIBUTOR_NAMES = [
@@ -701,7 +701,7 @@ function processDistributionDaily(state) {
         if (!drug) continue;
         const canSell = Math.min(dist.stock[drugId], unitsSell - dealerUnitsSold);
         // Revenue: midpoint price × location modifier × retail markup
-        let pricePerUnit = ((drug.minPrice + drug.maxPrice) / 2) * location.priceModifier * 1.3;
+        let pricePerUnit = ((drug.minPrice + drug.maxPrice) / 2) * location.priceModifier * 1.15;
         // Club connect bonus for party drugs
         if (role.partyDrugs && role.partyDrugs.includes(drugId)) pricePerUnit *= 1.5;
         // Territory sell bonus
@@ -871,7 +871,7 @@ const TERRITORY_GANGS = {
 const TERRITORY_BENEFITS = {
   priceDiscount: 0.15,      // 15% better buy prices
   sellBonus: 0.10,           // 10% better sell prices
-  dailyIncome: 500,          // $500/day per territory passive income
+  dailyIncome: 150,          // $150/day per territory passive income
   heatReduction: 0.20,       // 20% less heat gain
   dangerReduction: 1,        // -1 danger level
 };

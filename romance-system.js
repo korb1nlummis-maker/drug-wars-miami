@@ -104,10 +104,10 @@ const ROMANCE_NPCS = [
 const RELATIONSHIP_STAGES = ['stranger', 'acquaintance', 'dating', 'serious', 'partner'];
 
 const STAGE_THRESHOLDS = {
-  acquaintance: 10,
-  dating: 30,
-  serious: 60,
-  partner: 100
+  acquaintance: 30,
+  dating: 90,
+  serious: 180,
+  partner: 300
 };
 
 const GIFT_PREFERENCES = {
@@ -280,7 +280,7 @@ function meetRomanceNPC(state, npcId) {
   }
 
   state.relationships[npcId] = {
-    points: 5,
+    points: 15, // scaled 3x with STAGE_THRESHOLDS so meeting still lands near the acquaintance band
     stage: 'acquaintance',
     metDay: 0,
     stageDropped: false,
@@ -314,9 +314,9 @@ function goOnDate(state, npcId, tierIndex, playerCash) {
   const cash = typeof playerCash === 'number' ? playerCash : 0;
   if (cash < tier.cost) return { success: false, message: `Not enough cash. Need $${tier.cost.toLocaleString()}.` };
 
-  // Cooldown - one date per person per day
-  if (rel.lastDateDay !== undefined && rel.lastDateDay === (state._currentDay || 0)) {
-    return { success: false, message: `You already went on a date with ${npc.name} today.` };
+  // Cooldown - one date per person per 2 days
+  if (rel.lastDateDay !== undefined && (state._currentDay || 0) - rel.lastDateDay < 2) {
+    return { success: false, message: `You already went on a date with ${npc.name} recently. Give it a day.` };
   }
   rel.lastDateDay = state._currentDay || 0;
 
@@ -353,9 +353,9 @@ function giveGift(state, npcId, giftValue, playerCash) {
   var cash = typeof playerCash === 'number' ? playerCash : 0;
   if (cash < giftValue) return { success: false, message: `Not enough cash. Need $${giftValue.toLocaleString()}.` };
 
-  // Cooldown: max 1 gift per person per day
-  if (rel.lastGiftDay !== undefined && rel.lastGiftDay === (state._currentDay || 0)) {
-    return { success: false, message: `You already gave ${npc.name} a gift today. Give it time.` };
+  // Cooldown: max 1 gift per person per 2 days
+  if (rel.lastGiftDay !== undefined && (state._currentDay || 0) - rel.lastGiftDay < 2) {
+    return { success: false, message: `You already gave ${npc.name} a gift recently. Give it time.` };
   }
   rel.lastGiftDay = state._currentDay || 0;
 
@@ -432,9 +432,9 @@ function phoneCall(state, npcId) {
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
-  // Cooldown: max 1 call per person per day
-  if (rel.lastCallDay !== undefined && rel.lastCallDay === (state._currentDay || 0)) {
-    return { success: false, message: `You already called ${npc.name} today. Don't be clingy.` };
+  // Cooldown: max 1 call per person per 2 days
+  if (rel.lastCallDay !== undefined && (state._currentDay || 0) - rel.lastCallDay < 2) {
+    return { success: false, message: `You already called ${npc.name} recently. Don't be clingy.` };
   }
   rel.lastCallDay = state._currentDay || 0;
 
@@ -475,8 +475,8 @@ function shareSecret(state, npcId) {
   const rel = state.relationships[npcId];
   if (!rel) return { success: false, message: `You haven't met ${npc.name} yet.` };
 
-  // Cooldown: 1 secret per person per 7 days (you don't overshare)
-  if (rel.lastSecretDay !== undefined && (state._currentDay || 0) - rel.lastSecretDay < 7) {
+  // Cooldown: 1 secret per person per 14 days (you don't overshare)
+  if (rel.lastSecretDay !== undefined && (state._currentDay || 0) - rel.lastSecretDay < 14) {
     return { success: false, message: `Too soon to share another secret with ${npc.name}. Give it time.` };
   }
   rel.lastSecretDay = state._currentDay || 0;

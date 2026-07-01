@@ -243,7 +243,7 @@ function processProcessingDaily(state) {
   for (const job of completed) {
     state.processing.completedBatches.push(job);
     state.processing.totalBatchesCooked = (state.processing.totalBatchesCooked || 0) + 1;
-    gainChemistryXp(state, 5);
+    gainChemistryXp(state, 2);
     msgs.push(`⚗️ ${job.recipeName} complete! Quality: ${job.quality}. Collect from inventory.`);
   }
 
@@ -286,7 +286,7 @@ function collectBatch(state, batchIndex) {
   }
 
   state.processing.completedBatches.splice(batchIndex, 1);
-  gainChemistryXp(state, 2);
+  gainChemistryXp(state, 1);
 
   // Rep boost for high quality
   if (qualityLevel.multiplier >= 1.4 && typeof adjustRep === 'function') {

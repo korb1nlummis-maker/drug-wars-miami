@@ -341,7 +341,7 @@ const MISSION_ACTS = [
   {
     id: 'act1', name: 'Act 1: The Come Up', emoji: '🌱',
     hoursRange: [1, 16],
-    dayRange: [1, 60],
+    dayRange: [1, 500],
     desc: 'You are nobody. Learn the trade, build a crew, claim territory. By the end, you have a foothold -- and enemies.',
     unlockMessage: 'The streets are calling. Time to make a name.',
     mainMissions: [
@@ -773,7 +773,7 @@ const MISSION_ACTS = [
   {
     id: 'act2', name: 'Act 2: The Expansion', emoji: '📈',
     hoursRange: [16, 32],
-    dayRange: [61, 150],
+    dayRange: [500, 1500],
     desc: 'You are a player now. Expand territory, build supply chains, navigate faction politics. Every decision ripples outward. The choices from Act 1 have already shaped the landscape.',
     unlockMessage: 'The come-up is over. Now the real game begins.',
     mainMissions: [
@@ -1238,7 +1238,7 @@ const MISSION_ACTS = [
   {
     id: 'act3', name: 'Act 3: The Empire', emoji: '🏰',
     hoursRange: [32, 50],
-    dayRange: [151, 300],
+    dayRange: [1500, 2500],
     desc: 'You run a real operation now. Manage your empire, handle political pressure, go international. The choices from Acts 1 and 2 echo through every interaction.',
     unlockMessage: 'You\'ve built something real. Now comes the hard part -- keeping it.',
     mainMissions: [
@@ -1467,7 +1467,7 @@ const MISSION_ACTS = [
   {
     id: 'act4', name: 'Act 4: The Reckoning', emoji: '⚡',
     hoursRange: [50, 65],
-    dayRange: [301, 450],
+    dayRange: [2500, 3500],
     desc: 'The pressure builds. Betrayal, federal heat, rival empires. Everything you built is tested. Your choices from three acts come home to roost.',
     unlockMessage: 'They\'re coming for everything. The question is: will you hold?',
     mainMissions: [
@@ -1648,7 +1648,7 @@ const MISSION_ACTS = [
   {
     id: 'act5', name: 'Act 5: The Endgame', emoji: '🎭',
     hoursRange: [65, 80],
-    dayRange: [451, 600],
+    dayRange: [3500, 5000],
     desc: 'Your final chapter. The ending you\'ve earned through every choice, every alliance, every betrayal.',
     unlockMessage: 'This is how it ends. Or how it begins again.',
     mainMissions: [], // Act 5 missions are determined by ending path -- see endings-system.js
@@ -1784,9 +1784,15 @@ function isBranchMissionAvailable(state, branchMission) {
 function getAvailableBranchMissions(state) {
   if (!state.campaign) return [];
   const currentAct = missionActId(state);
+  const day = _campaignDay(state);
 
   return BRANCH_MISSIONS.filter(bm => {
     if (bm.act && bm.act !== currentAct) return false;
+    // Never leak a branch mission before its act's day window opens
+    if (bm.act) {
+      const actDef = MISSION_ACTS.find(a => a.id === bm.act);
+      if (actDef && actDef.dayRange && day < actDef.dayRange[0]) return false;
+    }
     if (state.campaign.completedMissions && state.campaign.completedMissions.includes(bm.id)) return false;
     return isBranchMissionAvailable(state, bm);
   });
@@ -1891,16 +1897,31 @@ function getCurrentMissionAct(state) {
   return MISSION_ACTS.find(a => a.id === missionActId(state)) || MISSION_ACTS[0];
 }
 
+// Minimum in-game day at which the Nth main mission of an act unlocks.
+// Missions are spread evenly across the first 80% of the act's day window,
+// so an act's story paces out instead of all unlocking at once.
+function getMissionMinDay(act, missionIndex) {
+  if (!act || !act.dayRange) return 1;
+  return act.dayRange[0] + Math.floor(missionIndex * (act.dayRange[1] - act.dayRange[0]) * 0.8 / Math.max(1, (act.mainMissions || []).length));
+}
+
+// Current in-game day (defaults to 1 for fresh/partial states)
+function _campaignDay(state) {
+  return (state && typeof state.day === 'number') ? state.day : 1;
+}
+
 // Get available main missions (includes branch missions for current act)
 function getAvailableMainMissions(state) {
   if (!state.campaign) return [];
   ensureCampaignMissionFields(state);
   const act = getCurrentMissionAct(state);
   if (!act.mainMissions) return [];
+  const day = _campaignDay(state);
 
-  // Standard main missions
-  const mainAvailable = act.mainMissions.filter(m => {
+  // Standard main missions (gated by completion, prerequisites, and day)
+  const mainAvailable = act.mainMissions.filter((m, idx) => {
     if (state.campaign.completedMissions.includes(m.id)) return false;
+    if (getMissionMinDay(act, idx) > day) return false; // day-gated: not unlocked yet
     if (m.requires) {
       for (const req of m.requires) {
         if (!state.campaign.completedMissions.includes(req)) return false;
@@ -1913,6 +1934,27 @@ function getAvailableMainMissions(state) {
   const branchAvailable = getAvailableBranchMissions(state);
 
   return [...mainAvailable, ...branchAvailable];
+}
+
+// Main missions of the current act that are NOT yet available purely due to
+// day gating (and not completed). Each mission object is annotated with
+// _unlockDay so the UI can show "unlocks on day X".
+function getUpcomingMainMissions(state) {
+  if (!state.campaign) return [];
+  ensureCampaignMissionFields(state);
+  const act = getCurrentMissionAct(state);
+  if (!act.mainMissions) return [];
+  const day = _campaignDay(state);
+
+  const upcoming = [];
+  act.mainMissions.forEach((m, idx) => {
+    if (state.campaign.completedMissions.includes(m.id)) return;
+    const unlockDay = getMissionMinDay(act, idx);
+    if (unlockDay > day) {
+      upcoming.push(Object.assign({}, m, { _unlockDay: unlockDay }));
+    }
+  });
+  return upcoming;
 }
 
 // Get next main mission (first available)

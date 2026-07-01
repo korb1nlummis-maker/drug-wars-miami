@@ -1078,6 +1078,21 @@ function renderCampaignScreen() {
     }).join('');
   }
 
+  // Upcoming missions (day-gated) from current act
+  let upcomingHtml = '';
+  const upcoming = typeof getUpcomingMainMissions === 'function' ? getUpcomingMainMissions(gameState) : [];
+  if (upcoming.length > 0) {
+    upcomingHtml = upcoming.slice(0, 4).map(m => `
+      <div class="card" style="opacity:0.55;border-color:var(--text-dim)">
+        <div class="card-header">
+          <span>${m.emoji || '📋'} ${m.name}</span>
+          <span class="text-dim" style="font-size:0.8rem">🔒 Unlocks day ${m._unlockDay} (${Math.max(0, m._unlockDay - gameState.day)} days)</span>
+        </div>
+        <p class="text-dim" style="font-size:0.8rem">${m.desc || ''}</p>
+      </div>
+    `).join('');
+  }
+
   // Side missions from current act
   let sideMissionsHtml = '';
   if (currentAct && currentAct.sideMissions && currentAct.sideMissions.length > 0) {
@@ -1110,6 +1125,7 @@ function renderCampaignScreen() {
       <h3 class="neon-yellow" style="margin:1rem 0 0.5rem">📖 Story Acts</h3>
       <div class="card-grid">${actCards}</div>
       ${missionsHtml ? `<h3 class="neon-green" style="margin:1rem 0 0.5rem">📋 Available Main Missions</h3>${missionsHtml}` : '<p class="text-dim">No main missions available right now. Progress your empire!</p>'}
+      ${upcomingHtml ? `<h3 class="text-dim" style="margin:1rem 0 0.5rem">⏳ Coming Up</h3>${upcomingHtml}` : ''}
       ${sideMissionsHtml ? `<h3 class="text-dim" style="margin:1rem 0 0.5rem">📎 Side Missions</h3>${sideMissionsHtml}` : ''}
       <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-top:1rem">← Back</button>
     </div>

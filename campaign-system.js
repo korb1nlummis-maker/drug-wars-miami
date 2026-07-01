@@ -25,7 +25,7 @@ const CAMPAIGN_ACTS = [
     name: 'Building the Empire',
     emoji: '🏗️',
     desc: 'Money is flowing. Expand your territory, grow your crew, and establish your presence.',
-    dayRange: [200, 1500],
+    dayRange: [500, 1500],
     milestones: [
       { id: 'territory_3', name: 'Power Base', desc: 'Control 3 territories', check: s => Object.keys(s.territory || {}).length >= 3, reward: 'Territory defense bonus' },
       { id: 'net_worth_100k', name: 'Six Figures', desc: 'Reach $100,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 100000; }, reward: 'Unlock premium suppliers' },
@@ -41,7 +41,7 @@ const CAMPAIGN_ACTS = [
     name: 'The Empire',
     emoji: '👑',
     desc: 'You\'re a player now. Diversify, launder, and consolidate before the heat catches up.',
-    dayRange: [800, 2500],
+    dayRange: [1500, 2500],
     milestones: [
       { id: 'territory_5', name: 'Regional Control', desc: 'Control 5+ territories', check: s => Object.keys(s.territory || {}).length >= 5, reward: 'Regional price control' },
       { id: 'net_worth_500k', name: 'Half Million', desc: 'Reach $500,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 500000; }, reward: 'Elite connections' },
@@ -57,7 +57,7 @@ const CAMPAIGN_ACTS = [
     name: 'The Reckoning',
     emoji: '⚖️',
     desc: 'The feds are watching. Betrayal looms. Every decision could be your last.',
-    dayRange: [1500, 3500],
+    dayRange: [2500, 3500],
     milestones: [
       { id: 'survive_investigation', name: 'Beat the Heat', desc: 'Survive a level 4+ investigation', check: s => (s.investigation && s.investigation.points >= 70 && s.investigation.timesArrested >= 1), reward: 'Investigation resistance' },
       { id: 'million_net_worth', name: 'Millionaire', desc: 'Reach $1,000,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 1000000; }, reward: 'Elite status' },
@@ -72,7 +72,7 @@ const CAMPAIGN_ACTS = [
     name: 'The Endgame',
     emoji: '🔥',
     desc: 'This is it. Everything has led to this moment. Choose your path.',
-    dayRange: [2500, 5000],
+    dayRange: [3500, 5000],
     milestones: [
       { id: 'endgame_choice', name: 'Choose Your Fate', desc: 'Your ending will be determined by your empire\'s state', check: s => (s.campaign && s.campaign.currentAct >= 5), reward: 'The ending you deserve' },
     ],
@@ -494,12 +494,11 @@ function checkActMilestones(state) {
     } catch (e) { /* milestone check failed, skip */ }
   }
 
-  // Check if we should advance to next act
+  // Check if we should advance to next act.
+  // transitionAct enforces the day gate: the campaign cannot enter act N
+  // before that act's dayRange[0], even with all milestones complete.
   if (completed.length >= act.requiredMilestones && currentActNum < 5) {
-    // Also check minimum day requirement
-    if (state.day >= act.dayRange[0]) {
-      return transitionAct(state, currentActNum + 1);
-    }
+    return transitionAct(state, currentActNum + 1);
   }
 
   return null;
@@ -508,6 +507,30 @@ function checkActMilestones(state) {
 // Transition to a new act
 function transitionAct(state, newActNum) {
   if (!state.campaign) state.campaign = initCampaign();
+
+  // Day gate: an act cannot begin before its dayRange[0], even if all
+  // milestones are complete. Notify the player exactly once, then stay quiet
+  // until the day gate opens (actNotified map prevents notification spam).
+  const targetAct = CAMPAIGN_ACTS.find(a => a.act === newActNum);
+  const gateDay = targetAct && targetAct.dayRange ? targetAct.dayRange[0] : 0;
+  if ((state.day || 0) < gateDay) {
+    if (!state.campaign.actNotified) state.campaign.actNotified = {};
+    if (!state.campaign.actNotified[newActNum]) {
+      state.campaign.actNotified[newActNum] = true;
+      return {
+        type: 'act_pending',
+        act: newActNum,
+        unlockDay: gateDay,
+        // Fields below keep the daily-log renderer happy (it prints
+        // `${actEmoji} ACT ${toAct}: ${actName}`)
+        toAct: newActNum,
+        actEmoji: '⏳',
+        actName: `Milestones complete — ${targetAct ? targetAct.name : 'next act'} begins on day ${gateDay}`,
+        message: `Milestones complete — Act ${newActNum} begins on day ${gateDay}`,
+      };
+    }
+    return null;
+  }
 
   const oldAct = state.campaign.currentAct;
   state.campaign.currentAct = newActNum;
