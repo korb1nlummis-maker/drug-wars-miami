@@ -630,6 +630,10 @@ function render() {
     case 'businesses_v2': app.innerHTML = renderBusinessesV2(); break;
     case 'phone': app.innerHTML = renderPhone(); break;
     case 'npcstory': app.innerHTML = renderNPCStory(); break;
+    case 'regionalbosses': app.innerHTML = typeof renderRegionalBosses === 'function' ? renderRegionalBosses() : renderGame(); break;
+    case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
+    case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
+    case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
   }
   updateMusic();
 }
@@ -2083,10 +2087,12 @@ function renderGame() {
       <div class="sidebar-section">
         <div class="sidebar-label">📋 CAMPAIGN</div>
         <button class="btn btn-sidebar btn-secondary" style="border-color:#ffaa00;color:#ffaa00" onclick="currentScreen='campaign'; render();">🎯 Campaign${gameState.campaign ? ` (Act ${typeof gameState.campaign.currentAct === 'number' ? gameState.campaign.currentAct : String(gameState.campaign.currentAct).replace('act','')})` : ''}</button>
+        ${typeof renderRegionalBosses === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6b35;color:#ff6b35" onclick="currentScreen='regionalbosses'; render();">👑 Regional Bosses</button>` : ''}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
         ${_isUnlocked('skills') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}</button>` : _lockedBtn('🌳', 'Skills', 'skills')}
+        ${typeof renderIntimidation === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='intimidation'; render();">😤 Intimidation</button>` : ''}
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stats'; render();">📊 Stats</button>
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='achievements'; render();">🏆 Achievements</button>
       </div>

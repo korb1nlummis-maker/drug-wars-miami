@@ -3688,8 +3688,19 @@ function waitDay(state) {
     if (weatherMsgs && weatherMsgs.length) msgs.push(...weatherMsgs);
   }
   if (typeof processBossesDaily === 'function') {
-    const bossMsgs = processBossesDaily(state);
-    if (bossMsgs && bossMsgs.length) msgs.push(...bossMsgs);
+    const bossEvents = processBossesDaily(state);
+    if (bossEvents && bossEvents.length) {
+      // Events are objects with a .message field, not plain strings
+      msgs.push(...bossEvents.map(e => typeof e === 'string' ? e : (e && e.message) || '').filter(Boolean));
+    }
+    // Boss empire income: puppets pay full, bribed bosses pay half
+    if (typeof getActiveBonuses === 'function' && state.bosses) {
+      const bossBonuses = getActiveBonuses(state.bosses);
+      if (bossBonuses.dailyIncome > 0) {
+        state.cash += bossBonuses.dailyIncome;
+        msgs.push(`👑 Boss network income: +$${bossBonuses.dailyIncome.toLocaleString()}`);
+      }
+    }
   }
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
