@@ -631,6 +631,7 @@ function render() {
     case 'phone': app.innerHTML = renderPhone(); break;
     case 'npcstory': app.innerHTML = renderNPCStory(); break;
     case 'regionalbosses': app.innerHTML = typeof renderRegionalBosses === 'function' ? renderRegionalBosses() : renderGame(); break;
+    case 'suppliers': app.innerHTML = typeof renderSuppliers === 'function' ? renderSuppliers() : renderGame(); break;
     case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
     case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
     case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
@@ -1684,6 +1685,7 @@ function renderGame() {
       <button class="main-tab-btn${mainTab === 'buysell' ? ' active' : ''}" onclick="mainTab='buysell'; render();">💰 Buy / Sell</button>
       <button class="main-tab-btn${mainTab === 'prices' ? ' active' : ''}" onclick="mainTab='prices'; render();">💊 Street Prices</button>
       <button class="main-tab-btn${mainTab === 'intel' ? ' active' : ''}" onclick="mainTab='intel'; render();">🗺️ Price Intel</button>
+      ${typeof renderSuppliers === 'function' ? `<button class="main-tab-btn" onclick="currentScreen='suppliers'; render();">🤝 Suppliers</button>` : ''}
       <button class="main-tab-btn${mainTab === 'empire' ? ' active' : ''}" onclick="mainTab='empire'; render();">👑 Empire</button>
       ${_tabUf.futures ? `<button class="main-tab-btn${mainTab === 'futures_tab' ? ' active' : ''}" onclick="currentScreen='futures'; render();">📊 Futures</button>` : _tabLocked('📊', 'Futures', 'futures')}
       ${_tabUf.imports ? `<button class="main-tab-btn${mainTab === 'imports_tab' ? ' active' : ''}" onclick="currentScreen='imports'; render();">🌍 Import</button>` : _tabLocked('🌍', 'Import', 'imports')}

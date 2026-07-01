@@ -3732,6 +3732,10 @@ function waitDay(state) {
       }
     }
   }
+  if (typeof processSuppliersDaily === 'function') {
+    const supplierMsgs = processSuppliersDaily(state);
+    if (supplierMsgs && supplierMsgs.length) msgs.push(...supplierMsgs);
+  }
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
     if (mafiaOpsMsgs && mafiaOpsMsgs.length) msgs.push(...mafiaOpsMsgs);
