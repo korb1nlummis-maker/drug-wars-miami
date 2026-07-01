@@ -575,6 +575,12 @@ function renderCharacterSelect() {
 // ============================================================
 function render() {
   const app = document.getElementById('app');
+  // Changing screens dismisses any lingering modal (bank, loan shark, etc.)
+  if (render._lastScreen !== currentScreen) {
+    const mc = document.getElementById('modal-container');
+    if (mc && mc.innerHTML) mc.innerHTML = '';
+    render._lastScreen = currentScreen;
+  }
   switch (currentScreen) {
     case 'title': app.innerHTML = renderTitle(); break;
     case 'charselect': app.innerHTML = renderCharacterSelect(); break;
@@ -971,6 +977,7 @@ function doDisposeBodies(methodId, count) {
 // CAMPAIGN SCREEN
 // ============================================================
 function renderCampaignScreen() {
+  if (!gameState) { currentScreen = 'title'; return renderTitle(); }
   const campaign = gameState.campaign || {};
   const currentAct = typeof getCurrentMissionAct === 'function' ? getCurrentMissionAct(gameState) : null;
   const currentActId = typeof missionActId === 'function' ? missionActId(gameState) : (campaign.missionAct || 'act1');
@@ -2916,7 +2923,11 @@ function renderTravel() {
     western_europe: '🏰 Western Europe', eastern_europe: '🏭 Eastern Europe', west_africa: '🌍 West Africa',
     southeast_asia: '🐉 Southeast Asia' };
 
-  for (const [region, locs] of Object.entries(filteredRegions)) {
+  // List the player's current region first, then Miami, then everywhere else
+  const curRegionKey = currentLoc.region || 'miami';
+  const regionRank = r => (r === curRegionKey ? 0 : r === 'miami' ? 1 : 2);
+  const orderedRegions = Object.entries(filteredRegions).sort((a, b) => regionRank(a[0]) - regionRank(b[0]));
+  for (const [region, locs] of orderedRegions) {
     const sameRegion = region === (currentLoc.region || 'miami');
     const crossRegion = !sameRegion;
     locHtml += `<h3 class="region-header ${sameRegion ? 'neon-green' : 'neon-cyan'}">${regionDisplayNames[region] || region} ${sameRegion ? '(Same Region)' : '✈️ Cross-Region'}</h3>`;
@@ -7405,7 +7416,7 @@ function renderHeist() {
       var avail = availableHeists.find(function(a) { return a.heistTypeId === ht.id; });
       return '<tr>' +
         '<td>' + ht.emoji + ' ' + ht.name + '</td>' +
-        '<td><span class="' + (ht.difficulty <= 2 ? 'neon-green' : ht.difficulty <= 4 ? 'neon-yellow' : 'neon-red') + '">★'.repeat(ht.difficulty) + '</span></td>' +
+        '<td><span class="' + (ht.difficulty <= 2 ? 'neon-green' : ht.difficulty <= 4 ? 'neon-yellow' : 'neon-red') + '">' + '★'.repeat(ht.difficulty) + '</span></td>' +
         '<td>$' + ht.rewardMin.toLocaleString() + '-$' + ht.rewardMax.toLocaleString() + '</td>' +
         '<td>' + ht.crewMin + '-' + ht.crewMax + '</td>' +
         '<td>🌡️' + ht.heatGenerated + '</td>' +
