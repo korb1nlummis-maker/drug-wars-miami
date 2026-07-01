@@ -435,9 +435,31 @@ const CHARGE_PENALTIES = {
   possession: { prisonMod: 1.0, forfeitMod: 1.0, label: 'Possession' },
   possession_premium: { prisonMod: 2.0, forfeitMod: 1.5, label: 'Possession (Class A)' }, // cocaine, heroin, etc.
   possession_large: { prisonMod: 3.0, forfeitMod: 2.0, label: 'Possession w/ Intent to Distribute' }, // >20 units
+  trafficking: { prisonMod: 4.5, forfeitMod: 2.5, label: 'Drug Trafficking' }, // bulk quantities
+  conspiracy: { prisonMod: 2.2, forfeitMod: 1.6, label: 'Conspiracy to Distribute' },
   rico: { prisonMod: 4.0, forfeitMod: 2.5, label: 'RICO Act Violations' },
   manslaughter: { prisonMod: 3.0, forfeitMod: 1.5, label: 'Manslaughter' }, // per count
+  murder: { prisonMod: 5.0, forfeitMod: 2.0, label: 'First-Degree Murder' }, // per recovered body
   cop_killing: { prisonMod: 6.0, forfeitMod: 3.0, label: 'Murder of Law Enforcement' },
+  // Weapons
+  weapon_concealed: { prisonMod: 1.2, forfeitMod: 1.0, label: 'Unlicensed Concealed Carry' },
+  weapon_automatic: { prisonMod: 2.2, forfeitMod: 1.2, label: 'Illegal Automatic Weapon' },
+  armed_felony: { prisonMod: 2.0, forfeitMod: 1.3, label: 'Firearm in Furtherance of Drug Trafficking' },
+  // Financial
+  money_laundering: { prisonMod: 2.5, forfeitMod: 2.2, label: 'Money Laundering' },
+  tax_evasion: { prisonMod: 2.0, forfeitMod: 2.5, label: 'Tax Evasion' },
+  bribery: { prisonMod: 1.8, forfeitMod: 1.5, label: 'Bribery of a Public Official' },
+  // Obstruction
+  resisting: { prisonMod: 1.2, forfeitMod: 1.0, label: 'Resisting Arrest' },
+  assault_officer: { prisonMod: 1.8, forfeitMod: 1.0, label: 'Assaulting a Federal Officer' },
+};
+
+// Quantity thresholds per drug category (units): [possession w/ intent, trafficking]
+const DRUG_CHARGE_THRESHOLDS = {
+  bulk: { intent: 40, trafficking: 150 },
+  low: { intent: 25, trafficking: 80 },
+  mid: { intent: 15, trafficking: 50 },
+  premium: { intent: 5, trafficking: 20 },
 };
 
 const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
@@ -3175,6 +3197,10 @@ function waitDay(state) {
       if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 25);
       if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { ultimate_betrayal: 1 } }, 'backstory', 'excon_a4_darnell');
     }
+    if (charId === 'ex_con' && day >= 3480 && !bt.excon_a4_close) {
+      bt.excon_a4_close = true;
+      msgs.push('📖 Five years inside taught you to survive betrayal. Nothing prepared you for this: Darnell wearing a wire, Big Mike facing trial, your son learning the trade. The walls are closing in again — and this time they\'re not made of concrete.');
+    }
 
     // HUSTLER: Act 4 - The long con collapses
     if (charId === 'hustler' && day >= 2550 && !bt.hustler_a4_ponzi_collapse) {
@@ -3196,6 +3222,10 @@ function waitDay(state) {
     if (charId === 'hustler' && day >= 3400 && !bt.hustler_a4_final_hustle) {
       bt.hustler_a4_final_hustle = true;
       msgs.push('💭 One last hustle. The biggest one. Fake your own death, take the offshore millions, disappear. You\'ve been planning it for months. The documents are ready. But leaving means leaving EVERYTHING.');
+    }
+    if (charId === 'hustler' && day >= 3480 && !bt.hustler_a4_close) {
+      bt.hustler_a4_close = true;
+      msgs.push('📖 The Ponzi collapsed. The senator flipped. The ex-wife wants half. Every con has a moment when the mark finally sees the game — and for the first time, you wonder if the mark was you.');
     }
 
     // CONNECTED KID: Act 4 - The heir's trial
@@ -5065,7 +5095,7 @@ function resolveCombatRound(state, action, event) {
           return results;
         }
         state.health = 1; // Barely alive, arrested
-        initCourtCase(state);
+        initCourtCase(state, { fought: true }); // shot it out with the law — extra charge
         results.goToCourt = true;
         results.msg += ' You\'re badly wounded and under arrest!';
         results.resolved = true;
@@ -5140,7 +5170,7 @@ function resolveCombatRound(state, action, event) {
         state.health = 0;
         if ((event.combatType === 'police' || event.combatType === 'dea_raid') && state.investigation) {
           state.health = 1;
-          initCourtCase(state);
+          initCourtCase(state, { resisted: true }); // ran from the cops and got caught — extra charge
           results.goToCourt = true;
           results.msg += ' You\'re caught!';
           results.resolved = true;
@@ -5585,25 +5615,36 @@ function createDEARaidEvent(state) {
 // ============================================================
 // COURT SYSTEM
 // ============================================================
-function initCourtCase(state) {
+function initCourtCase(state, context) {
+  context = context || {}; // { resisted: true } = arrest after failed escape, { fought: true } = arrest after losing a fight with police
   // Build charges with severity tags for penalty calculation
   const charges = [];
   const chargeSeverity = []; // tracks penalty types
   const drugIds = Object.keys(state.inventory);
   let totalUnits = 0;
   let hasPremium = false;
+  let hasTrafficking = false;
+  let hasDistributionFelony = false; // intent-to-distribute or worse
 
+  // --- Drug charges: quantity thresholds per drug category ---
   for (const id of drugIds) {
     const drug = DRUGS.find(d => d.id === id);
     if (drug) {
       const qty = state.inventory[id];
       totalUnits += qty;
-      const isPremium = PREMIUM_DRUGS.includes(id);
+      const isPremium = PREMIUM_DRUGS.includes(id) || drug.category === 'premium';
       if (isPremium) hasPremium = true;
+      const thresholds = DRUG_CHARGE_THRESHOLDS[drug.category] || DRUG_CHARGE_THRESHOLDS.low;
 
-      if (qty > 20) {
+      if (qty >= thresholds.trafficking) {
+        charges.push(`TRAFFICKING: ${drug.name} (${qty} units — federal weight)`);
+        chargeSeverity.push('trafficking');
+        hasTrafficking = true;
+        hasDistributionFelony = true;
+      } else if (qty >= thresholds.intent) {
         charges.push(`Possession w/ Intent to Distribute: ${drug.name} (${qty} units)`);
         chargeSeverity.push('possession_large');
+        hasDistributionFelony = true;
       } else if (isPremium) {
         charges.push(`Class A Possession: ${drug.name} (${qty} units)`);
         chargeSeverity.push('possession_premium');
@@ -5613,40 +5654,149 @@ function initCourtCase(state) {
       }
     }
   }
-  if (charges.length === 0) charges.push('Racketeering and conspiracy');
-  if (state.investigation.level >= 4) {
-    charges.push('RICO Act violations');
-    chargeSeverity.push('rico');
+
+  // --- Weapons charges: based on what you're actually carrying ---
+  const AUTOMATIC_TIERS = ['smg', 'rifle', 'heavy', 'legendary'];
+  let autoWeapon = null;
+  let firearm = null;
+  if (Array.isArray(state.weapons)) {
+    for (const wId of state.weapons) {
+      const w = typeof WEAPONS !== 'undefined' ? WEAPONS.find(function(wd) { return wd.id === wId; }) : null;
+      if (!w || w.tier === 'melee') continue;
+      firearm = firearm || w;
+      if (!autoWeapon && AUTOMATIC_TIERS.includes(w.tier)) autoWeapon = w;
+    }
   }
+  if (autoWeapon) {
+    charges.push(`Possession of an Illegal Automatic Weapon (${autoWeapon.name})`);
+    chargeSeverity.push('weapon_automatic');
+  } else if (firearm) {
+    charges.push(`Unlicensed Concealed Carry (${firearm.name})`);
+    chargeSeverity.push('weapon_concealed');
+  }
+  // Armed-while-trafficking enhancer (federal 924(c)-style charge)
+  if (firearm && hasDistributionFelony) {
+    charges.push('Use of a Firearm in Furtherance of Drug Trafficking');
+    chargeSeverity.push('armed_felony');
+  }
+
+  // --- Financial charges ---
+  const dirtyCash = state.dirtyMoney || 0;
+  const totalLaundered = (state.stats && state.stats.totalLaunderedMoney) || 0;
+  const frontCount = (state.frontBusinesses || []).length;
+  if (dirtyCash >= 100000 || (totalLaundered >= 500000 && state.investigation.level >= 3)) {
+    if (dirtyCash >= 100000) {
+      charges.push(`Money Laundering ($${dirtyCash.toLocaleString()} in unexplained cash seized)`);
+    } else {
+      charges.push('Money Laundering (financial forensics traced your wash cycle)');
+    }
+    chargeSeverity.push('money_laundering');
+  }
+  if ((state.bank || 0) >= 500000 && frontCount <= 1) {
+    charges.push(`Tax Evasion ($${state.bank.toLocaleString()} banked with no declared income)`);
+    chargeSeverity.push('tax_evasion');
+  }
+  const totalBribes = ((state.stats && state.stats.totalBribesPaid) || 0) + ((state.politics && state.politics.totalBribesPaid) || 0);
+  if (totalBribes >= 25000 && state.investigation.level >= 3) {
+    charges.push('Bribery of Public Officials (payment trail uncovered)');
+    chargeSeverity.push('bribery');
+  }
+
+  if (charges.length === 0) charges.push('Racketeering and conspiracy');
+
+  // --- Enterprise charges: RICO needs an actual enterprise (territory / crew / fronts) ---
+  const territoriesHeld = state.territory ? Object.keys(state.territory).filter(function(k) { return state.territory[k].controlled; }).length : 0;
+  const runsEnterprise = territoriesHeld >= 2 || (state.henchmen && state.henchmen.length >= 4) || frontCount >= 2;
+  if (state.investigation.level >= 4 && runsEnterprise) {
+    charges.push('RICO Act violations (continuing criminal enterprise)');
+    chargeSeverity.push('rico');
+  } else if (state.investigation.level >= 4) {
+    charges.push('Conspiracy to Distribute Controlled Substances');
+    chargeSeverity.push('conspiracy');
+  }
+
+  // --- Violence charges ---
   if (state.copsKilled > 0) {
     charges.push(`${state.copsKilled} count(s) of murder of law enforcement`);
     chargeSeverity.push('cop_killing');
-  } else if (state.peopleKilled > 0) {
+  }
+  // Unburied bodies: police search your properties on arrest — bodies become evidence
+  let bodiesFoundNow = 0;
+  let unchargedBodies = 0;
+  if (state.bodies_state) {
+    const bs = state.bodies_state;
+    if (bs.bodies > 0) {
+      bodiesFoundNow = bs.bodies;
+      bs.discoveredBodies = (bs.discoveredBodies || 0) + bs.bodies;
+      bs.bodies = 0;
+    }
+    unchargedBodies = Math.max(0, (bs.discoveredBodies || 0) - (bs.chargedBodies || 0));
+    if (unchargedBodies > 0) {
+      charges.push(`${unchargedBodies} count(s) of first-degree murder (bodies recovered${bodiesFoundNow > 0 ? ' during search' : ''})`);
+      for (let i = 0; i < Math.min(unchargedBodies, 3); i++) chargeSeverity.push('murder');
+      bs.chargedBodies = bs.discoveredBodies;
+    }
+  }
+  if (state.copsKilled <= 0 && unchargedBodies <= 0 && state.peopleKilled > 0) {
     charges.push(`${state.peopleKilled} count(s) of manslaughter`);
     for (let i = 0; i < Math.min(state.peopleKilled, 3); i++) chargeSeverity.push('manslaughter');
   }
 
-  // Calculate worst severity multiplier from all charges
+  // --- Obstruction charges from how the arrest went down ---
+  if (context.resisted) {
+    charges.push('Resisting Arrest & Evading Law Enforcement');
+    chargeSeverity.push('resisting');
+  }
+  if (context.fought) {
+    charges.push('Assaulting Federal Officers');
+    chargeSeverity.push('assault_officer');
+  }
+
+  // Calculate severity multipliers: worst charge sets the base, additional
+  // charges stack a fraction on top (unknown/legacy tags are skipped safely)
   let worstPrisonMod = 1.0;
   let worstForfeitMod = 1.0;
+  let prisonStack = 0;
+  let forfeitStack = 0;
   for (const sev of chargeSeverity) {
     const penalty = CHARGE_PENALTIES[sev];
     if (penalty) {
       worstPrisonMod = Math.max(worstPrisonMod, penalty.prisonMod);
       worstForfeitMod = Math.max(worstForfeitMod, penalty.forfeitMod);
+      prisonStack += Math.max(0, penalty.prisonMod - 1);
+      forfeitStack += Math.max(0, penalty.forfeitMod - 1);
     }
   }
+  // Stack: +20% of every other charge's severity beyond the worst one
+  worstPrisonMod = Math.min(9.0, Math.round((worstPrisonMod + (prisonStack - (worstPrisonMod - 1)) * 0.2) * 100) / 100);
+  worstForfeitMod = Math.min(3.0, Math.round((worstForfeitMod + (forfeitStack - (worstForfeitMod - 1)) * 0.15) * 100) / 100);
+
+  // --- Case type: derived from the dominant charge, shown at top of charge sheet ---
+  let caseType;
+  if (chargeSeverity.includes('cop_killing') || chargeSeverity.includes('murder')) caseType = 'CAPITAL MURDER TRIAL';
+  else if (chargeSeverity.includes('rico')) caseType = 'RICO PROSECUTION';
+  else if (hasTrafficking) caseType = 'FEDERAL TRAFFICKING INDICTMENT';
+  else if (chargeSeverity.includes('money_laundering') || chargeSeverity.includes('tax_evasion')) caseType = 'IRS CRIMINAL CASE';
+  else if (chargeSeverity.includes('possession_large') || chargeSeverity.includes('conspiracy')) caseType = 'FEDERAL INDICTMENT';
+  else caseType = 'STREET BUST — STATE COURT';
+  charges.unshift(`📁 ${caseType} — Day ${state.day}, ${charges.length} count charge sheet`);
 
   // Check for available fall guys
   const fallGuyIndex = state.henchmen.findIndex(h => h.type === 'fall_guy' && !h.injured);
 
   // Build evidence strength based on investigation level and player history
+  // (prosecution strength scales with investigation level + quantity of evidence)
   var evidenceStrength = 0;
   evidenceStrength += state.investigation.level * 15; // 0-75 from investigation
   evidenceStrength += Math.min(20, totalUnits * 0.5); // caught with drugs
   if (state.copsKilled > 0) evidenceStrength += 20;
   if (state.heatSystem && state.heatSystem.wiretaps && state.heatSystem.wiretaps.length > 0) evidenceStrength += 15; // wiretap evidence
   if (state.bodies_state && state.bodies_state.discoveredBodies > 0) evidenceStrength += state.bodies_state.discoveredBodies * 5;
+  if (bodiesFoundNow > 0) evidenceStrength += Math.min(15, bodiesFoundNow * 5); // fresh bodies found in the search
+  if (chargeSeverity.includes('money_laundering')) evidenceStrength += 10; // seized ledgers / cash
+  if (chargeSeverity.includes('tax_evasion')) evidenceStrength += 8; // bank records subpoenaed
+  if (autoWeapon) evidenceStrength += 5; // the hardware speaks for itself
+  evidenceStrength += Math.min(12, Math.max(0, chargeSeverity.length - 1) * 2); // stacked counts strengthen the case
   evidenceStrength = Math.min(100, evidenceStrength);
 
   // Generate witnesses based on evidence
@@ -5656,6 +5806,9 @@ function initCourtCase(state) {
   if (state.copsKilled > 0) witnesses.push({ name: 'Officer body cam footage', type: 'forensic', strength: 25 });
   if (state.bodies_state && state.bodies_state.discoveredBodies > 0) witnesses.push({ name: 'Forensic evidence from crime scenes', type: 'forensic', strength: 15 });
   if (hasPremium) witnesses.push({ name: 'Lab analysis of seized substances', type: 'forensic', strength: 10 });
+  if (chargeSeverity.includes('murder')) witnesses.push({ name: 'Coroner\'s report on recovered bodies', type: 'forensic', strength: 20 });
+  if (chargeSeverity.includes('money_laundering') || chargeSeverity.includes('tax_evasion')) witnesses.push({ name: 'IRS forensic accountant', type: 'forensic', strength: 15 });
+  if (chargeSeverity.includes('weapon_automatic')) witnesses.push({ name: 'ATF ballistics report', type: 'forensic', strength: 10 });
   // Random civilian witness (30% chance)
   if (Math.random() < 0.3) witnesses.push({ name: 'Anonymous civilian eyewitness', type: 'civilian', strength: 10 });
   // Disloyal crew member might testify (check for low loyalty)
@@ -5668,6 +5821,7 @@ function initCourtCase(state) {
   state.courtCase = {
     charges,
     chargeSeverity,
+    caseType,
     worstPrisonMod,
     worstForfeitMod,
     totalUnitsConfiscated: totalUnits,
