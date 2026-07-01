@@ -2624,6 +2624,44 @@ function doStash(action, drugId, amount) {
 // BLACK MARKET
 // ============================================================
 var bmTierFilter = 'all';
+var bmUpgradeWeapon = null; // gunsmith: currently selected owned weapon
+
+// --- Weapon tier progression gating (rank-locked arsenal) ---
+// Minimum kingpin level required to purchase weapons in each tier.
+var WEAPON_TIER_REQUIREMENTS = {
+  melee: 1, throwable: 1, pistol: 1,
+  shotgun: 3, smg: 3,
+  rifle: 5,
+  sniper: 7,
+  heavy: 9,
+  exotic: 10,
+  legendary: 11,
+};
+
+function getWeaponLevelReq(w) {
+  if (!w) return 1;
+  return WEAPON_TIER_REQUIREMENTS[w.tier || 'pistol'] || 1;
+}
+
+function getPlayerKingpinLevel() {
+  if (typeof getKingpinLevel === 'function' && gameState) {
+    var lvl = getKingpinLevel(gameState.xp || 0);
+    return (lvl && lvl.level) || 1;
+  }
+  return 99; // leveling system not loaded — don't gate
+}
+
+function getRankTitle(level) {
+  if (typeof KINGPIN_LEVELS !== 'undefined') {
+    var k = KINGPIN_LEVELS.find(function(l) { return l.level === level; });
+    if (k) return (k.emoji ? k.emoji + ' ' : '') + k.title;
+  }
+  return 'Level ' + level;
+}
+
+function isWeaponUnlocked(w) {
+  return getPlayerKingpinLevel() >= getWeaponLevelReq(w);
+}
 
 function setBMTierFilter(tier) {
   bmTierFilter = tier;
@@ -2642,9 +2680,25 @@ function renderBlackMarket() {
     `<button class="btn btn-sm ${bmTierFilter === t ? 'btn-primary' : 'btn-secondary'}" style="margin:0 3px 5px 0;font-size:0.7rem;" onclick="setBMTierFilter('${t}')">${t === 'all' ? 'ALL' : t.toUpperCase()}</button>`
   ).join('');
 
+  const playerLevel = getPlayerKingpinLevel();
   const weaponRows = WEAPONS.filter(w => w.price > 0).filter(w => bmTierFilter === 'all' || (w.tier || 'standard') === bmTierFilter).map(w => {
     const owned = gameState.weapons.includes(w.id);
     const equipped = gameState.equippedWeapon === w.id;
+    const reqLevel = getWeaponLevelReq(w);
+    const locked = !owned && playerLevel < reqLevel;
+    if (locked) {
+      // Visible-but-locked: show what's waiting at higher ranks
+      return `
+      <tr style="opacity:0.45;">
+        <td>🔒 ${w.name}</td>
+        <td>DMG: ${w.damage}</td>
+        <td>ACC: ${Math.round(w.accuracy * 100)}%</td>
+        <td>$${w.price.toLocaleString()}</td>
+        <td>${w.space} slots</td>
+        <td><span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">Unlocks at ${getRankTitle(reqLevel)} rank (Lv ${reqLevel})</span></td>
+      </tr>
+    `;
+    }
     return `
       <tr class="${owned ? 'row-owned' : ''}">
         <td>${w.name}</td>
@@ -2694,14 +2748,98 @@ function renderBlackMarket() {
     `;
   }).join('');
 
+  // === GUNSMITH: weapon upgrades for owned weapons (weapon-upgrades.js) ===
+  let gunsmithSection = '';
+  if (typeof WEAPON_UPGRADES !== 'undefined' && typeof getCompatibleUpgrades === 'function') {
+    const ownedGuns = (gameState.weapons || []).map(id => WEAPONS.find(w => w.id === id)).filter(w => w && w.price > 0 && !w.consumable);
+    if (ownedGuns.length === 0) {
+      gunsmithSection = '<h3>🔧 Gunsmith</h3><p style="color:var(--text-dim);font-size:0.75rem;">Buy a weapon first — then bring it here for custom work.</p>';
+    } else {
+      if (!bmUpgradeWeapon || !ownedGuns.some(w => w.id === bmUpgradeWeapon)) {
+        bmUpgradeWeapon = ownedGuns.some(w => w.id === gameState.equippedWeapon) ? gameState.equippedWeapon : ownedGuns[0].id;
+      }
+      const selTabs = ownedGuns.map(w =>
+        `<button class="btn btn-sm ${bmUpgradeWeapon === w.id ? 'btn-primary' : 'btn-secondary'}" style="margin:0 3px 5px 0;font-size:0.7rem;" onclick="setBMUpgradeWeapon('${w.id}')">${w.emoji || '🔫'} ${w.name}</button>`
+      ).join('');
+      const selWeapon = ownedGuns.find(w => w.id === bmUpgradeWeapon);
+      const installed = (gameState.weaponState && gameState.weaponState.upgrades && gameState.weaponState.upgrades[bmUpgradeWeapon]) || [];
+      const modStats = typeof getModifiedWeaponStats === 'function' ? getModifiedWeaponStats(bmUpgradeWeapon, gameState.weaponState && gameState.weaponState.upgrades) : null;
+      const statLine = modStats ? `<div style="font-size:0.75rem;margin-bottom:6px;">Modified stats: <span class="neon-cyan">DMG ${modStats.damage}</span> | <span class="neon-cyan">ACC ${Math.round((modStats.accuracy <= 1 ? modStats.accuracy * 100 : modStats.accuracy))}%</span>${modStats.intimidation ? ' | <span class="neon-yellow">INTIM +' + modStats.intimidation + '</span>' : ''} <span style="color:var(--text-dim)">(${installed.length} mod${installed.length === 1 ? '' : 's'} installed)</span></div>` : '';
+      const upgradeRows = getCompatibleUpgrades(selWeapon.tier).map(u => {
+        const isInstalled = installed.includes(u.id);
+        const rankLocked = u.minLevel && playerLevel < u.minLevel;
+        const catTaken = !isInstalled && installed.some(uid => { const iu = WEAPON_UPGRADES.find(x => x.id === uid); return iu && iu.category === u.category; });
+        let actionCell;
+        if (isInstalled) actionCell = '<span class="neon-green">✓ INSTALLED</span>';
+        else if (rankLocked) actionCell = `<span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">🔒 ${getRankTitle(u.minLevel)} rank (Lv ${u.minLevel})</span>`;
+        else if (catTaken) actionCell = `<span style="color:var(--text-dim);font-size:0.65rem;">${u.category} slot used</span>`;
+        else actionCell = `<button class="btn btn-sm btn-buy" onclick="doInstallUpgrade('${selWeapon.id}','${u.id}')">INSTALL</button>`;
+        return `<tr style="${rankLocked ? 'opacity:0.45;' : ''}">
+          <td>${u.emoji} ${u.name}</td>
+          <td style="font-size:0.7rem;color:var(--text-dim);max-width:220px;">${u.desc}</td>
+          <td>$${u.cost.toLocaleString()}</td>
+          <td>${actionCell}</td>
+        </tr>`;
+      }).join('');
+      gunsmithSection = `<h3>🔧 Gunsmith — Weapon Upgrades</h3>
+        <div style="margin-bottom:6px;">${selTabs}</div>
+        ${statLine}
+        <table class="data-table"><thead><tr><th>Upgrade</th><th>Effect</th><th>Cost</th><th></th></tr></thead><tbody>${upgradeRows}</tbody></table>`;
+    }
+  }
+
+  // === BODY ARMOR (weapon-upgrades.js) ===
+  let armorSection = '';
+  if (typeof BODY_ARMOR_TIERS !== 'undefined') {
+    const currentArmor = gameState.weaponState && gameState.weaponState.armor;
+    const armorRows = BODY_ARMOR_TIERS.map(a => {
+      const isWorn = currentArmor === a.id;
+      const rankLocked = a.minLevel && playerLevel < a.minLevel;
+      let cell;
+      if (isWorn) cell = '<span class="neon-green">WEARING</span>';
+      else if (rankLocked) cell = `<span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">🔒 ${getRankTitle(a.minLevel)} rank (Lv ${a.minLevel})</span>`;
+      else cell = `<button class="btn btn-sm btn-buy" onclick="doBuyArmor('${a.id}')">BUY</button>`;
+      return `<tr style="${rankLocked ? 'opacity:0.45;' : ''}">
+        <td>🦺 ${a.name}</td>
+        <td style="font-size:0.7rem;color:var(--text-dim);max-width:200px;">${a.desc}</td>
+        <td>+${a.protection} armor</td>
+        <td>${a.concealable ? '<span class="neon-green">Concealable</span>' : '<span style="color:var(--text-dim)">Visible</span>'}</td>
+        <td>$${a.cost.toLocaleString()}</td>
+        <td>${cell}</td>
+      </tr>`;
+    }).join('');
+    armorSection = `<h3>🦺 Body Armor</h3>
+      <table class="data-table"><thead><tr><th>Armor</th><th>Details</th><th>Protection</th><th>Profile</th><th>Price</th><th></th></tr></thead><tbody>${armorRows}</tbody></table>`;
+  }
+
+  // === TACTICAL EQUIPMENT (weapon-upgrades.js) ===
+  let tacticalSection = '';
+  if (typeof EQUIPMENT !== 'undefined' && Array.isArray(EQUIPMENT)) {
+    const ownedEquip = (gameState.weaponState && gameState.weaponState.equipment) || [];
+    const equipRows = EQUIPMENT.map(e => `
+      <tr>
+        <td>${e.name}</td>
+        <td style="font-size:0.7rem;color:var(--text-dim);max-width:220px;">${e.desc}</td>
+        <td>$${e.cost.toLocaleString()}</td>
+        <td>${ownedEquip.includes(e.id) ? '<span class="neon-green">✓ OWNED</span>' : `<button class="btn btn-sm btn-buy" onclick="doBuyEquipment('${e.id}')">BUY</button>`}</td>
+      </tr>
+    `).join('');
+    tacticalSection = `<h3>📡 Tactical Equipment</h3>
+      <table class="data-table"><thead><tr><th>Gear</th><th>Effect</th><th>Price</th><th></th></tr></thead><tbody>${equipRows}</tbody></table>`;
+  }
+
   return `
     <div class="screen-container">
       ${renderToolbar()}
       ${backButton()}
       <h2 class="section-title neon-yellow">🏴 BLACK MARKET</h2>
       <h3>🔫 Weapons</h3>
+      <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:4px;">Your rank: <span class="neon-cyan">${getRankTitle(playerLevel)} (Lv ${playerLevel})</span> — bigger hardware unlocks as your reputation grows.</div>
       <div style="margin-bottom:8px;">${tierTabs}</div>
       <table class="data-table"><thead><tr><th>Name</th><th>Damage</th><th>Accuracy</th><th>Price</th><th>Space</th><th></th></tr></thead><tbody>${weaponRows}</tbody></table>
+      ${gunsmithSection}
+      ${armorSection}
+      ${tacticalSection}
       <h3>🎒 Items & Equipment</h3>
       <table class="data-table"><thead><tr><th>Item</th><th>Effect</th><th>Price</th><th>Owned</th><th></th></tr></thead><tbody>${itemRows}</tbody></table>
       <h3>👥 Hire Crew (Max ${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</h3>
@@ -2714,6 +2852,14 @@ function renderBlackMarket() {
 }
 
 function doBuyWeapon(id) {
+  // Defensive rank gate — mirrors the locked rendering in renderBlackMarket
+  const weaponDef = typeof WEAPONS !== 'undefined' ? WEAPONS.find(w => w.id === id) : null;
+  if (weaponDef && !isWeaponUnlocked(weaponDef)) {
+    const reqLevel = getWeaponLevelReq(weaponDef);
+    playSound('error');
+    showNotification(`🔒 ${weaponDef.name} is locked. Reach ${getRankTitle(reqLevel)} rank (Lv ${reqLevel}) first.`, 'error');
+    return;
+  }
   const result = buyWeapon(gameState, id);
   if (result.success) {
     playSound('buy');
@@ -2728,6 +2874,54 @@ function doBuyWeapon(id) {
 function equipWeapon(id) {
   gameState.equippedWeapon = id;
   playSound('click');
+  render();
+}
+
+function setBMUpgradeWeapon(id) {
+  bmUpgradeWeapon = id;
+  playSound('click');
+  render();
+}
+
+function doInstallUpgrade(weaponId, upgradeId) {
+  if (typeof installWeaponUpgrade !== 'function') return;
+  const result = installWeaponUpgrade(gameState, weaponId, upgradeId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
+  render();
+}
+
+function doBuyArmor(armorId) {
+  if (typeof buyArmor !== 'function') return;
+  const result = buyArmor(gameState, armorId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
+  render();
+}
+
+function doBuyEquipment(equipId) {
+  if (typeof buyEquipment !== 'function') return;
+  const result = buyEquipment(gameState, equipId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
   render();
 }
 
@@ -7630,7 +7824,70 @@ function doAdvanceRelationship(npcId, action) {
       var advResult = advanceRelationship(romState, npcId);
       showNotification(advResult.message, advResult.success ? 'success' : 'error');
     }
+  } else if (action === 'secret') {
+    if (typeof shareSecret === 'function') {
+      romState._currentDay = gameState.day || 0;
+      var secretResult = shareSecret(romState, npcId);
+      if (secretResult.success && secretResult.leaked && typeof gameState.heat === 'number') {
+        // shareSecret applies heat to the romance state object; mirror onto real game state
+        gameState.heat = Math.min(100, gameState.heat + 5);
+      }
+      showNotification(secretResult.message, secretResult.success ? (secretResult.leaked ? 'error' : 'success') : 'error');
+      if (secretResult.success) gameState.messageLog.push(secretResult.message);
+    }
+  } else if (action === 'protect') {
+    if (typeof protectPartner === 'function') {
+      var protResult = protectPartner(romState, npcId);
+      if (protResult.success) {
+        if (typeof gameState.health === 'number') gameState.health = Math.max(20, gameState.health - 10);
+        playSound('combat');
+        gameState.messageLog.push(protResult.message);
+      }
+      showNotification(protResult.message, protResult.success ? 'success' : 'error');
+    }
   }
+  render();
+}
+
+// Resolve a story-beat choice (per-NPC relationship events with consequences)
+function doRomanceEventChoice(npcId, choiceId) {
+  if (typeof resolveRomanceEventChoice !== 'function') return;
+  var romState = gameState.romance;
+  if (!romState) return;
+
+  var result = resolveRomanceEventChoice(romState, npcId, choiceId, gameState.cash || 0);
+  if (!result.success) {
+    playSound('error');
+    showNotification(result.message, 'error');
+    render();
+    return;
+  }
+
+  // Apply consequences to the real game state (defensively)
+  if (result.cashDelta) gameState.cash = Math.max(0, (gameState.cash || 0) + result.cashDelta);
+  if (result.heatDelta && typeof gameState.heat === 'number') {
+    gameState.heat = Math.max(0, Math.min(100, gameState.heat + result.heatDelta));
+  }
+  if (result.healthDelta && typeof gameState.health === 'number') {
+    gameState.health = Math.max(10, Math.min(gameState.maxHealth || 100, gameState.health + result.healthDelta));
+  }
+
+  playSound(result.brokeUp ? 'error' : (result.cashDelta > 0 ? 'cash' : 'click'));
+  showNotification(result.message + (result.stageUp ? ' 💕 Stage Up: ' + result.newStage + '!' : ''), result.brokeUp ? 'error' : 'success');
+  if (gameState.messageLog) gameState.messageLog.push(result.message);
+  render();
+}
+
+// Dismiss informational romance events (pregnancy, births, warnings...)
+function doDismissRomanceEvent(npcId) {
+  if (typeof dismissRomanceEvent !== 'function') {
+    // Fallback: clear manually
+    var rs = gameState.romance;
+    if (rs && rs.relationships && rs.relationships[npcId]) rs.relationships[npcId].pendingEvent = null;
+  } else if (gameState.romance) {
+    dismissRomanceEvent(gameState.romance, npcId);
+  }
+  playSound('click');
   render();
 }
 
@@ -7642,6 +7899,13 @@ function renderRomance() {
   var romState = gameState.romance || { relationships: {}, daysSinceContact: {}, gifts: {} };
   var stageOrder = typeof RELATIONSHIP_STAGES !== 'undefined' ? RELATIONSHIP_STAGES : ['stranger', 'acquaintance', 'dating', 'serious', 'partner'];
   var thresholds = typeof STAGE_THRESHOLDS !== 'undefined' ? STAGE_THRESHOLDS : { acquaintance: 10, dating: 30, serious: 60, partner: 100 };
+
+  // Arm any story beats whose point thresholds have been crossed (fires immediately, not just on day tick)
+  if (typeof checkStoryBeatTrigger === 'function' && romState.relationships) {
+    Object.keys(romState.relationships).forEach(function(id) {
+      checkStoryBeatTrigger(romState, id);
+    });
+  }
 
   var npcCards = ROMANCE_NPCS.map(function(npc) {
     var rel = romState.relationships ? romState.relationships[npc.id] : null;
@@ -7670,6 +7934,69 @@ function renderRomance() {
       if (parts.length > 0) benefitsStr = '<div style="font-size:0.65rem;color:var(--neon-green);margin-top:3px;">Benefits: ' + parts.join(' | ') + '</div>';
     }
 
+    // Partner perk display: earned at partner stage, teased before it
+    var perkStr = '';
+    var perk = typeof getPartnerPerk === 'function' ? getPartnerPerk(npc.id) : null;
+    if (perk) {
+      if (stage === 'partner') {
+        perkStr = '<div style="font-size:0.65rem;color:#ff44ff;margin-top:3px;border:1px solid #ff44ff;border-radius:3px;padding:3px 5px;">' +
+          perk.emoji + ' <strong>Partner Perk — ' + perk.name + ':</strong> ' + perk.desc + '</div>';
+      } else if (rel) {
+        perkStr = '<div style="font-size:0.6rem;color:var(--text-dim);margin-top:3px;">🔒 Partner perk: <em>' + perk.name + '</em> — ' + perk.desc + '</div>';
+      }
+    }
+
+    // Next story beat hint
+    var beatHint = '';
+    if (rel && typeof getNextStoryBeat === 'function') {
+      var nextBeat = getNextStoryBeat(romState, npc.id);
+      if (nextBeat && !rel.pendingEvent) {
+        if (points >= nextBeat.minPoints) {
+          beatHint = '<div style="font-size:0.65rem;color:var(--neon-yellow);margin-top:2px;">📖 Something is coming with ' + npc.name.split(' ')[0] + '...</div>';
+        } else {
+          beatHint = '<div style="font-size:0.65rem;color:var(--text-dim);margin-top:2px;">📖 Next chapter: <em>"' + nextBeat.title + '"</em> at ' + nextBeat.minPoints + ' pts</div>';
+        }
+      }
+    }
+
+    // Neglect warning (daysSinceContact accumulates now)
+    var neglectStr = '';
+    var daysSince = (romState.daysSinceContact && romState.daysSinceContact[npc.id]) || 0;
+    if (rel && stageIdx >= 3 && daysSince >= 15) {
+      var neglectColor = daysSince >= 30 ? 'var(--neon-red, #ff4444)' : 'var(--neon-yellow)';
+      neglectStr = '<div style="font-size:0.65rem;color:' + neglectColor + ';margin-top:2px;">' +
+        (daysSince >= 30 ? '💔 ' + daysSince + ' days of silence — she\'s slipping away. Call her NOW.' : '⏳ ' + daysSince + ' days since contact. Don\'t neglect her.') + '</div>';
+    }
+
+    // Pending event card (story beats with choices, or informational life events)
+    var eventCard = '';
+    if (rel && rel.pendingEvent) {
+      var ev = rel.pendingEvent;
+      if (ev.choices && ev.choices.length) {
+        var choiceBtns = ev.choices.map(function(c) {
+          return '<div style="margin:4px 0;">' +
+            '<button class="btn btn-sm btn-secondary" style="border-color:#ff6699;color:#ff6699;text-align:left;" onclick="doRomanceEventChoice(\'' + npc.id + '\',\'' + c.id + '\')">' + c.label + '</button>' +
+            (c.hint ? ' <span style="font-size:0.6rem;color:var(--text-dim);">' + c.hint + '</span>' : '') +
+          '</div>';
+        }).join('');
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid #ff6699;border-radius:6px;background:rgba(255,102,153,0.07);">' +
+          '<div style="color:#ff6699;font-weight:bold;">📖 ' + (ev.title || 'A Moment of Truth') + '</div>' +
+          '<div style="font-size:0.75rem;margin:4px 0;">' + (ev.description || '') + '</div>' +
+          choiceBtns +
+        '</div>';
+      } else if (ev.id !== 'kidnapped' && ev.id !== 'threatened') {
+        // Informational life event (pregnancy, birth, divorce, worry...) — protect events keep their button below
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid var(--neon-yellow);border-radius:6px;">' +
+          '<div style="font-size:0.75rem;">💌 ' + (ev.description || 'Something happened.') + '</div>' +
+          '<button class="btn btn-sm btn-secondary" style="margin-top:4px;" onclick="doDismissRomanceEvent(\'' + npc.id + '\')">OK</button>' +
+        '</div>';
+      } else {
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid var(--neon-red,#ff4444);border-radius:6px;">' +
+          '<div style="font-size:0.75rem;color:var(--neon-red,#ff4444);">🚨 ' + (ev.description || 'She\'s in danger!') + '</div>' +
+        '</div>';
+      }
+    }
+
     return '<div style="padding:10px;border:1px solid ' + stageColor + ';border-radius:6px;margin-bottom:8px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
         '<div>' +
@@ -7678,6 +8005,9 @@ function renderRomance() {
           '<div style="font-size:0.7rem;">Personality: <span class="neon-cyan">' + npc.personality.primary + '</span> / <span class="neon-yellow">' + npc.personality.secondary + '</span></div>' +
           '<div style="font-size:0.7rem;">Meets at: <span style="color:' + stageColor + '">' + npc.meetLocation + '</span></div>' +
           benefitsStr +
+          perkStr +
+          beatHint +
+          neglectStr +
         '</div>' +
         '<div style="text-align:right;min-width:140px;">' +
           '<div style="color:' + stageColor + ';font-weight:bold;text-transform:uppercase;">' + stage + '</div>' +
@@ -7702,6 +8032,7 @@ function renderRomance() {
             '</div>') +
         '</div>' +
       '</div>' +
+      eventCard +
     '</div>';
   }).join('');
 

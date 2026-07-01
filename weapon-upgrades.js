@@ -17,7 +17,7 @@ const WEAPON_UPGRADES = [
   {
     id: 'suppressor', name: 'Suppressor', emoji: '🔇',
     category: 'barrel', cost: 6000,
-    compatibleTypes: ['pistol', 'smg', 'rifle'],
+    compatibleTypes: ['pistol', 'smg', 'rifle', 'sniper'],
     effects: { noise: -2, heatPerKill: -50, accuracy: -5, damage: -5 },
     desc: 'Reduces noise and heat from kills. Slight accuracy and damage penalty.',
   },
@@ -31,7 +31,7 @@ const WEAPON_UPGRADES = [
   {
     id: 'improved_sights', name: 'Improved Sights', emoji: '🔭',
     category: 'sights', cost: 4000,
-    compatibleTypes: ['pistol', 'smg', 'rifle', 'shotgun'],
+    compatibleTypes: ['pistol', 'smg', 'rifle', 'shotgun', 'sniper'],
     effects: { accuracy: 15 },
     desc: 'Better accuracy at all ranges.',
   },
@@ -94,7 +94,7 @@ const WEAPON_UPGRADES = [
   {
     id: 'filed_serial', name: 'Filed Serial Number', emoji: '🔒',
     category: 'cosmetic', cost: 500,
-    compatibleTypes: ['pistol', 'smg', 'rifle', 'shotgun', 'heavy'],
+    compatibleTypes: ['pistol', 'smg', 'rifle', 'shotgun', 'heavy', 'sniper'],
     effects: { traceability: -100 },
     desc: 'Untraceable weapon. Cannot be linked to you if found.',
   },
@@ -108,7 +108,7 @@ const WEAPON_UPGRADES = [
   {
     id: 'armor_piercing', name: 'AP Rounds', emoji: '🎯',
     category: 'ammo', cost: 8000,
-    compatibleTypes: ['pistol', 'smg', 'rifle'],
+    compatibleTypes: ['pistol', 'smg', 'rifle', 'sniper'],
     effects: { armorPen: 50, damage: 15 },
     desc: 'Penetrates body armor. Devastating against armored targets.',
   },
@@ -119,6 +119,56 @@ const WEAPON_UPGRADES = [
     effects: { damage: 25, armorPen: -30 },
     desc: 'Maximum damage to unarmored targets. Weak against armor.',
   },
+  // === LATE-GAME UPGRADES (Act 3-5 money, rank-gated) ===
+  {
+    id: 'bipod', name: 'Deployable Bipod', emoji: '🦿',
+    category: 'grip', cost: 30000, minLevel: 5,
+    compatibleTypes: ['sniper', 'heavy'],
+    effects: { accuracy: 25, recoilControl: 30, weight: 10 },
+    desc: 'Stabilized fire for long guns. Big accuracy gain, extra weight.',
+  },
+  {
+    id: 'match_barrel', name: 'Match-Grade Barrel', emoji: '🎯',
+    category: 'barrel', cost: 45000, minLevel: 5,
+    compatibleTypes: ['rifle', 'sniper'],
+    effects: { accuracy: 20, damage: 10, critChance: 5 },
+    desc: 'Precision-machined barrel. Competition accuracy, lethal at range.',
+  },
+  {
+    id: 'incendiary_rounds', name: 'Incendiary Rounds', emoji: '🔥',
+    category: 'ammo', cost: 60000, minLevel: 7,
+    compatibleTypes: ['shotgun', 'heavy'],
+    effects: { damage: 30, intimidation: 15, heatPerKill: 25 },
+    desc: 'Dragon\'s breath. Devastating and terrifying — but the DEA notices.',
+  },
+  {
+    id: 'thermal_scope', name: 'Thermal Scope', emoji: '🌡️',
+    category: 'sights', cost: 150000, minLevel: 9,
+    compatibleTypes: ['rifle', 'sniper'],
+    effects: { accuracy: 30, critChance: 15, nightOps: 25 },
+    desc: 'Military thermal optics. See them before they see you.',
+  },
+  {
+    id: 'belt_feed', name: 'Dual Belt Feed', emoji: '⛓️',
+    category: 'magazine', cost: 120000, minLevel: 9,
+    compatibleTypes: ['heavy'],
+    effects: { ammoCapacity: 200, damage: 15, weight: 30 },
+    desc: 'Never stop shooting. Cartel-war sustained fire.',
+  },
+  {
+    id: 'titanium_frame', name: 'Titanium Frame', emoji: '🛡️',
+    category: 'frame', cost: 250000, minLevel: 10,
+    compatibleTypes: ['pistol', 'smg', 'rifle', 'shotgun', 'sniper', 'heavy'],
+    effects: { damage: 15, accuracy: 10, weight: -15 },
+    desc: 'Full custom rebuild. Lighter, harder-hitting, indestructible.',
+  },
+  {
+    id: 'diamond_inlay', name: 'Diamond Inlay', emoji: '💎',
+    category: 'cosmetic', cost: 500000, minLevel: 12,
+    compatibleTypes: ['pistol', 'smg'],
+    effects: { intimidation: 40, reputation: 15 },
+    desc: 'Drug lord flex. Everyone in Miami knows whose gun this is.',
+  },
 ];
 
 // Body Armor levels (from gameplay bible)
@@ -127,6 +177,7 @@ const BODY_ARMOR_TIERS = [
   { id: 'tactical_vest', name: 'Tactical Vest', cost: 8000, protection: 30, mobility: -10, concealable: false, desc: 'Standard tactical protection.' },
   { id: 'heavy_armor', name: 'Heavy Body Armor', cost: 20000, protection: 50, mobility: -20, concealable: false, desc: 'Serious protection. Visible and heavy.' },
   { id: 'military_grade', name: 'Military Grade', cost: 50000, protection: 75, mobility: -30, concealable: false, desc: 'Maximum protection. Extremely heavy.', minLevel: 5 },
+  { id: 'kevlar_suit', name: 'Tailored Kevlar Suit', cost: 200000, protection: 60, mobility: -5, concealable: true, desc: 'Bespoke Italian cut with hidden kevlar weave. Boardroom to firefight.', minLevel: 10 },
 ];
 
 // Equipment categories
@@ -182,11 +233,27 @@ function getModifiedWeaponStats(weaponId, upgrades) {
 
     // Apply effects
     if (upgrade.effects.damage) modified.damage = Math.max(1, (modified.damage || 10) + upgrade.effects.damage);
-    if (upgrade.effects.accuracy) modified.accuracy = Math.min(100, (modified.accuracy || 50) + upgrade.effects.accuracy);
+    if (upgrade.effects.accuracy) {
+      // WEAPONS use 0-1 accuracy scale; upgrade effects are in percentage points
+      if ((modified.accuracy || 0) <= 1) {
+        modified.accuracy = Math.min(0.99, Math.max(0.05, (modified.accuracy || 0.5) + upgrade.effects.accuracy / 100));
+      } else {
+        modified.accuracy = Math.min(100, (modified.accuracy || 50) + upgrade.effects.accuracy);
+      }
+    }
     if (upgrade.effects.intimidation) modified.intimidation = (modified.intimidation || 0) + upgrade.effects.intimidation;
   }
 
   return modified;
+}
+
+// Get the player's kingpin level (defensive — achievements.js may not be loaded)
+function getWeaponShopPlayerLevel(state) {
+  if (typeof getKingpinLevel === 'function') {
+    const lvl = getKingpinLevel((state && state.xp) || 0);
+    return (lvl && lvl.level) || 1;
+  }
+  return 99; // no leveling system loaded — don't gate
 }
 
 // Install an upgrade on a weapon
@@ -195,6 +262,22 @@ function installWeaponUpgrade(state, weaponId, upgradeId) {
 
   const upgrade = WEAPON_UPGRADES.find(u => u.id === upgradeId);
   if (!upgrade) return { success: false, msg: 'Upgrade not found.' };
+
+  // Must own the weapon you're modifying
+  if (Array.isArray(state.weapons) && !state.weapons.includes(weaponId)) {
+    return { success: false, msg: 'You don\'t own that weapon.' };
+  }
+
+  // Rank gate on high-end upgrades
+  if (upgrade.minLevel && getWeaponShopPlayerLevel(state) < upgrade.minLevel) {
+    return { success: false, msg: `${upgrade.name} requires kingpin level ${upgrade.minLevel}. Earn more respect first.` };
+  }
+
+  // Compatibility check against the weapon's tier
+  const baseWeapon = typeof WEAPONS !== 'undefined' ? WEAPONS.find(w => w.id === weaponId) : null;
+  if (baseWeapon && upgrade.compatibleTypes && !upgrade.compatibleTypes.includes(baseWeapon.tier)) {
+    return { success: false, msg: `${upgrade.name} doesn't fit a ${baseWeapon.tier}.` };
+  }
 
   if (state.cash < upgrade.cost) return { success: false, msg: 'Not enough cash.' };
 
@@ -221,6 +304,9 @@ function buyArmor(state, armorId) {
   if (!state.weaponState) state.weaponState = initWeaponState();
   const armor = BODY_ARMOR_TIERS.find(a => a.id === armorId);
   if (!armor) return { success: false, msg: 'Armor not found.' };
+  if (armor.minLevel && getWeaponShopPlayerLevel(state) < armor.minLevel) {
+    return { success: false, msg: `${armor.name} requires kingpin level ${armor.minLevel}.` };
+  }
   if (state.cash < armor.cost) return { success: false, msg: 'Not enough cash.' };
 
   state.cash -= armor.cost;

@@ -573,12 +573,23 @@ function getRandomDistrict(state) {
 }
 
 function getRandomDrugName(state) {
+  // Prefer drugs the player actually carries
   if (state.inventory && typeof state.inventory === 'object') {
     const drugs = Object.keys(state.inventory).filter(k => state.inventory[k] > 0);
-    if (drugs.length > 0) return drugs[Math.floor(Math.random() * drugs.length)];
+    if (drugs.length > 0) {
+      const id = drugs[Math.floor(Math.random() * drugs.length)];
+      const def = typeof DRUGS !== 'undefined' ? DRUGS.find(d => d.id === id) : null;
+      return def ? def.name : id;
+    }
   }
-  const defaults = ['cocaine', 'weed', 'meth', 'ecstasy', 'heroin'];
-  return defaults[Math.floor(Math.random() * defaults.length)];
+  // Otherwise only drugs actually unlocked at the current day/level —
+  // no buyer should demand cocaine years before it exists in the market
+  if (typeof DRUGS !== 'undefined') {
+    const level = typeof getKingpinLevel === 'function' ? (getKingpinLevel(state.xp || 0).level || 1) : 1;
+    const unlocked = DRUGS.filter(d => !d.ngPlus && (state.day || 1) >= (d.minDay || 1) && level >= (d.minLevel || 1));
+    if (unlocked.length > 0) return unlocked[Math.floor(Math.random() * unlocked.length)].name;
+  }
+  return 'Weed';
 }
 
 // ============================================================
