@@ -75,7 +75,7 @@ function checkChainCondition(state, cond) {
   if (cond.minHeat && (state.heat || 0) < cond.minHeat) return false;
   if (cond.minCrew && (state.henchmen || []).length < cond.minCrew) return false;
   if (cond.minAct) {
-    const act = typeof getCurrentAct === 'function' ? getCurrentAct(state) : 1;
+    const act = typeof getCurrentActNumber === 'function' ? getCurrentActNumber(state) : 1;
     if (act < cond.minAct) return false;
   }
   if (cond.hasBusiness && state.businesses && (!state.businesses.owned || state.businesses.owned.length === 0)) return false;

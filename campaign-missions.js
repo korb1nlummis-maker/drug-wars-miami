@@ -334,7 +334,7 @@ const BRANCH_MISSIONS = [
   },
 ];
 
-const CAMPAIGN_ACTS = [
+const MISSION_ACTS = [
   // ==================================================================
   // ACT 1: THE COME UP
   // ==================================================================
@@ -1783,7 +1783,7 @@ function isBranchMissionAvailable(state, branchMission) {
 // Get all available branch missions for the current act
 function getAvailableBranchMissions(state) {
   if (!state.campaign) return [];
-  const currentAct = state.campaign.currentAct;
+  const currentAct = missionActId(state);
 
   return BRANCH_MISSIONS.filter(bm => {
     if (bm.act && bm.act !== currentAct) return false;
@@ -1820,7 +1820,7 @@ function getAvailableApproaches(state, mission) {
 // Find a mission by ID across all acts and branch missions
 function findMissionById(missionId) {
   // Check main and side missions in acts
-  for (const act of CAMPAIGN_ACTS) {
+  for (const act of MISSION_ACTS) {
     const main = (act.mainMissions || []).find(m => m.id === missionId);
     if (main) return main;
     const side = (act.sideMissions || []).find(m => m.id === missionId);
@@ -1840,7 +1840,7 @@ function findMissionById(missionId) {
 // Initialize campaign state
 function initCampaignState(characterId) {
   return {
-    currentAct: 'act1',
+    missionAct: 'act1',
     actProgress: { act1: 0, act2: 0, act3: 0, act4: 0, act5: 0 },
     completedMissions: [],
     activeMission: null,
@@ -1860,16 +1860,42 @@ function initCampaignState(characterId) {
   };
 }
 
+// Ensure mission-related campaign fields exist (self-heals old saves and
+// state created by campaign-system's initCampaign, which lacks these keys)
+function ensureCampaignMissionFields(state) {
+  if (!state.campaign) state.campaign = {};
+  const c = state.campaign;
+  if (c.missionAct === undefined) {
+    if (typeof c.currentAct === 'number') c.missionAct = 'act' + c.currentAct;
+    else if (typeof c.currentAct === 'string' && c.currentAct.startsWith('act')) c.missionAct = c.currentAct;
+    else c.missionAct = 'act1';
+  }
+  const defaults = initCampaignState();
+  for (const k of Object.keys(defaults)) {
+    if (c[k] === undefined) c[k] = defaults[k];
+  }
+}
+
+// The mission act id ('act1'..'act5') for this state
+function missionActId(state) {
+  const c = state.campaign || {};
+  if (typeof c.missionAct === 'string') return c.missionAct;
+  if (typeof c.currentAct === 'number') return 'act' + c.currentAct;
+  if (typeof c.currentAct === 'string' && c.currentAct.startsWith('act')) return c.currentAct;
+  return 'act1';
+}
+
 // Get current act data
-function getCurrentAct(state) {
-  if (!state.campaign) return CAMPAIGN_ACTS[0];
-  return CAMPAIGN_ACTS.find(a => a.id === state.campaign.currentAct) || CAMPAIGN_ACTS[0];
+function getCurrentMissionAct(state) {
+  if (!state.campaign) return MISSION_ACTS[0];
+  return MISSION_ACTS.find(a => a.id === missionActId(state)) || MISSION_ACTS[0];
 }
 
 // Get available main missions (includes branch missions for current act)
 function getAvailableMainMissions(state) {
   if (!state.campaign) return [];
-  const act = getCurrentAct(state);
+  ensureCampaignMissionFields(state);
+  const act = getCurrentMissionAct(state);
   if (!act.mainMissions) return [];
 
   // Standard main missions
@@ -1989,9 +2015,10 @@ function checkMissionObjective(state, objective) {
   }
 }
 
-// Complete a mission (with optional approach for branching consequences)
-function completeMission(state, missionId, approachId) {
+// Complete a campaign mission (with optional approach for branching consequences)
+function completeCampaignMission(state, missionId, approachId) {
   if (!state.campaign) return;
+  ensureCampaignMissionFields(state);
   if (state.campaign.completedMissions.includes(missionId)) return;
 
   state.campaign.completedMissions.push(missionId);
@@ -2029,10 +2056,10 @@ function completeMission(state, missionId, approachId) {
 
     // Check for act progression
     const unlocks = mission.unlocks || [];
-    if (unlocks.includes('act2')) state.campaign.currentAct = 'act2';
-    if (unlocks.includes('act3')) state.campaign.currentAct = 'act3';
-    if (unlocks.includes('act4')) state.campaign.currentAct = 'act4';
-    if (unlocks.includes('act5')) state.campaign.currentAct = 'act5';
+    if (unlocks.includes('act2')) state.campaign.missionAct = 'act2';
+    if (unlocks.includes('act3')) state.campaign.missionAct = 'act3';
+    if (unlocks.includes('act4')) state.campaign.missionAct = 'act4';
+    if (unlocks.includes('act5')) state.campaign.missionAct = 'act5';
   }
 
   state.campaign.activeMission = null;
@@ -2040,7 +2067,9 @@ function completeMission(state, missionId, approachId) {
 
 // Check all active mission objectives and auto-complete if all met
 function checkMissionProgress(state) {
-  if (!state.campaign || !state.campaign.activeMission) return null;
+  if (!state.campaign) return null;
+  ensureCampaignMissionFields(state);
+  if (!state.campaign.activeMission) return null;
 
   const missionId = state.campaign.activeMission;
   const mission = findMissionById(missionId);
@@ -2056,7 +2085,8 @@ function checkMissionProgress(state) {
 // Get campaign progress percentage
 function getCampaignProgress(state) {
   if (!state.campaign) return 0;
-  const totalMain = CAMPAIGN_ACTS.reduce((s, a) => s + (a.mainMissions ? a.mainMissions.length : 0), 0);
+  ensureCampaignMissionFields(state);
+  const totalMain = MISSION_ACTS.reduce((s, a) => s + (a.mainMissions ? a.mainMissions.length : 0), 0);
   return Math.round((state.campaign.completedMissions.length / Math.max(1, totalMain)) * 100);
 }
 

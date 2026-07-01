@@ -455,8 +455,16 @@ function initCampaign() {
 
 // Get current act data
 function getCurrentAct(state) {
-  const actNum = (state.campaign && state.campaign.currentAct) || 1;
+  const actNum = getCurrentActNumber(state);
   return CAMPAIGN_ACTS.find(a => a.act === actNum) || CAMPAIGN_ACTS[0];
+}
+
+// Current act as a plain number (1-5), tolerating legacy 'actN' string saves
+function getCurrentActNumber(state) {
+  const c = state && state.campaign ? state.campaign.currentAct : 1;
+  if (typeof c === 'number') return c;
+  const n = parseInt(String(c).replace('act', ''), 10);
+  return isNaN(n) ? 1 : n;
 }
 
 // Get act modifiers for current act

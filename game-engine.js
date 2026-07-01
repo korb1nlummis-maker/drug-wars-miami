@@ -1886,7 +1886,10 @@ function createGameState() {
     marketMemory: initMarketMemory(),
     properties: {},
     stashes: {},
-    campaign: initCampaign(),
+    campaign: Object.assign(
+      typeof initCampaignState === 'function' ? initCampaignState() : {},
+      initCampaign()
+    ),
     endlessMode: false,
     newGamePlus: false,   // Will be set to { active: true, tier: N, ... } when NG+ is active
     ngPlusLevel: 0,       // Legacy compat
@@ -3640,7 +3643,16 @@ function waitDay(state) {
   if (typeof checkMissionProgress === 'function' && state.campaign) {
     const completedMission = checkMissionProgress(state);
     if (completedMission) {
-      msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! Check missions for rewards.`);
+      if (completedMission.approaches && completedMission.approaches.length > 0) {
+        // Player picks an approach on the Campaign screen to collect
+        msgs.push(`🎯 MISSION READY: ${completedMission.name}! Choose your approach on the Campaign screen.`);
+      } else if (typeof completeCampaignMission === 'function') {
+        completeCampaignMission(state, completedMission.id);
+        const r = completedMission.reward || {};
+        msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! +$${(r.cash||0).toLocaleString()}, +${r.rep||0} Rep, +${r.xp||0} XP`);
+      } else {
+        msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! Check missions for rewards.`);
+      }
     }
   }
 

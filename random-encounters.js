@@ -121,7 +121,7 @@ function checkEncounterCondition(state, cond) {
   if (cond.hasPet && (!state.encounters || !state.encounters.companions.pet)) return false;
   if (cond.hasBusiness && typeof state.businesses !== 'undefined' && (!state.businesses.owned || state.businesses.owned.length === 0)) return false;
   if (cond.minAct) {
-    const act = typeof getCurrentAct === 'function' ? getCurrentAct(state) : 1;
+    const act = typeof getCurrentActNumber === 'function' ? getCurrentActNumber(state) : 1;
     if (act < cond.minAct) return false;
   }
   return true;

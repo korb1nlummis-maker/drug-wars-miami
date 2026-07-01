@@ -423,7 +423,7 @@ function getCounterMeasureEffect(state, effectKey) {
 // ============================================================
 // BUY VEHICLE
 // ============================================================
-function buyVehicle(state, vehicleId) {
+function buyChaseVehicle(state, vehicleId) {
   const vehicle = CHASE_VEHICLES.find(v => v.id === vehicleId);
   if (!vehicle) return { success: false, msg: 'Unknown vehicle' };
   if (!vehicle.cost) return { success: false, msg: 'Can\'t buy this' };
@@ -439,10 +439,9 @@ function buyVehicle(state, vehicleId) {
   return { success: true, msg: `${vehicle.emoji} Purchased ${vehicle.name}!` };
 }
 
-function setActiveVehicle(state, vehicleId) {
+function setActiveChaseVehicle(state, vehicleId) {
   if (!state.heatSystem) return { success: false, msg: 'No vehicles' };
   if (!state.heatSystem.vehicles.includes(vehicleId)) return { success: false, msg: 'Don\'t own that' };
-  state.heatSystem.vehicles; // exists
   state.heatSystem.activeVehicle = vehicleId;
   return { success: true, msg: `Now using ${CHASE_VEHICLES.find(v => v.id === vehicleId)?.name || vehicleId}` };
 }

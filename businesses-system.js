@@ -710,7 +710,7 @@ function purchaseBusiness(state, businessId, districtId) {
   if (!def) return { success: false, reason: 'Unknown business type.' };
 
   // Check act unlock
-  const currentAct = (typeof getCurrentAct === 'function') ? getCurrentAct(state) : (state.act || 1);
+  const currentAct = (typeof getCurrentActNumber === 'function') ? getCurrentActNumber(state) : (state.act || 1);
   if (currentAct < def.unlockAct) {
     return { success: false, reason: 'Not available yet. Unlocks in Act ' + def.unlockAct + '.' };
   }
@@ -837,7 +837,7 @@ function upgradeBusiness(state, businessIndex) {
 // AVAILABLE BUSINESSES
 // ============================================================
 function getAvailableBusinesses(state) {
-  const currentAct = (typeof getCurrentAct === 'function') ? getCurrentAct(state) : (state.act || 1);
+  const currentAct = (typeof getCurrentActNumber === 'function') ? getCurrentActNumber(state) : (state.act || 1);
   const isNgPlus = !!state.ngPlus;
 
   return BUSINESS_TYPES.map(def => {

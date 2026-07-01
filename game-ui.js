@@ -972,7 +972,8 @@ function doDisposeBodies(methodId, count) {
 // ============================================================
 function renderCampaignScreen() {
   const campaign = gameState.campaign || {};
-  const currentAct = typeof getCurrentAct === 'function' ? getCurrentAct(gameState) : null;
+  const currentAct = typeof getCurrentMissionAct === 'function' ? getCurrentMissionAct(gameState) : null;
+  const currentActId = typeof missionActId === 'function' ? missionActId(gameState) : (campaign.missionAct || 'act1');
   const progress = typeof getCampaignProgress === 'function' ? getCampaignProgress(gameState) : 0;
   const availableMissions = typeof getAvailableMainMissions === 'function' ? getAvailableMainMissions(gameState) : [];
   const nextMission = availableMissions.length > 0 ? availableMissions[0] : null;
@@ -981,10 +982,10 @@ function renderCampaignScreen() {
   const charData = gameState.characterData || {};
 
   // Act cards
-  const actCards = typeof CAMPAIGN_ACTS !== 'undefined' ? CAMPAIGN_ACTS.map(act => {
-    const isCurrent = campaign.currentAct === act.id;
-    const isComplete = act.mainMissions && act.mainMissions.every(m => (campaign.completedMissions || []).includes(m.id));
-    const isLocked = !isCurrent && !isComplete && CAMPAIGN_ACTS.indexOf(act) > CAMPAIGN_ACTS.findIndex(a => a.id === campaign.currentAct);
+  const actCards = typeof MISSION_ACTS !== 'undefined' ? MISSION_ACTS.map(act => {
+    const isCurrent = currentActId === act.id;
+    const isComplete = act.mainMissions && act.mainMissions.length > 0 && act.mainMissions.every(m => (campaign.completedMissions || []).includes(m.id));
+    const isLocked = !isCurrent && !isComplete && MISSION_ACTS.indexOf(act) > MISSION_ACTS.findIndex(a => a.id === currentActId);
     const completedInAct = act.mainMissions ? act.mainMissions.filter(m => (campaign.completedMissions || []).includes(m.id)).length : 0;
     const totalInAct = act.mainMissions ? act.mainMissions.length : 0;
 
@@ -1048,7 +1049,7 @@ function renderCampaignScreen() {
           <p class="text-dim" style="font-size:0.85rem;margin-bottom:0.3rem">${variant}</p>
           ${m.isActClimax ? '<div style="font-size:0.75rem;color:#ff8844;margin-bottom:0.3rem;font-weight:bold">ACT CLIMAX - Major story mission</div>' : ''}
           ${m.choiceConsequences ? '<div style="font-size:0.75rem;color:#cc88ff;margin-bottom:0.3rem">Your choices in this mission will affect the story</div>' : ''}
-          ${m.approaches ? `<div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Approaches: ${m.approaches.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}</div>` : ''}
+          ${m.approaches ? `<div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Approaches: ${m.approaches.map(a => a.name ? a.name : (String(a).charAt(0).toUpperCase() + String(a).slice(1))).join(', ')}</div>` : ''}
           ${objectivesHtml ? `<div style="margin-top:0.5rem;font-size:0.85rem;background:rgba(0,0,0,0.2);border-radius:6px;padding:0.4rem 0.6rem">
             <div style="font-size:0.7rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem">Objectives (${completedCount}/${totalCount})</div>
             ${objectivesHtml}
@@ -1057,7 +1058,10 @@ function renderCampaignScreen() {
             Reward: ${m.reward ? `$${(m.reward.cash||0).toLocaleString()} | +${m.reward.rep||0} Rep | +${m.reward.xp||0} XP` : 'See description'}
           </div>
           ${m.unlocks && m.unlocks.length > 0 ? `<div style="font-size:0.7rem;color:#888;margin-top:0.3rem">Unlocks: ${m.unlocks.filter(u => !u.startsWith('act')).join(', ') || 'Next act'}</div>` : ''}
-          ${!isActive ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
+          ${!isActive && !allDone ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
+          ${allDone ? (m.approaches && typeof getAvailableApproaches === 'function'
+            ? `<div style="margin-top:0.5rem"><div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Choose your approach:</div>${getAvailableApproaches(gameState, m).map(a => `<button class="btn btn-sm btn-buy" style="margin:0.15rem 0.3rem 0.15rem 0" onclick="doCompleteCampaignMission('${m.id}','${a.id}')">${a.name}</button>`).join('')}</div>`
+            : `<button class="btn btn-sm btn-buy" style="margin-top:0.5rem" onclick="doCompleteCampaignMission('${m.id}')">✅ Complete Mission</button>`) : ''}
         </div>
       `;
     }).join('');
@@ -1090,7 +1094,7 @@ function renderCampaignScreen() {
       </div>
       <div style="margin-bottom:1rem">
         <div class="stat-bar" style="height:8px"><div class="stat-fill" style="width:${progress}%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green))"></div></div>
-        <p class="text-dim" style="text-align:center;font-size:0.85rem">Campaign Progress: ${progress}% | Missions: ${(campaign.completedMissions||[]).length}/${typeof CAMPAIGN_ACTS !== 'undefined' ? CAMPAIGN_ACTS.reduce((s,a) => s + (a.mainMissions?a.mainMissions.length:0), 0) : '?'}</p>
+        <p class="text-dim" style="text-align:center;font-size:0.85rem">Campaign Progress: ${progress}% | Missions: ${(campaign.completedMissions||[]).length}/${typeof MISSION_ACTS !== 'undefined' ? MISSION_ACTS.reduce((s,a) => s + (a.mainMissions?a.mainMissions.length:0), 0) : '?'}</p>
       </div>
       <h3 class="neon-yellow" style="margin:1rem 0 0.5rem">📖 Story Acts</h3>
       <div class="card-grid">${actCards}</div>
@@ -5364,11 +5368,11 @@ function renderMissions() {
         function milestoneGuidance(milestone, isDone) {
           // Try to find matching campaign mission objectives for richer info
           var campaignMission = null;
-          if (typeof CAMPAIGN_ACTS !== 'undefined') {
-            for (var ai = 0; ai < CAMPAIGN_ACTS.length; ai++) {
-              if (CAMPAIGN_ACTS[ai].mainMissions) {
-                for (var mi = 0; mi < CAMPAIGN_ACTS[ai].mainMissions.length; mi++) {
-                  var cm = CAMPAIGN_ACTS[ai].mainMissions[mi];
+          if (typeof MISSION_ACTS !== 'undefined') {
+            for (var ai = 0; ai < MISSION_ACTS.length; ai++) {
+              if (MISSION_ACTS[ai].mainMissions) {
+                for (var mi = 0; mi < MISSION_ACTS[ai].mainMissions.length; mi++) {
+                  var cm = MISSION_ACTS[ai].mainMissions[mi];
                   if (cm.objectives) {
                     for (var oi = 0; oi < cm.objectives.length; oi++) {
                       if (cm.objectives[oi].id === milestone.id) { campaignMission = cm; break; }
@@ -5509,6 +5513,17 @@ function doCompleteMission(index) {
   gameState.messageLog.push(result.msg);
   if (result.success) playSound('click');
   else playSound('error');
+  render();
+}
+
+function doCompleteCampaignMission(missionId, approachId) {
+  if (typeof completeCampaignMission !== 'function') return;
+  const mission = typeof findMissionById === 'function' ? findMissionById(missionId) : null;
+  completeCampaignMission(gameState, missionId, approachId);
+  const name = mission ? mission.name : missionId;
+  gameState.messageLog.push(`🎯 MISSION COMPLETE: ${name}!` + (mission && mission.reward ? ` +$${(mission.reward.cash||0).toLocaleString()}, +${mission.reward.rep||0} Rep, +${mission.reward.xp||0} XP` : ''));
+  showNotification(`Mission complete: ${name}`, 'success');
+  playSound('cash');
   render();
 }
 
@@ -5897,7 +5912,7 @@ function renderSecurity() {
       <div class="prop-header">${v.emoji} ${v.name} ${isActive ? '✅' : ''}</div>
       <div class="prop-details">
         Speed: ${v.speed} | Handling: ${v.handling}${v.armor ? ` | Armor: ${v.armor}` : ''}${v.waterOnly ? ' | 🌊 Water only' : ''}<br>
-        ${owned ? (isActive ? '<span class="neon-green">Active</span>' : `<button class="btn btn-sm btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="doSetVehicle('${v.id}')">Set Active</button>`) : `<button class="btn btn-sm btn-buy" onclick="doBuyVehicle('${v.id}')">Buy $${v.cost.toLocaleString()}</button>`}
+        ${owned ? (isActive ? '<span class="neon-green">Active</span>' : `<button class="btn btn-sm btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="doSetVehicle('${v.id}')">Set Active</button>`) : `<button class="btn btn-sm btn-buy" onclick="doBuyChaseVehicle('${v.id}')">Buy $${v.cost.toLocaleString()}</button>`}
       </div>
     </div>`;
   }).join('');
@@ -5994,10 +6009,18 @@ function doBuyCounterMeasure(measureId) {
 }
 
 function doSetVehicle(vehicleId) {
-  const result = setActiveVehicle(gameState, vehicleId);
+  const result = setActiveChaseVehicle(gameState, vehicleId);
   if (result.msg) gameState.messageLog.push(result.msg);
   if (result.message) gameState.messageLog.push(result.message);
   if (result.success) playSound('click');
+  render();
+}
+
+function doBuyChaseVehicle(vehicleId) {
+  const result = buyChaseVehicle(gameState, vehicleId);
+  if (result.msg) gameState.messageLog.push(result.msg);
+  if (result.success) playSound('cash');
+  else playSound('error');
   render();
 }
 
@@ -6440,6 +6463,8 @@ function migrateGameState(state) {
     else if (state.day > 800) state.campaign.currentAct = 3;
     else if (state.day > 200) state.campaign.currentAct = 2;
   }
+  // Campaign mission fields (story missions live alongside act milestones)
+  if (typeof ensureCampaignMissionFields === 'function') ensureCampaignMissionFields(state);
 
   // Crew expansion fields
   for (const h of state.henchmen) {
@@ -6523,17 +6548,18 @@ function migrateGameState(state) {
     };
   }
 
-  // Campaign state
+  // Campaign state (acts + story mission fields)
   if (!state.campaign) {
-    state.campaign = typeof initCampaignState === 'function' ? initCampaignState(state.character) :
-      { currentAct: 'act1', actProgress: {}, completedMissions: [], activeMission: null,
-        activeSideMissions: [], availableSideMissions: [], missionObjectives: {},
-        endingPath: null, totalMissionsCompleted: 0, totalSideMissionsCompleted: 0,
-        campaignStartDay: 0, campaignComplete: false, choiceHistory: [] };
-    // Estimate act based on day count for existing saves
-    if (state.day > 300) state.campaign.currentAct = 'act4';
-    else if (state.day > 150) state.campaign.currentAct = 'act3';
-    else if (state.day > 60) state.campaign.currentAct = 'act2';
+    state.campaign = typeof initCampaign === 'function' ? initCampaign() :
+      { currentAct: 1, milestonesCompleted: {}, actTransitions: [], flags: {} };
+  }
+  if (typeof ensureCampaignMissionFields === 'function') {
+    ensureCampaignMissionFields(state);
+  } else if (!state.campaign.completedMissions) {
+    Object.assign(state.campaign, { missionAct: 'act1', actProgress: {}, completedMissions: [], activeMission: null,
+      activeSideMissions: [], availableSideMissions: [], missionObjectives: {},
+      endingPath: null, totalMissionsCompleted: 0, totalSideMissionsCompleted: 0,
+      campaignStartDay: 0, campaignComplete: false, choiceHistory: [] });
   }
 
   // Weapon state (upgrades, armor, equipment)

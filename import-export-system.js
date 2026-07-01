@@ -378,7 +378,7 @@ function bribeCustomsOfficial(state, sourceId) {
 // ============================================================
 // EXPORT (sell abroad for premium)
 // ============================================================
-function exportDrugs(state, drugId, amount, destinationId) {
+function exportDrugsInternational(state, drugId, amount, destinationId) {
   const source = INTERNATIONAL_SOURCES.find(s => s.id === destinationId);
   if (!source) return { success: false, msg: 'Unknown destination' };
 

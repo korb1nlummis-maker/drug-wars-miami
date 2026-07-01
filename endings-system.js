@@ -4,7 +4,7 @@
 // Each ending has sub-variants and quality grades (S/A/B/C)
 // ============================================================
 
-const CAMPAIGN_ENDINGS = [
+const ENDING_DEFS = [
   {
     id: 'kingpin', name: 'The Kingpin', emoji: '👑',
     desc: 'You rule Miami. Every district, every faction, every dollar flows through you.',
@@ -253,7 +253,7 @@ const CAMPAIGN_ENDINGS = [
   },
 ];
 
-const NG_PLUS_ENDINGS = [
+const NG_PLUS_ENDING_DEFS = [
   { id: 'dynasty', name: 'The Dynasty', emoji: '🏰', desc: 'Build a criminal dynasty spanning generations. Legacy character carries the torch.', ngPlusOnly: true, minTier: 1 },
   { id: 'secret', name: 'The Secret Ending', emoji: '❓', desc: 'Complete all 12 campaign endings + specific NG+ conditions.', ngPlusOnly: true, hidden: true, minTier: 1 },
   { id: 'revolution', name: 'The Revolution', emoji: '✊', desc: 'Overthrow the entire system. Transform Miami from the ground up.', ngPlusOnly: true, minTier: 1 },
@@ -265,13 +265,13 @@ const NG_PLUS_ENDINGS = [
 ];
 
 // All endings combined (includes tier-gated NG+ endings from campaign-system.js)
-const ALL_ENDINGS = [...CAMPAIGN_ENDINGS, ...NG_PLUS_ENDINGS];
+const ALL_ENDINGS = [...ENDING_DEFS, ...NG_PLUS_ENDING_DEFS];
 
 // Determine which endings the player qualifies for
 function getAvailableEndings(state) {
   const available = [];
 
-  for (const ending of CAMPAIGN_ENDINGS) {
+  for (const ending of ENDING_DEFS) {
     if (meetsEndingRequirements(state, ending)) {
       const grade = calculateEndingGrade(state, ending);
       available.push({ ...ending, grade });
@@ -284,7 +284,7 @@ function getAvailableEndings(state) {
 
   if (isNgPlus || state.newGamePlus === true) {
     const effectiveTier = isNgPlus ? ngTier : 1; // Legacy compat: boolean true = tier 1
-    for (const ending of NG_PLUS_ENDINGS) {
+    for (const ending of NG_PLUS_ENDING_DEFS) {
       const minTier = ending.minTier || 1;
       if (effectiveTier < minTier) continue; // Not at required tier yet
       if (ending.hidden && !meetsSecretEndingConditions(state)) continue;

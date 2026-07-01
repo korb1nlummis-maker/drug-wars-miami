@@ -262,7 +262,7 @@ function buildCategoryWeights(state, heat) {
   if (rep > 50) weights.buyer_request += 10;
 
   // Political messages only after act 2
-  const act = (typeof getCurrentAct === 'function') ? getCurrentAct(state) : (state.act || 1);
+  const act = (typeof getCurrentActNumber === 'function') ? getCurrentActNumber(state) : (state.act || 1);
   if (act < 2) weights.political = 0;
 
   return weights;
