@@ -579,6 +579,10 @@ const MusicEngine = (() => {
   // SOUND EFFECTS (procedural Web Audio API - preserved from original)
   // ============================================================
   function playSfx(type) {
+    try { playSfxInner(type); } catch (e) { /* rapid clicks can race oscillator start/stop */ }
+  }
+
+  function playSfxInner(type) {
     if (!ctx) init();
     if (!ctx) return;
 

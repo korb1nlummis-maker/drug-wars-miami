@@ -3678,7 +3678,7 @@ function renderCrewPanel() {
     const rank = h.rank || 0;
     const rankData = typeof CREW_RANKS !== 'undefined' ? CREW_RANKS[rank] : null;
     const rankName = rankData ? rankData.name : 'Crew';
-    const canPromote = typeof canPromoteCrew === 'function' ? canPromoteCrew(gameState, i) : null;
+    const canPromote = typeof canPromoteCrew === 'function' ? canPromoteCrew(gameState, h) : null;
     const daysServed = h.daysServed || 0;
     const traits = h.traits || [];
     const betrayalRisk = h.betrayalRisk || 0;
@@ -7741,6 +7741,7 @@ function doBuildFortification(districtId, level) {
   } else {
     showNotification(result.message, 'error');
   }
+  delete defState.cash;
   render();
 }
 
@@ -7764,6 +7765,7 @@ function doBuildStructure(districtId, structureId) {
   } else {
     showNotification(result.message, 'error');
   }
+  delete defState.cash;
   render();
 }
 
@@ -7780,7 +7782,8 @@ function renderDefense() {
   var territoryCards = '';
   if (controlledTerritories.length > 0) {
     territoryCards = controlledTerritories.map(function(t) {
-      var districtId = t.id || t.districtId || t.name;
+      // getControlledTerritories returns plain string ids
+      var districtId = typeof t === 'string' ? t : (t.id || t.districtId || t.name);
       var fortLevel = (defState.fortifications || {})[districtId] || 0;
       var fortDef = FORTIFICATION_LEVELS[fortLevel];
       var structures = (defState.structures || {})[districtId] || [];
@@ -7804,7 +7807,7 @@ function renderDefense() {
       return '<div style="padding:10px;border:1px solid ' + (underSiege ? 'var(--neon-red)' : 'var(--neon-green)') + ';border-radius:6px;margin-bottom:8px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<div>' +
-            '<strong>' + (t.name || districtId) + '</strong>' +
+            '<strong>' + (typeof t === 'string' ? String(districtId).replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }) : (t.name || districtId)) + '</strong>' +
             (underSiege ? ' <span class="neon-red">⚔️ UNDER SIEGE</span>' : '') +
             '<div style="font-size:0.75rem;">Fortification: <span class="neon-yellow">' + fortDef.name + ' (Lv.' + fortLevel + ')</span> | Defense: <span class="neon-cyan">' + defenseStrength + '</span></div>' +
             '<div style="font-size:0.7rem;">Structures: ' + structList + '</div>' +

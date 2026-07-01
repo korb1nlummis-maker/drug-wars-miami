@@ -6395,6 +6395,10 @@ function processCrewDaily(state) {
       state.processing.activeJobs[ji].completionDay = Math.max(state.day, state.processing.activeJobs[ji].completionDay - labWorkers);
     }
   }
+  // Lab workers also teach the boss chemistry (up to level 3 from watching alone)
+  if (labWorkers > 0 && state.processing && (state.processing.chemistryXp || 0) < 30) {
+    state.processing.chemistryXp = Math.min(30, (state.processing.chemistryXp || 0) + labWorkers);
+  }
 
   // Enforcers: collect debts, intimidation bonus, passive income from protection
   if (enforcers > 0) {

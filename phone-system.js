@@ -722,7 +722,16 @@ function applyMessageEffect(state, msg, effect) {
       // Create a delivery mission: sell X drugs within Y days for bonus cash
       const mData = msg._missionData;
       if (mData) {
-        const bonus = 500 + Math.floor(Math.random() * 2000);
+        // Premium scales with the market value of the requested delivery
+        let unitPrice = 0;
+        if (typeof DRUGS !== 'undefined') {
+          const def = DRUGS.find(d => d.name === mData.drug || d.id === mData.drug);
+          if (def) {
+            unitPrice = (state.prices && state.prices[def.id]) || Math.round((def.minPrice + def.maxPrice) / 2);
+          }
+        }
+        const marketValue = unitPrice * (mData.amount || 10);
+        const bonus = Math.max(500 + Math.floor(Math.random() * 2000), Math.round(marketValue * (0.2 + Math.random() * 0.2)));
         // Give a cash advance
         const advance = Math.round(bonus * 0.3);
         state.cash = (state.cash || 0) + advance;
