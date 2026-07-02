@@ -83,14 +83,47 @@ function _processUnlockToastQueue() {
   }, 3000);
 }
 
-// Check for new unlocks and show notifications + message log entries
+// Check for new unlocks: log them and queue a readable explainer card.
+// Cards are held back while the tutorial runs so they never talk over it.
 function checkAndAnnounceUnlocks() {
   if (!gameState || typeof checkNewUnlocks !== 'function') return;
   const newUnlocks = checkNewUnlocks(gameState);
+  if (!newUnlocks.length) return;
+  if (!gameState.pendingUnlockCards) gameState.pendingUnlockCards = [];
   for (const info of newUnlocks) {
     gameState.messageLog.push(`🔓 NEW SYSTEM UNLOCKED: ${info.emoji} ${info.name}! ${info.desc}`);
-    showUnlockToast(info);
+    gameState.pendingUnlockCards.push(info);
   }
+}
+
+// Show the next queued unlock card as a real modal the player must read
+// and dismiss — not a 3-second toast.
+function _maybeShowUnlockCard() {
+  if (!gameState || !gameState.pendingUnlockCards || gameState.pendingUnlockCards.length === 0) return;
+  if (typeof isTutorialActive === 'function' && isTutorialActive()) return; // wait until class is over
+  const mc = document.getElementById('modal-container');
+  if (!mc || mc.innerHTML.trim() !== '') return; // never stack over another modal
+  const info = gameState.pendingUnlockCards[0];
+  const remaining = gameState.pendingUnlockCards.length - 1;
+  mc.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal" style="max-width:420px;text-align:center;border-color:var(--neon-green)">
+        <div style="font-size:0.7rem;letter-spacing:2px;color:var(--neon-green);margin-bottom:0.3rem">🔓 NEW SYSTEM UNLOCKED</div>
+        <h3 class="neon-cyan" style="margin-bottom:0.5rem">${info.emoji} ${info.name}</h3>
+        <p style="margin-bottom:0.6rem">${info.desc}</p>
+        ${info.where ? `<p class="text-dim" style="font-size:0.85rem;margin-bottom:0.8rem">📍 Where: ${info.where}</p>` : ''}
+        <button class="btn btn-primary" onclick="dismissUnlockCard()">GOT IT${remaining > 0 ? ` (${remaining} more)` : ''}</button>
+      </div>
+    </div>
+  `;
+}
+
+function dismissUnlockCard() {
+  if (gameState && gameState.pendingUnlockCards) gameState.pendingUnlockCards.shift();
+  const mc = document.getElementById('modal-container');
+  if (mc) mc.innerHTML = '';
+  playSound('click');
+  _maybeShowUnlockCard();
 }
 
 // Helper: render a locked sidebar button
@@ -99,9 +132,45 @@ function renderLockedSidebarBtn(emoji, label, featureKey) {
   return `<button class="btn btn-sidebar btn-secondary btn-locked-interactive" data-lock-tooltip="${tooltip}" onclick="showNotification('${tooltip}', 'info'); return false;">🔒 ${label}</button>`;
 }
 
+// Adaptive soundtrack: pick the track that fits where you are and what's
+// happening. Runs on every render, so screens, regions, and heat all
+// steer the music (MusicEngine crossfades between tracks).
+function getMusicContext() {
+  if (typeof gameState === 'undefined' || !gameState) return 'title';
+  switch (currentScreen) {
+    case 'title': case 'charselect': case 'highscores': case 'howtoplay': case 'intro':
+      return 'title';
+    case 'combat': case 'heist':
+      return 'combat';
+    case 'event':
+      return 'event';
+    case 'court': case 'prison':
+      return 'court';
+    case 'travel':
+      return 'travel';
+    case 'gameover':
+      return 'gameover';
+    case 'nightlife': case 'romance':
+      return 'title'; // dreamy synth fits the club and the dates
+    case 'crew': case 'properties': case 'fronts': case 'businesses_v2': case 'distribution':
+    case 'processing': case 'security': case 'defense': case 'offshore': case 'smuggling':
+    case 'suppliers': case 'stats': case 'skilltree': case 'operations': case 'shipping': case 'imports':
+      return 'management';
+  }
+  // Main game screen: tension first, then regional flavor
+  if ((gameState.heat || 0) >= 80 || (gameState.pendingRaid)) return 'event';
+  const loc = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(l => l.id === gameState.currentLocation) : null;
+  const region = String((loc && loc.region) || 'miami').toLowerCase();
+  if (['americas', 'caribbean', 'south_america', 'central_america', 'mexico', 'us_cities'].includes(region)) return 'game_americas';
+  if (['europe', 'western_europe', 'eastern_europe'].includes(region)) return 'game_europe';
+  if (['asia', 'southeast_asia'].includes(region)) return 'game_asia';
+  if (['africa', 'west_africa'].includes(region)) return 'game_africa';
+  return 'background'; // Miami: rotate the full synthwave playlist
+}
+
 function updateMusic() {
   if (MusicEngine.isMuted()) return;
-  MusicEngine.playTrack('background');
+  MusicEngine.playTrack(getMusicContext());
 }
 
 // ============================================================
@@ -580,6 +649,10 @@ function render() {
     const mc = document.getElementById('modal-container');
     if (mc && mc.innerHTML) mc.innerHTML = '';
     render._lastScreen = currentScreen;
+  }
+  // Surface any queued unlock explainer once the tutorial is out of the way
+  if (currentScreen === 'game' && typeof _maybeShowUnlockCard === 'function') {
+    setTimeout(_maybeShowUnlockCard, 0);
   }
   switch (currentScreen) {
     case 'title': app.innerHTML = renderTitle(); break;
