@@ -455,6 +455,10 @@ function doBossAssassinate(bossId) {
   if (boss && !confirm(`Send your killers after ${boss.name}? A failed attempt turns them hostile.`)) return;
   const bs = bossUIGetState();
   const result = assassinateBoss(bs, bossId, bossUIGetCrewTypes(), bossUIGetSkills());
+  // A dead kingpin is front-page news and shocks regional prices
+  if (result && result.success && typeof reportPlayerEvent === 'function' && boss) {
+    reportPlayerEvent(gameState, 'boss_hit', { locId: boss.districtId, bossName: boss.name });
+  }
   bossUIApplyResult(result, 0);
 }
 

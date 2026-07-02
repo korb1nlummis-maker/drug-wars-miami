@@ -2025,6 +2025,11 @@ function generatePrices(state) {
       price *= getSupplyDemandPriceMod(state, drug.id, state.currentLocation);
     }
 
+    // News/market impacts from player actions (shootouts, takeovers, raids)
+    if (typeof getMarketImpactMult === 'function') {
+      price *= getMarketImpactMult(state, state.currentLocation, drug.id);
+    }
+
     // Faction trade discount
     if (typeof getFactionTradeDiscount === 'function') {
       price *= getFactionTradeDiscount(state, state.currentLocation);
@@ -3736,6 +3741,9 @@ function waitDay(state) {
     const supplierMsgs = processSuppliersDaily(state);
     if (supplierMsgs && supplierMsgs.length) msgs.push(...supplierMsgs);
   }
+  if (typeof processNewsDaily === 'function') {
+    processNewsDaily(state); // feeds the news wire; no message spam
+  }
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
     if (mafiaOpsMsgs && mafiaOpsMsgs.length) msgs.push(...mafiaOpsMsgs);
@@ -4200,6 +4208,10 @@ function buyDrug(state, drugId, amount) {
   if (_locT >= 20) buyBonuses.push('Rep -8%');
   else if (_locT >= 5) buyBonuses.push('Rep -3%');
   const buyBonusStr = buyBonuses.length > 0 ? ' (' + buyBonuses.join(', ') + ')' : '';
+  // Large buys create visible shortages the street notices
+  if (amount >= 50 && typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'big_buy', { locId: state.currentLocation, drugId: drugId, qty: amount });
+  }
   const result = { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}${ambushMsg}` };
   if (factionDealMsgs.length > 0) result.factionMsgs = factionDealMsgs;
   return result;
@@ -4342,6 +4354,10 @@ function sellDrug(state, drugId, amount) {
   if (_locTS >= 20) sellBonuses.push('Rep +8%');
   else if (_locTS >= 5) sellBonuses.push('Rep +3%');
   const sellBonusStr = sellBonuses.length > 0 ? ' (' + sellBonuses.join(', ') + ')' : '';
+  // Flooding the street with product makes the news
+  if (amount >= 50 && typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'big_sale', { locId: state.currentLocation, drugId: drugId, qty: amount });
+  }
   const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${tapMsg}${ambushSellMsg}` };
   if (factionSellMsgs.length > 0) result.factionMsgs = factionSellMsgs;
   return result;
@@ -5038,6 +5054,10 @@ function resolveCombatRound(state, action, event) {
       } else {
         state.reputation += 5;
       }
+      // Shootouts make the news and rattle local prices
+      if (typeof reportPlayerEvent === 'function') {
+        reportPlayerEvent(state, 'shootout_won', { locId: state.currentLocation, opponent: event.combatType });
+      }
       // Silencer: no heat from combat kills
       if (hasItem(state, 'silencer')) {
         results.msg += ' 🔇 Silencer kept things quiet.';
@@ -5621,6 +5641,10 @@ function createDEARaidEvent(state) {
 // ============================================================
 function initCourtCase(state, context) {
   context = context || {}; // { resisted: true } = arrest after failed escape, { fought: true } = arrest after losing a fight with police
+  // An arrest is news — corners go quiet, prices react
+  if (typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'busted', { locId: state.currentLocation });
+  }
   // Build charges with severity tags for penalty calculation
   const charges = [];
   const chargeSeverity = []; // tracks penalty types
@@ -6328,6 +6352,10 @@ function claimTerritory(state, locationId) {
     state.reputation = Math.min(100, state.reputation + 15);
   }
   state.heat = Math.min(100, state.heat + 25);
+  // A takeover is front-page news and shakes up the local market
+  if (typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'territory_taken', { locId: locationId, gang: gang ? gang.name : 'the old crew' });
+  }
   return {
     msg: `You've taken control of ${LOCATIONS.find(l => l.id === locationId).name}! The ${gang ? gang.name : 'locals'} answer to you now.`,
   };

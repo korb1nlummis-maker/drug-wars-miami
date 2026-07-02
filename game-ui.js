@@ -632,6 +632,7 @@ function render() {
     case 'npcstory': app.innerHTML = renderNPCStory(); break;
     case 'regionalbosses': app.innerHTML = typeof renderRegionalBosses === 'function' ? renderRegionalBosses() : renderGame(); break;
     case 'suppliers': app.innerHTML = typeof renderSuppliers === 'function' ? renderSuppliers() : renderGame(); break;
+    case 'news': app.innerHTML = typeof renderNewsFeed === 'function' ? renderNewsFeed() : renderGame(); break;
     case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
     case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
     case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
@@ -1620,7 +1621,7 @@ function renderGame() {
         return cond.label !== 'STABLE' ? `<span style="font-size:0.55rem;margin-left:0.3rem;color:${cond.color}">${cond.label}</span>` : '';
       })() : '';
     const priceDisplay = price === null ? '<span class="unavailable">—</span>' :
-      `$${price.toLocaleString()}${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
+      `<span data-tick-price="${drug.id}">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
     const hasEvent = gameState.priceEvents.find(e => e.drugId === drug.id);
     const rowClass = hasEvent ? (hasEvent.effect === 'spike' ? 'row-spike' : 'row-crash') : '';
     let spark = '';
@@ -1679,7 +1680,11 @@ function renderGame() {
     return `<button class="main-tab-btn tab-locked" data-lock-tooltip="${tip}" onclick="showNotification('${tip}', 'info'); return false;">🔒 ${label}</button>`;
   };
 
+  const newsTickerStrip = typeof renderNewsFeed === 'function' && gameState.newsFeed && gameState.newsFeed.length
+    ? `<div data-news-ticker onclick="currentScreen='news'; render();" style="cursor:pointer;font-size:0.75rem;color:var(--text-mid);padding:0.25rem 0.5rem;margin-bottom:0.3rem;border:1px solid var(--border-color);border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="Open the news wire">📰 ${gameState.newsFeed[0].headline}</div>`
+    : '';
   const mainTabBar = `
+    ${newsTickerStrip}
     <div class="main-tab-bar" style="display:flex;gap:0;margin-bottom:0.5rem;border-bottom:2px solid var(--border-color);flex-wrap:wrap;">
       <button class="main-tab-btn${mainTab === 'portfolio' ? ' active' : ''}" onclick="mainTab='portfolio'; render();">💼 Portfolio</button>
       <button class="main-tab-btn${mainTab === 'buysell' ? ' active' : ''}" onclick="mainTab='buysell'; render();">💰 Buy / Sell</button>
@@ -2106,6 +2111,7 @@ function renderGame() {
         <div class="sidebar-label">📋 CAMPAIGN</div>
         <button class="btn btn-sidebar btn-secondary" style="border-color:#ffaa00;color:#ffaa00" onclick="currentScreen='campaign'; render();">🎯 Campaign${gameState.campaign ? ` (Act ${typeof gameState.campaign.currentAct === 'number' ? gameState.campaign.currentAct : String(gameState.campaign.currentAct).replace('act','')})` : ''}</button>
         ${typeof renderRegionalBosses === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6b35;color:#ff6b35" onclick="currentScreen='regionalbosses'; render();">👑 Regional Bosses</button>` : ''}
+        ${typeof renderNewsFeed === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00f0ff;color:#00f0ff" onclick="currentScreen='news'; render();">📺 News${typeof getUnreadNewsCount === 'function' && getUnreadNewsCount(gameState) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${getUnreadNewsCount(gameState)})</span>` : ''}</button>` : ''}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
