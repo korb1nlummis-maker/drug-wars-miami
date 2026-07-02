@@ -2030,6 +2030,11 @@ function generatePrices(state) {
       price *= getMarketImpactMult(state, state.currentLocation, drug.id);
     }
 
+    // Neighborhood condition: blighted districts run desperate (higher) prices
+    if (typeof getDistrictConditionPriceMod === 'function') {
+      price *= getDistrictConditionPriceMod(state, state.currentLocation, drug.id);
+    }
+
     // Faction trade discount
     if (typeof getFactionTradeDiscount === 'function') {
       price *= getFactionTradeDiscount(state, state.currentLocation);
@@ -3744,6 +3749,19 @@ function waitDay(state) {
   if (typeof processNewsDaily === 'function') {
     processNewsDaily(state); // feeds the news wire; no message spam
   }
+  if (typeof processDistrictEcologyDaily === 'function') {
+    const districtMsgs = processDistrictEcologyDaily(state);
+    if (districtMsgs && districtMsgs.length) msgs.push(...districtMsgs);
+  }
+  if (typeof processSmugglingDaily === 'function') {
+    const smugglingMsgs = processSmugglingDaily(state);
+    if (smugglingMsgs && smugglingMsgs.length) msgs.push(...smugglingMsgs);
+  }
+  if (typeof processOffshoreDaily === 'function') {
+    const offshoreMsgs = processOffshoreDaily(state);
+    if (offshoreMsgs && offshoreMsgs.length) msgs.push(...offshoreMsgs);
+  }
+  // (crew agendas ride inside processCrewExpansionDaily, wired above)
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
     if (mafiaOpsMsgs && mafiaOpsMsgs.length) msgs.push(...mafiaOpsMsgs);

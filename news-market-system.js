@@ -110,6 +110,16 @@ function reportPlayerEvent(state, type, data) {
   const loc = newsLocName(data.locId);
   const rnd = (a, b) => a + Math.random() * (b - a);
 
+  // Neighborhood ecology reacts to the same events the news reports
+  if (typeof notifyDistrictEvent === 'function' && data.locId) {
+    const districtEventMap = {
+      shootout_won: 'shootout', shootout_lost: 'shootout',
+      police_raid: 'raid', busted: 'raid',
+      territory_taken: 'takeover', big_sale: 'big_sale',
+    };
+    if (districtEventMap[type]) notifyDistrictEvent(state, districtEventMap[type], data.locId);
+  }
+
   switch (type) {
     case 'shootout_won':
     case 'shootout_lost': {

@@ -141,6 +141,16 @@ function promoteCrew(state, crewIndex) {
   member.hiddenLoyalty = Math.min(100, (member.hiddenLoyalty || member.loyalty) + 15);
   member.betrayalRisk = Math.max(0, (member.betrayalRisk || 0) - 10);
 
+  // Soldier+ crew develop a hidden agenda (assigned lazily for old saves too)
+  if (typeof _assignAgendaIfNeeded === 'function') _assignAgendaIfNeeded(state, member);
+  // Ambitious agenda: a promotion is exactly what they wanted
+  if (member.agenda && member.agenda.id === 'ambitious') {
+    member.agenda.unmetDays = 0;
+    member.agenda.snapped = false;
+    member.agenda.eligibleSinceDay = null;
+    member.agenda.eligibleRank = nextRank;
+  }
+
   // Other crew may get jealous (ambitious trait)
   for (const other of state.henchmen) {
     if (other === member) continue;
@@ -150,7 +160,20 @@ function promoteCrew(state, crewIndex) {
     }
   }
 
-  return { success: true, msg: member.name + ' promoted to ' + nextRankData.name + '!' };
+  // Lieutenant+ promotions demand a ceremony — the crew is watching how you mark it
+  if (nextRank >= 2) {
+    if (!member.uniqueId) member.uniqueId = 'crew_' + Math.random().toString(36).substr(2, 8);
+    state.pendingCeremony = {
+      crewId: member.uniqueId,
+      crewIndex: crewIndex,
+      rankName: nextRankData.name,
+      memberName: member.name,
+      createdDay: state.day || 0,
+    };
+    return { success: true, newRank: nextRank, msg: member.name + ' promoted to ' + nextRankData.name + '! The crew expects you to mark the occasion — choose a ceremony.' };
+  }
+
+  return { success: true, newRank: nextRank, msg: member.name + ' promoted to ' + nextRankData.name + '!' };
 }
 
 // Get trait object by ID

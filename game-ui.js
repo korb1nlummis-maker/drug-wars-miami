@@ -633,6 +633,9 @@ function render() {
     case 'regionalbosses': app.innerHTML = typeof renderRegionalBosses === 'function' ? renderRegionalBosses() : renderGame(); break;
     case 'suppliers': app.innerHTML = typeof renderSuppliers === 'function' ? renderSuppliers() : renderGame(); break;
     case 'news': app.innerHTML = typeof renderNewsFeed === 'function' ? renderNewsFeed() : renderGame(); break;
+    case 'districts': app.innerHTML = typeof renderDistrictEcology === 'function' ? renderDistrictEcology() : renderGame(); break;
+    case 'smuggling': app.innerHTML = typeof renderSmugglingFleet === 'function' ? renderSmugglingFleet() : renderGame(); break;
+    case 'offshore': app.innerHTML = typeof renderOffshore === 'function' ? renderOffshore() : renderGame(); break;
     case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
     case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
     case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
@@ -2112,6 +2115,9 @@ function renderGame() {
         <button class="btn btn-sidebar btn-secondary" style="border-color:#ffaa00;color:#ffaa00" onclick="currentScreen='campaign'; render();">🎯 Campaign${gameState.campaign ? ` (Act ${typeof gameState.campaign.currentAct === 'number' ? gameState.campaign.currentAct : String(gameState.campaign.currentAct).replace('act','')})` : ''}</button>
         ${typeof renderRegionalBosses === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6b35;color:#ff6b35" onclick="currentScreen='regionalbosses'; render();">👑 Regional Bosses</button>` : ''}
         ${typeof renderNewsFeed === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00f0ff;color:#00f0ff" onclick="currentScreen='news'; render();">📺 News${typeof getUnreadNewsCount === 'function' && getUnreadNewsCount(gameState) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${getUnreadNewsCount(gameState)})</span>` : ''}</button>` : ''}
+        ${typeof renderDistrictEcology === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#39ff14;color:#39ff14" onclick="currentScreen='districts'; render();">🏘️ Neighborhoods</button>` : ''}
+        ${typeof renderSmugglingFleet === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ffe600;color:#ffe600" onclick="currentScreen='smuggling'; render();">🚤 Smuggling Fleet</button>` : ''}
+        ${typeof renderOffshore === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='offshore'; render();">🏝️ Offshore</button>` : ''}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
@@ -3161,6 +3167,12 @@ function renderTravel() {
       locHtml += `
         <div class="travel-card ${visited ? 'visited' : ''}" onclick="selectDestination('${loc.id}')">
           <div class="travel-card-name">${loc.emoji || ''} ${loc.name}</div>
+          ${gameState.districts && gameState.districts[loc.id] ? (() => {
+            const c = gameState.districts[loc.id].condition;
+            const label = c >= 70 ? '🌴 Thriving' : c >= 50 ? '🏙️ Stable' : c >= 30 ? '🏚️ Struggling' : '💀 Blighted';
+            const color = c >= 70 ? 'var(--neon-green)' : c >= 50 ? 'var(--text-mid)' : c >= 30 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+            return `<div style="font-size:0.65rem;color:${color}">${label}</div>`;
+          })() : ''}
           <div class="travel-card-desc">${loc.desc}</div>
           <div class="travel-card-danger">Danger: ${'★'.repeat(Math.min(loc.dangerLevel, 10))}${'☆'.repeat(Math.max(0, 10 - loc.dangerLevel))}</div>
           ${loc.drugSpecialty ? `<div class="travel-card-specialty">Known for: ${DRUGS.find(d => d.id === loc.drugSpecialty)?.name || loc.drugSpecialty}</div>` : ''}
