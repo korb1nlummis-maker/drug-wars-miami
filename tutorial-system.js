@@ -611,6 +611,13 @@ function applyHighlights(step) {
           els[j].classList.add('tutorial-highlight');
         }
       }
+      // Bring the first highlighted target into view — critical on phones,
+      // where the target is often below the fold or inside the scrolling
+      // bottom bar
+      var first = document.querySelector('.tutorial-highlight');
+      if (first && typeof first.scrollIntoView === 'function') {
+        first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }
     } catch (e) {
       // Selector might not exist yet
     }

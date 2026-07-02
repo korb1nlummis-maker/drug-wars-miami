@@ -834,125 +834,86 @@ function renderHighScores() {
 // HOW TO PLAY
 // ============================================================
 function renderHowToPlay() {
+  const S = (emoji, title, body) => `
+    <details class="htp-section" style="border:1px solid var(--border-color);border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;">
+      <summary style="cursor:pointer;font-weight:bold;color:var(--neon-cyan);font-size:0.95rem;padding:0.3rem 0;">${emoji} ${title}</summary>
+      <div style="padding:0.4rem 0 0.2rem;color:var(--text-main);line-height:1.65;font-size:0.85rem;">${body}</div>
+    </details>`;
+  const TIP = t => `<p style="color:var(--neon-green);font-size:0.8rem;margin:0.2rem 0">💡 ${t}</p>`;
   return `
     <div class="screen-container" style="max-width:700px;margin:0 auto;">
-      <h2 class="section-title neon-cyan" style="text-align:center;">📖 HOW TO PLAY</h2>
-      <div style="color:var(--text-main);line-height:1.7;font-size:0.85rem;">
+      <h2 class="section-title neon-cyan" style="text-align:center;">📖 THE HANDBOOK</h2>
+      <p class="text-dim" style="text-align:center;font-size:0.85rem;margin-bottom:1rem">Everything in the game, in the order you'll meet it. Tap a section to open it.</p>
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎯 OBJECTIVE</h3>
-          <p>You are a small-time dealer starting in Miami. Buy drugs cheap, sell them at a profit in other cities, and build a global empire. Pay off your loan shark debt and amass as much wealth as possible before your days run out — or go Endless and play forever.</p>
-        </div>
+      ${S('🎯', 'The Long Game', `
+        <p>The campaign runs <b>5,000 days across 5 acts</b> — The Come Up (days 1–500), Building the Empire (500–1500), The Empire (1500–2500), The Reckoning (2500–3500), and The Endgame (3500–5000). Systems, drugs, story missions, and world regions unlock as the days pass. Nobody rushes this — the game is designed to be lived in.</p>
+        ${TIP('When a 🔓 unlock card appears, read it — it tells you exactly where the new system lives.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">⚡ ACTIONS</h3>
-          <p><b style="color:var(--neon-cyan)">Travel</b> — Move between 21 cities worldwide. Each trip takes 1-3 days depending on distance. Random events can occur during travel (ambushes, deals, police encounters).</p>
-          <p><b style="color:var(--neon-cyan)">Wait</b> — Pass one day. Prices fluctuate, events trigger, and your operations continue. Sometimes waiting is the smartest move.</p>
-        </div>
+      ${S('💰', 'Trading & the Living Market', `
+        <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
+        <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
+        ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🏪 SERVICES</h3>
-          <p><b style="color:var(--neon-cyan)">Bank</b> — Deposit cash to keep it safe from muggings. Earns small daily interest.</p>
-          <p><b style="color:var(--neon-cyan)">Loan Shark</b> — Borrow money or repay your debt. Interest compounds daily — pay early!</p>
-          <p><b style="color:var(--neon-cyan)">Hospital</b> — Heal injuries from combat. Costs money but keeps you alive.</p>
-          <p><b style="color:var(--neon-cyan)">Black Market</b> — Buy weapons for combat and items for special uses (body armor, fake IDs, burner phones, etc.).</p>
-          <p><b style="color:var(--neon-cyan)">Stash</b> — Store drugs at properties. Stash capacity depends on your properties and safe house.</p>
-        </div>
+      ${S('🤝', 'Suppliers', `
+        <p>The Suppliers tab has 12 named connects across 4 tiers (street → wholesale → The Connect → cartel, unlocking by day and rank). They sell bulk <b>below street price</b>. Keep buying from the same supplier to build trust: better prices, bigger lots, credit lines. Haggle once per stock cycle — win with persuasion, or sour the deal.</p>
+        ${TIP('Credit is real: default on a fronted lot and the supplier burns you, the debt lands on your books, and heat follows.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎯 MISSIONS</h3>
-          <p><b style="color:var(--neon-pink)">Main Missions</b> — Story campaign missions tied to your rise through the underworld. One active at a time. Complete milestones to advance through 5 Acts.</p>
-          <p><b style="color:var(--neon-pink)">Side Missions</b> — Random jobs for extra cash, reputation, and items. Up to 3 active at once. Includes deliveries, negotiations, investigations, and moral dilemmas.</p>
-        </div>
+      ${S('🏘️', 'Neighborhoods: Invest or Bleed', `
+        <p>Every district tracks <b>condition, police presence, and civilian loyalty</b>. On turf you control, choose: INVEST (community centers, clinics, storefronts — loyalty protects you, locals tip you off, heat decays faster) or BLEED (flood corners, strip businesses, protection rackets — fast money, but informants breed below 25 loyalty).</p>
+        ${TIP('The news wire tracks every district\'s trajectory. "RENAISSANCE?" or "SPIRALS" — that\'s your reputation in print.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">👑 EMPIRE</h3>
-          <p><b style="color:var(--neon-purple)">Properties</b> — Buy apartments, warehouses, and labs across cities. Provide stash space, security, and income.</p>
-          <p><b style="color:var(--neon-purple)">Crew</b> — Hire henchmen (enforcers, smugglers, chemists, accountants). They boost combat, carry capacity, production, and laundering.</p>
-          <p><b style="color:var(--neon-purple)">Fronts</b> — Legitimate businesses that launder dirty money into clean cash.</p>
-          <p><b style="color:var(--neon-purple)">Distribution</b> — Set up automatic drug sales networks in territories you control.</p>
-          <p><b style="color:var(--neon-purple)">Lab</b> — Process raw drugs into higher-purity products worth more money.</p>
-          <p><b style="color:var(--neon-purple)">Import/Export</b> — Set up international supply routes for bulk drug shipments.</p>
-          <p><b style="color:var(--neon-purple)">Factions</b> — Manage relationships with cartels, mafias, triads, and more. Alliances bring trade bonuses; wars mean combat.</p>
-          <p><b style="color:var(--neon-purple)">Security</b> — Monitor your heat level and manage law enforcement threats.</p>
-          <p><b style="color:var(--neon-purple)">Lifestyle</b> — Your living standard affects stress, reputation, and daily costs.</p>
-          <p><b style="color:var(--neon-purple)">Politics</b> — Bribe officials, gain political connections, reduce legal pressure.</p>
-          <p><b style="color:var(--neon-purple)">Futures</b> — Trade drug futures contracts. Bet on price movements for big profits (or losses).</p>
-          <p><b style="color:var(--neon-purple)">Safe House</b> — Your personal hideout. Upgrade it for heat reduction, stash space, and security. Watch your money stacks fill the room!</p>
-        </div>
+      ${S('🎯', 'Campaign, Contracts & Side Ops', `
+        <p><b>Campaign</b>: your character\'s story — 25 main missions spread across the 5 acts, with choices that shape your traits and ending. <b>📜 Street Contracts</b>: procedural jobs, 1–3 new ones daily, expire in 3 days. <b>📜 Side Ops</b>: 40 multi-chapter chains with choice-driven outcomes that trickle in over years.</p>
+        ${TIP('Track a campaign mission to auto-complete it when its objectives are met; missions with approaches let you choose HOW you finish.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🧬 CHARACTER</h3>
-          <p><b style="color:var(--neon-green)">Skills</b> — Spend XP to unlock abilities across 8 categories: Combat, Driving, Persuasion, Chemistry, Business, Stealth, Leadership, and Streetwise. Each has 10 levels (6-10 unlock in NG+).</p>
-          <p><b style="color:var(--neon-green)">Stats</b> — View your progress: days played, money earned, cities visited, enemies defeated.</p>
-          <p><b style="color:var(--neon-green)">Achievements</b> — Track milestones and earn bragging rights.</p>
-        </div>
+      ${S('👥', 'Crew: Loyalty, Agendas & Rank', `
+        <p>Hire crew, assign jobs (guards, runners, lab workers, lookouts...), and promote them up the ladder: Soldier → Lieutenant → Underboss → Right Hand. Promotions take <b>real service time</b> and cost real money. Ranked crew develop hidden <b>agendas</b> — learn their tells, feed their wants, or watch rivals court them away. Defection offers demand an answer: pay them, let them walk (with what they know), or make an example.</p>
+        ${TIP('Lieutenant promotions trigger a ceremony choice — the lavish party buys loyalty across the whole crew.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">⚔️ COMBAT</h3>
-          <p>Your <b>weapon damage + crew combat power</b> determines your strength. Accuracy affects hit chance. You can fight, flee, or sometimes bribe your way out. Better weapons and more crew = better odds.</p>
-        </div>
+      ${S('🏴', 'Territory, Heat & War', `
+        <p>Take over districts (needs 2+ healthy crew, level/day gates) for income, sell bonuses, and district control. Defend turf with fortifications and structures. Heat brings police encounters; the Investigation meter brings the DEA. Shootouts make headlines and change district ecology.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🔥 HEAT & LAW</h3>
-          <p>Every crime raises your <b>heat</b>. High heat means police raids, arrests, and court appearances. Reduce heat by: waiting, using safe houses, bribing officials, or laying low. If caught, you may lose cash, drugs, or do jail time.</p>
-        </div>
+      ${S('⚖️', 'The Law: Charges, Court & Prison', `
+        <p>Get caught and the charges are built from <b>real evidence</b>: quantity thresholds (possession → intent → trafficking), the gun you carry, dirty cash, unburied bodies, your bribe history, and whether you ran or fought. Cases range from a street bust to a <b>capital murder trial</b>. Lawyers, witness problems, plea deals, and fall guys are all levers.</p>
+        ${TIP('Offshore money survives conviction. Cash and bank balances don\'t.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">📱 PHONE SYSTEM</h3>
-          <p>Your <b style="color:var(--neon-cyan)">burner phone</b> receives 2-5 messages daily: supplier alerts, crew check-ins, buyer requests, NPC story updates, news, threats, and spam. Each burner lasts 30 days — when you switch phones, unread messages are lost and contacts must re-share info. Check the 📱 icon in the sidebar for unread messages.</p>
-        </div>
+      ${S('🏦', 'Money: Dirty, Clean & Offshore', `
+        <p>Drug money is <b>dirty</b> — launder it through front businesses (slow, daily caps) or shell-company layering (bulk, 25% cost, 5 days). Clean money in the bank earns interest but is visible. <b>Offshore accounts</b> (Panama day 300 → Vanuatu day 2800) hide wealth from forfeiture — but volume draws IRS scrutiny, and audits demand answers.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🏢 BUSINESSES V2</h3>
-          <p>Beyond fronts, you can now own <b style="color:var(--neon-green)">15 new business types</b>: Music Labels, Food Truck Fleets, Marinas, Crypto Mining Farms, Private Security firms, Towing Companies, Bail Bonds offices, Pawn Shops, Gas Stations, Pharmacies, Strip Clubs, Storage Units, Car Dealerships, Construction Companies, and Laundromat Chains. Each generates daily income, provides laundering capacity, and has unique criminal synergies (e.g., pharmacy supplies drugs, construction builds hideouts, bail bonds provides intel).</p>
-        </div>
+      ${S('🚤', 'Smuggling Fleet', `
+        <p>Own the transports that move weight: cigarette boats, shrimp trawlers, coyote trucks, planes, semi-subs, a Learjet. Each run risks interdiction — risk rises with the transport\'s heat signature, route heat, and poor condition. Rotate transports and routes; rest and repair them.</p>
+        ${TIP('The Coast Guard cycles hot and clear lanes weekly. A "hot" lane is +10% risk — wait it out or reroute.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎲 RANDOM ENCOUNTERS</h3>
-          <p>Every day there's a chance of encountering <b style="color:var(--neon-yellow)">150+ unique random events</b> across 6 categories: Street, Business, Crew, Law Enforcement, Faction, and Wild Card. Each presents 2-4 choices with different outcomes — help a mugging victim, take a bribe from a corrupt cop, discover buried treasure, or deal with an escaped zoo animal. Your choices affect cash, heat, reputation, stress, and more. Some encounters can even grant you a pet companion or lookout!</p>
-        </div>
+      ${S('🔫', 'Weapons & the Gunsmith', `
+        <p>Weapon tiers unlock with rank (shotguns Lv3, rifles Lv5, snipers Lv7, heavy Lv9+). The Black Market\'s Gunsmith installs upgrades — suppressors, scopes, AP rounds — plus body armor and tactical gear. Carrying illegal hardware is a court charge if you\'re caught.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">👤 NAMED NPCs</h3>
-          <p>Meet <b style="color:var(--neon-purple)">30 named characters</b> with multi-chapter story arcs: Dr. Rosa Mendez (underground doctor), Father Ignacio (conflicted priest), Diamond Destiny Harris (nightclub queen), Officer Tommy Chen (ambitious cop), and many more. Build relationships through dialogue choices to unlock powerful benefits — discounted healing, case dismissals, weapons deals, and even romance options.</p>
-        </div>
+      ${S('⚗️', 'Processing & Distribution', `
+        <p>Buy an industrial property to unlock the lab: re-bag, refine, cut, and cook for higher margins. Chemistry grows with practice (lab-worker crew help). Distribution networks sell your stock passively per district — supply them and manage dealer loyalty.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">📋 MISSION CHAINS</h3>
-          <p><b style="color:var(--neon-pink)">40 multi-chapter side mission chains</b> unlock as you progress: become a crime photographer, run a cooking school front, plan a marina heist, promote underground fights, enter a poker tournament, orchestrate a Super Bowl operation, and more. Each chain has 3-5 chapters with branching outcomes. Up to 3 chains available at once — offers expire in 14 days!</p>
-        </div>
+      ${S('💕', 'People: Romance, NPCs & Bosses', `
+        <p>Six romance interests with real story arcs — family dinners, secrets, ultimatums — and partner perks at full commitment (neglect them 30+ days and there are consequences). Named NPCs carry their own stories. <b>👑 Regional Bosses</b>: 47 crime lords worldwide to negotiate with, bribe, fight, assassinate, or replace with puppets who pay you daily.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🔄 PROCEDURAL MISSIONS</h3>
-          <p>The game generates <b style="color:var(--neon-cyan)">1-3 unique procedural missions daily</b> from 12 templates (delivery, collection, elimination, defense, sabotage, espionage, recruitment, escort, supply run, cleanup, negotiation, rescue) combined with 20 possible complications (police checkpoints, rival ambushes, vehicle breakdowns, etc.). Rewards scale with your level and the current act.</p>
-        </div>
+      ${S('🌍', 'The World', `
+        <p>Miami is home, but the map opens over time: the Caribbean, South and Central America, Mexico, US cities, Europe, Africa, Asia. Each region has its own prices, dangers, bosses — and its own music. Unlock regions via net worth and contacts.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">💡 TIPS FOR BEGINNERS</h3>
-          <p>• Start small in Miami — learn the local prices before traveling far.</p>
-          <p>• Pay off your loan shark ASAP — the interest compounds daily.</p>
-          <p>• Watch the news ticker — price events create huge profit opportunities.</p>
-          <p>• Invest in properties early — stash space and labs multiply your income.</p>
-          <p>• Keep heat below 50 — above that, raids become frequent and deadly.</p>
-          <p>• Diversify your drugs — don't put all your money in one product.</p>
-          <p>• Check your phone daily — messages contain deals, threats, and story triggers.</p>
-          <p>• Build relationships with NPCs — their benefits stack and compound over time.</p>
-          <p>• Buy businesses early in each act — passive income funds everything else.</p>
-          <p>• Save often — this is a dangerous business.</p>
-        </div>
+      ${S('📊', 'Rank, Skills & Endings', `
+        <p>XP earns Kingpin levels (20 ranks, Street Punk → Immortal) with a perk each; levels grant skill points for the 100-skill tree. Your empire\'s final shape — territories, wealth, loyalty, bodies, clean money — decides which of the many endings you earn, graded S to C. New Game+ unlocks harder tiers, new characters, and deeper skills.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎮 CAMPAIGN STRUCTURE</h3>
-          <p><b>Act 1</b> — Small-time hustler in Miami. Learn the ropes, build your crew.</p>
-          <p><b>Act 2</b> — Expand across cities, establish supply routes, clash with rivals.</p>
-          <p><b>Act 3</b> — Go international, take on cartels, build your empire.</p>
-          <p><b>Act 4</b> — Defend your territory, face the law, deal with betrayal.</p>
-          <p><b>Act 5</b> — The final showdown. Multiple endings based on your choices.</p>
-          <p><b>New Game+</b> — Beat the campaign to unlock NG+ with new content, harder challenges, and exclusive items.</p>
-        </div>
-
-      </div>
       <div style="text-align:center;margin-top:1.5rem;">
         <button class="btn btn-primary btn-glow" onclick="currentScreen='title'; render();">← BACK TO MENU</button>
       </div>
