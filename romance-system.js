@@ -681,6 +681,8 @@ function meetRomanceNPC(state, npcId) {
 // ---- Date ----
 
 function goOnDate(state, npcId, tierIndex, playerCash) {
+  if (!state.stats) state.stats = {};
+  state.stats.datesCount = (state.stats.datesCount || 0) + 1;
   const npc = ROMANCE_NPCS.find(n => n.id === npcId);
   if (!npc) return { success: false, message: 'Unknown person.' };
 
@@ -991,6 +993,8 @@ function triggerRomanceEvent(state, npcId) {
 // ---- Break Up ----
 
 function breakUp(state, npcId) {
+  if (!state.stats) state.stats = {};
+  state.stats.breakups = (state.stats.breakups || 0) + 1;
   const npc = ROMANCE_NPCS.find(n => n.id === npcId);
   if (!npc) return { success: false, message: 'Unknown person.' };
 

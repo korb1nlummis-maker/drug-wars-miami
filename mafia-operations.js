@@ -378,6 +378,10 @@ function setupOperation(state, operationId, districtId) {
   };
 
   state.mafiaOps.activeOperations.push(instance);
+  if (!state.stats) state.stats = {};
+  if (!state.stats.racketTypes) state.stats.racketTypes = {};
+  state.stats.racketTypes[instance.operationId || instance.id || 'unknown'] = 1;
+  state.stats.racketsStarted = (state.stats.racketsStarted || 0) + 1;
   return { success: true, operation: instance };
 }
 

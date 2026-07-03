@@ -1890,6 +1890,7 @@ function processProceduralDaily(state) {
       if (typeof adjustRep === 'function') {
         adjustRep(state, 'streetCred', -failCons.repLoss);
       }
+      if (state.stats) state.stats.procFailed = (state.stats.procFailed || 0) + 1;
       messages.push('\u{274C} MISSION FAILED: ' + failed.name + ' - ' + failCons.narrative);
     } else {
       if (typeof adjustRep === 'function') {
@@ -2337,6 +2338,10 @@ function completeProceduralMission(state, missionId, approachId) {
     }
   }
 
+  if (!state.stats) state.stats = {};
+  state.stats.procCompleted = (state.stats.procCompleted || 0) + 1;
+  if (!state.stats.procTypes) state.stats.procTypes = {};
+  state.stats.procTypes[mission.type || mission.template || 'generic'] = 1;
   var msg = '\u{2705} MISSION COMPLETE: ' + mission.name + '\n';
   msg += 'Reward: +$' + mission.reward.toLocaleString() + '\n';
   msg += 'Difficulty: ' + getDifficultyLabel(mission.difficultyTier) + ' (' + mission.difficulty + '/5)\n';

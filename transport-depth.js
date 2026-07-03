@@ -363,6 +363,9 @@ function processSmugglingDaily(state) {
         owned.condition = Math.max(5, (owned.condition || 100) - (3 + Math.floor(Math.random() * 5))); // -3-7
       }
       sf.routeHeat[pair] = Math.min(100, (sf.routeHeat[pair] || 0) + 6 + Math.floor(Math.random() * 5)); // +6-10
+      if (/sub/i.test(run.transportId || '') && state.achievementStats) {
+        state.achievementStats.narcoSubShipments = (state.achievementStats.narcoSubShipments || 0) + 1;
+      }
       const msg = `📦 ${def.emoji} ${def.name} delivered ${run.qty} ${drugName} to the ${smugLocName(run.toLoc)} stash. Clean run.`;
       smugLog(state, msg);
       messages.push(msg);

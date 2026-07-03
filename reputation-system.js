@@ -37,6 +37,11 @@ function adjustRep(state, dimension, amount) {
   if (!state.rep) state.rep = initReputation();
   const dim = REP_DIMENSIONS[dimension];
   if (!dim) return;
+  // Skills: street rep / kingpin aura — reputation gains amplified (+X%)
+  if (amount > 0 && typeof getSkillEffect === 'function') {
+    const repSkill = getSkillEffect(state, 'repBonus');
+    if (repSkill > 0) amount = Math.max(1, Math.round(amount * (1 + repSkill / 100)));
+  }
   state.rep[dimension] = Math.max(dim.min, Math.min(dim.max, (state.rep[dimension] || 0) + amount));
   // Recompute the legacy single reputation value
   state.reputation = computeReputation(state);

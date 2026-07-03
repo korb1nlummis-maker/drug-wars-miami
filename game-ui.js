@@ -1784,7 +1784,7 @@ function renderGame() {
       <div class="status-row">
         <span class="stat"><span class="stat-label">HP</span> <span class="stat-value ${gameState.health < 30 ? 'neon-red' : 'neon-green'}">${gameState.health}/${gameState.maxHealth}</span></span>
         <span class="stat"><span class="stat-label">STRESS</span> <span class="stat-value ${(gameState.lifestyle?.stress || 0) > 70 ? 'neon-red' : (gameState.lifestyle?.stress || 0) > 40 ? 'neon-yellow' : 'neon-green'}">${gameState.lifestyle?.stress || 0}%</span></span>
-        <span class="stat rep-stat-hover"><span class="stat-label">HEAT</span> <span class="heat-bar heat-bar-enhanced"><span class="heat-fill ${gameState.heat > 80 ? 'heat-critical' : gameState.heat > 60 ? 'heat-high' : gameState.heat > 30 ? 'heat-medium' : 'heat-low'}" style="width:${gameState.heat}%"></span><span class="heat-pct">${gameState.heat}%</span></span>${typeof renderHeatTooltipHTML === 'function' ? renderHeatTooltipHTML(gameState) : ''}</span>
+        <span class="stat rep-stat-hover"><span class="stat-label">HEAT</span> <span class="heat-bar heat-bar-enhanced"><span class="heat-fill ${gameState.heat > 80 ? 'heat-critical' : gameState.heat > 60 ? 'heat-high' : gameState.heat > 30 ? 'heat-medium' : 'heat-low'}" style="width:${gameState.heat}%"></span><span class="heat-pct">${Math.round(gameState.heat)}%</span></span>${typeof renderHeatTooltipHTML === 'function' ? renderHeatTooltipHTML(gameState) : ''}</span>
         <span class="stat"><span class="stat-label">SPACE</span> <span class="stat-value">${getInventoryCount(gameState)}/${getMaxInventory(gameState)}</span></span>
         <span class="stat rep-stat-hover"><span class="stat-label">REP</span> <span class="stat-value">${gameState.reputation}</span>${typeof renderRepTooltipHTML === 'function' ? renderRepTooltipHTML(gameState) : ''}</span>
         ${typeof getCurrentAct === 'function' && gameState.campaign ? `<span class="stat"><span class="stat-label">ACT</span> <span class="act-indicator act-${gameState.campaign.currentAct || 1}">${getCurrentAct(gameState).name}</span></span>` : ''}
@@ -1952,6 +1952,21 @@ function renderGame() {
         else if (diff < 0) trendArrow = `<span style="color:var(--neon-red);font-size:0.7rem;font-weight:bold">▼ ${pctChange}%</span>`;
         else trendArrow = `<span style="color:var(--text-dim);font-size:0.7rem">● 0%</span>`;
       }
+    }
+    // Skill: informant network — read tomorrow's likely drift (mean reversion)
+    if (price !== null && typeof getSkillEffect === 'function' && getSkillEffect(gameState, 'priceForecast') > 0) {
+      const locDef = LOCATIONS.find(l => l.id === gameState.currentLocation);
+      const fair = ((drug.minPrice + drug.maxPrice) / 2) * (locDef ? locDef.priceModifier : 1);
+      const drift = fair - price;
+      if (Math.abs(drift) > fair * 0.08) {
+        trendArrow += ` <span title="Informant forecast" style="font-size:0.65rem;color:${drift > 0 ? 'var(--neon-green)' : 'var(--neon-red)'}">🔮${drift > 0 ? '▲' : '▼'}</span>`;
+      }
+    }
+    // Skill: market insider — exact price band for every product
+    if (price !== null && typeof hasSkillEffect === 'function' && hasSkillEffect(gameState, 'priceRangeVision')) {
+      const locDef2 = LOCATIONS.find(l => l.id === gameState.currentLocation);
+      const lm = locDef2 ? locDef2.priceModifier : 1;
+      trendArrow += `<br><span style="font-size:0.55rem;color:var(--text-dim)">range $${Math.round(drug.minPrice * lm).toLocaleString()}–$${Math.round(drug.maxPrice * lm).toLocaleString()}</span>`;
     }
     // Show P&L for owned drugs
     let pnlCell = '';
@@ -2522,7 +2537,7 @@ function renderTradeModal() {
   const _ltCount = (gameState.locationTrades || {})[gameState.currentLocation] || 0;
   const _repBonus = _ltCount >= 20 ? (tradeMode === 'buy' ? '-8%' : '+8%') : _ltCount >= 5 ? (tradeMode === 'buy' ? '-3%' : '+3%') : null;
   const _repLabel = _ltCount >= 20 ? 'Trusted Regular' : _ltCount >= 5 ? 'Known Dealer' : null;
-  const _bulkNote = tradeMode === 'buy' ? 'Buy 10+ for 5% discount' : 'Sell 10+ for 5% premium';
+  const _bulkNote = tradeMode === 'buy' ? 'Buy 10+ for 5% discount' : 'Sell 10+ for 5% premium · 50+ floods the corner (price slips up to -30%)';
 
   return `
     <div class="trade-modal">
@@ -3745,6 +3760,24 @@ function processNextEvent() {
   }
 
   if (event.combatType) {
+    // Skill: smooth talker — chance to defuse the fight before it starts
+    const talkOut = typeof getSkillEffect === 'function' ? getSkillEffect(gameState, 'talkOutChance') : 0;
+    if (talkOut > 0 && event.combatType !== 'territory' && Math.random() < talkOut) {
+      const msg = '😎 You talked your way out of a ' + String(event.combatType).replace(/_/g, ' ') + ' confrontation. No shots fired.';
+      gameState.messageLog.push(msg);
+      showNotification(msg, 'success');
+      event.resolved = true;
+      currentEventIndex++;
+      processNextEvent();
+      return;
+    }
+    // Skill: warlord — gang and territory crews field weaker soldiers
+    const gangHp = typeof getSkillEffect === 'function' ? getSkillEffect(gameState, 'gangHpMod') : 0;
+    if (gangHp < 0 && (event.combatType === 'territory' || event.combatType === 'gang') && !event._gangHpApplied) {
+      event._gangHpApplied = true;
+      event.enemyHealth = Math.max(20, Math.round(event.enemyHealth * (1 + gangHp)));
+      if (event.enemyMaxHealth) event.enemyMaxHealth = Math.max(20, Math.round(event.enemyMaxHealth * (1 + gangHp)));
+    }
     combatEvent = event;
     currentScreen = 'combat';
   } else {
@@ -6382,7 +6415,7 @@ function renderFutures() {
       <div style="background:rgba(0,204,136,0.1);border:1px solid #00cc88;border-radius:8px;padding:0.8rem;margin:0.5rem 0">
         <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
           <div>Quantity: <input type="number" min="1" max="999" value="${futuresSelectedQty}" onchange="futuresSelectedQty=Math.max(1,parseInt(this.value)||10);render()" style="width:60px;background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-main);padding:0.2rem;border-radius:4px"></div>
-          <div>Premium: <span style="color:#ffcc00;font-weight:bold">$${premium.toLocaleString()}</span></div>
+          <div>Premium: <span style="color:#ffcc00;font-weight:bold">$${premium.toLocaleString()}</span> <span style="font-size:0.65rem;color:var(--text-dim)">(broker fee — not returned)</span></div>
           <div>Max Payout: <span style="color:#00ff88">$${(price * futuresSelectedQty * 2).toLocaleString()}</span></div>
         </div>
         <button class="btn btn-primary" style="margin-top:0.5rem;border-color:#00cc88;color:#00cc88" ${!canAfford || !canOpen ? 'disabled' : ''} onclick="doOpenFutures()">

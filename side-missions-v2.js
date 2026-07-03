@@ -176,6 +176,9 @@ function resolveChainChapter(state, chainId, outcomeIndex) {
 }
 
 function completeChainV2(state, chainId, finalOutcome) {
+  if (!state.stats) state.stats = {};
+  if (!state.stats.chainsCompleted) state.stats.chainsCompleted = [];
+  if (!state.stats.chainsCompleted.includes(chainId)) state.stats.chainsCompleted.push(chainId);
   const sm = state.sideMissionsV2;
   delete sm.activeChains[chainId];
   if (!sm.completedChains.includes(chainId)) sm.completedChains.push(chainId);

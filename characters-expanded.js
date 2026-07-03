@@ -422,6 +422,9 @@ function applyCharacterToState(state, charId) {
   };
 
   state.cash = char.startingCash;
+  // Starting money is clean — reset the ledger createGameState seeded from defaults
+  state.dirtyMoney = 0;
+  state.cleanMoney = char.startingCash;
   state.debt = char.startingDebt;
   state.currentLocation = char.startingDistrict || 'liberty_city';
 

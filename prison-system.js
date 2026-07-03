@@ -713,6 +713,8 @@ function attemptEscape(state) {
     };
 
     ps.eventLog.push({ day: ps.daysServed, type: 'escape', success: true });
+    if (!state.stats) state.stats = {};
+    state.stats.prisonEscapes = (state.stats.prisonEscapes || 0) + 1;
     return result;
   } else {
     // Failure
@@ -948,6 +950,14 @@ function recruitInmate(state) {
 // ─── Release ───
 
 function releaseFromPrison(state) {
+  if (!state.stats) state.stats = {};
+  state.stats.prisonSentencesServed = (state.stats.prisonSentencesServed || 0) + 1;
+  state.stats.prisonDaysTotal = (state.stats.prisonDaysTotal || 0) + ((state.prison && state.prison.daysServed) || 0);
+  if (typeof getControlledTerritories === 'function' && getControlledTerritories(state).length > 0) {
+    state.stats.prisonEmpireSurvived = 1;
+  }
+  if (state.prison && (state.prison.health || 100) < 50) state.stats.prisonShanked = 1;
+  if (state.prison && (state.prison.connections || 0) >= 3) state.stats.prisonConnected = 1;
   const ps = state.prison;
   if (!ps) return { success: false, message: 'No prison state.' };
 
