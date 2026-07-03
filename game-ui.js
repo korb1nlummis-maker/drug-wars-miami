@@ -1667,8 +1667,11 @@ function renderGame() {
       (() => { const cond = getMarketCondition(gameState, drug.id, gameState.currentLocation);
         return cond.label !== 'STABLE' ? `<span style="font-size:0.55rem;margin-left:0.3rem;color:${cond.color}">${cond.label}</span>` : '';
       })() : '';
+    // Reserve fixed width for the ticking price + trend so 1.5s updates never
+    // reflow the table and shift the BUY/SELL buttons under the player's finger
+    const _priceCh = price === null ? 0 : ('$' + Math.round(price * 1.07).toLocaleString()).length;
     const priceDisplay = price === null ? '<span class="unavailable">—</span>' :
-      `<span data-tick-price="${drug.id}">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
+      `<span data-tick-price="${drug.id}" style="display:inline-block;min-width:${_priceCh}ch;text-align:right;font-variant-numeric:tabular-nums">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px;display:inline-block;width:1.1em;text-align:center"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
     const hasEvent = gameState.priceEvents.find(e => e.drugId === drug.id);
     const rowClass = hasEvent ? (hasEvent.effect === 'spike' ? 'row-spike' : 'row-crash') : '';
     let spark = '';
