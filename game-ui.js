@@ -36,16 +36,37 @@ function backButton(label) {
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================
+// Single-lane notification queue: one toast on screen at a time, duplicates
+// merged into a ×N counter, hold time shrinks when a backlog builds so bursts
+// drain quickly. Tap a toast to advance to the next one.
+let _notifQueue = [];
+let _notifShowing = false;
 function showNotification(msg, type = 'info') {
+  const last = _notifQueue[_notifQueue.length - 1];
+  if (last && last.msg === msg && last.type === type) { last.count++; return; }
+  _notifQueue.push({ msg, type, count: 1 });
+  if (_notifQueue.length > 8) _notifQueue.splice(0, _notifQueue.length - 8);
+  if (!_notifShowing) _drainNotifQueue();
+}
+function _drainNotifQueue() {
+  if (_notifQueue.length === 0) { _notifShowing = false; return; }
+  _notifShowing = true;
+  const n = _notifQueue.shift();
   const toast = document.createElement('div');
-  toast.className = 'notification-toast notification-' + type;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 50);
-  setTimeout(() => {
+  toast.className = 'notification-toast notification-' + n.type;
+  toast.textContent = n.msg + (n.count > 1 ? '  (×' + n.count + ')' : '');
+  let advanced = false;
+  const advance = () => {
+    if (advanced) return;
+    advanced = true;
     toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 500);
-  }, 2500);
+    setTimeout(() => { toast.remove(); _drainNotifQueue(); }, 300);
+  };
+  toast.onclick = advance;
+  document.body.appendChild(toast);
+  const hold = _notifQueue.length >= 3 ? 1100 : _notifQueue.length >= 1 ? 1700 : 2500;
+  setTimeout(() => toast.classList.add('show'), 30);
+  setTimeout(advance, hold);
 }
 
 // Progressive unlock toast notification
