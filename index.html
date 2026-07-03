@@ -1736,7 +1736,21 @@ body::before {
   pointer-events: none;
   animation: fadeIn 0.3s ease;
 }
+.tutorial-pill {
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  z-index: 9500; background: var(--bg-panel, #111128);
+  border: 1px solid var(--neon-cyan, #00f0ff); border-radius: 999px;
+  padding: 0.5rem 1rem; font-size: 0.78rem; color: var(--text-main, #e0d6ff);
+  cursor: pointer; box-shadow: 0 2px 12px rgba(0, 240, 255, 0.25);
+  max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tutorial-hide-btn {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border-color, #333366);
+  color: #aaa; border-radius: 6px; font-size: 0.65rem; padding: 0.25rem 0.55rem;
+  cursor: pointer; min-height: 0 !important;
+}
 .tutorial-card {
+  position: relative;
   background: var(--bg-panel, #111128);
   border: 2px solid var(--neon-cyan, #00f0ff);
   border-radius: 10px;
