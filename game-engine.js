@@ -2091,6 +2091,10 @@ function generatePrices(state) {
   state.prices = prices;
   state.priceEvents = events;
 
+  // Early-game script: day-1 flip opportunity + delivering its promised price
+  if (typeof fireDay1Opportunity === 'function' && (state.day || 1) === 1) fireDay1Opportunity(state);
+  if (typeof applyEarlyGamePricePromise === 'function') applyEarlyGamePricePromise(state);
+
   // Record known prices for this location (price memory system)
   if (!state.knownPrices) state.knownPrices = {};
   const knownEntry = {};
@@ -3761,6 +3765,10 @@ function waitDay(state) {
   if (typeof processOffshoreDaily === 'function') {
     const offshoreMsgs = processOffshoreDaily(state);
     if (offshoreMsgs && offshoreMsgs.length) msgs.push(...offshoreMsgs);
+  }
+  if (typeof processEarlyGameDaily === 'function') {
+    const earlyMsgs = processEarlyGameDaily(state);
+    if (earlyMsgs && earlyMsgs.length) msgs.push(...earlyMsgs);
   }
   // (crew agendas ride inside processCrewExpansionDaily, wired above)
   if (typeof processMafiaOpsDaily === 'function') {
