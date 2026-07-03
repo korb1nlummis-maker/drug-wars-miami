@@ -6,6 +6,7 @@
 
 // Map zoom state (global)
 let mapZoomLevel = 'world'; // 'world' or 'region'
+let mapSelectedDistrict = null; // tapped district -> intel panel
 let mapCurrentRegion = null;
 
 // World map region positions — viewBox 0 0 1000 500 (2:1 aspect like a real world map)
@@ -444,11 +445,14 @@ function renderRegionMapView(regionId) {
     const locHeat = state && state.heatSystem ? (state.heatSystem.cityHeat || {})[distId] || 0 : 0;
     if (locHeat > 50) { strokeColor = '#ff4400'; }
 
-    const onclick = isCurrent ? '' : `selectDestination('${distId}')`;
+    const onclick = `mapSelectDistrict('${distId}')`;
     const cursor = onclick ? 'cursor:pointer' : '';
 
     // Node circle (larger, more visible)
     nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="13" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" ${glowFilter} style="${cursor}" ${onclick ? `onclick="${onclick}"` : ''}/>`;
+    if (mapSelectedDistrict === distId) {
+      nodesSvg += `<circle cx="${pos.x}" cy="${pos.y}" r="19" fill="none" stroke="#ffe600" stroke-width="2" stroke-dasharray="4,3"/>`;
+    }
 
     // Pulsing for current location
     if (isCurrent) {
@@ -520,7 +524,101 @@ function renderRegionMapView(regionId) {
         <span style="font-size:0.6rem;color:#888;">👥 Crew</span>
         <span style="font-size:0.6rem;color:#888;">⚔ Gang</span>
         <span style="font-size:0.6rem;color:#888;">🔥 Heat</span>
-        <span style="font-size:0.6rem;color:#556;margin-left:auto;">Tap district to travel</span>
+        <span style="font-size:0.6rem;color:#556;margin-left:auto;">Tap a district for intel</span>
+      </div>
+      ${renderDistrictIntelPanel(regionId, coords)}
+    </div>
+  `;
+}
+
+// Toggle district selection on the map
+function mapSelectDistrict(distId) {
+  mapSelectedDistrict = (mapSelectedDistrict === distId) ? null : distId;
+  if (typeof render === 'function') render();
+}
+
+// Intel panel for the tapped district: ecology, prices, stash, actions
+function renderDistrictIntelPanel(regionId, coords) {
+  const state = typeof gameState !== 'undefined' ? gameState : null;
+  const id = mapSelectedDistrict;
+  if (!state || !id || !coords || !coords[id]) return '';
+  const loc = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(l => l.id === id) : null;
+  if (!loc) return '';
+  const isCurrent = state.currentLocation === id;
+  const controlled = typeof isTerritory === 'function' && isTerritory(state, id);
+
+  // Gang / danger line
+  let gangName = null;
+  if (typeof MIAMI_DISTRICTS !== 'undefined') {
+    const md = MIAMI_DISTRICTS.find(d => d.id === id);
+    if (md && md.gangPresence && md.gangPresence.length) gangName = String(md.gangPresence[0]).replace(/_/g, ' ');
+  }
+  const danger = '★'.repeat(Math.min(loc.dangerLevel || 0, 10)) + '☆'.repeat(Math.max(0, 5 - (loc.dangerLevel || 0)));
+
+  // Neighborhood ecology
+  let ecoHtml = '';
+  const d = typeof getDistrict === 'function' ? getDistrict(state, id) : (state.districts && state.districts[id]);
+  if (d) {
+    const bar = (label, v, color) => `<div style="display:flex;align-items:center;gap:0.4rem;font-size:0.7rem"><span style="width:64px;color:var(--text-dim)">${label}</span><div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px"><div style="width:${v}%;height:100%;border-radius:3px;background:${color}"></div></div><span style="width:24px;text-align:right">${Math.round(v)}</span></div>`;
+    const condLabel = d.condition >= 70 ? '🌴 Thriving' : d.condition >= 50 ? '🏙️ Stable' : d.condition >= 30 ? '🏚️ Struggling' : '💀 Blighted';
+    ecoHtml = `<div style="margin:0.4rem 0">${bar('Condition', d.condition, d.condition >= 50 ? 'var(--neon-green)' : 'var(--neon-red)')}${bar('Police', d.police, '#4488ff')}${bar('Loyalty', d.loyalty, 'var(--neon-pink)')}<div style="font-size:0.7rem;color:var(--text-dim);margin-top:2px">${condLabel}${d.condition < 30 ? ' — desperation prices' : d.condition >= 70 ? ' — soft prices, low risk' : ''}</div></div>`;
+  }
+
+  // Known prices + best sell opportunities for what you hold
+  let intelHtml = '';
+  const known = state.knownPrices && state.knownPrices[id];
+  if (known && !isCurrent) {
+    const age = state.day - (known._day || state.day);
+    const held = Object.keys(state.inventory || {}).filter(k => state.inventory[k] > 0);
+    const opps = [];
+    for (const drugId of held) {
+      const there = known[drugId]; const here = state.prices ? state.prices[drugId] : null;
+      if (there && here && here > 0) {
+        const gain = Math.round(((there - here) / here) * 100);
+        if (gain > 5) opps.push({ drugId, gain, there });
+      }
+    }
+    opps.sort((a, b) => b.gain - a.gain);
+    const oppHtml = opps.slice(0, 3).map(o => {
+      const dd = typeof DRUGS !== 'undefined' ? DRUGS.find(x => x.id === o.drugId) : null;
+      return `<span style="color:var(--neon-green);font-size:0.72rem;margin-right:0.6rem">${dd ? dd.emoji + ' ' + dd.name : o.drugId} +${o.gain}% ($${o.there.toLocaleString()})</span>`;
+    }).join('');
+    intelHtml = `<div style="font-size:0.7rem;color:var(--text-dim);margin:0.3rem 0">💵 Price intel${age > 0 ? ` <span style="color:#777">(${age}d old)</span>` : ''}: ${oppHtml || '<span style="color:#777">no sell edge on what you carry</span>'}</div>`;
+  } else if (!known && !isCurrent) {
+    intelHtml = `<div style="font-size:0.7rem;color:#777;margin:0.3rem 0">💵 No price intel — visit to scout the market.</div>`;
+  }
+
+  // Your stash there
+  let stashHtml = '';
+  const stash = state.stashes && state.stashes[id];
+  if (stash) {
+    const units = Object.values(stash).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+    if (units > 0) stashHtml = `<div style="font-size:0.7rem;color:var(--neon-yellow);margin:0.2rem 0">📦 Your stash here: ${units} units</div>`;
+  }
+
+  // Assets
+  const fronts = (state.frontBusinesses || []).filter(b => b.location === id).length;
+  const hasDist = state.distribution && state.distribution[id] && state.distribution[id].active;
+  const assets = [controlled ? '🏴 YOUR TURF' : null, fronts ? `🏢 ${fronts} front${fronts > 1 ? 's' : ''}` : null, hasDist ? '📡 distribution' : null].filter(Boolean).join(' · ');
+
+  return `
+    <div style="border-top:1px solid rgba(0,240,255,0.15);background:rgba(0,15,30,0.85);padding:0.6rem 0.8rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <div>
+          <span style="font-weight:bold;color:var(--neon-cyan);font-size:1rem">${loc.emoji || ''} ${loc.name}</span>
+          <span style="font-size:0.7rem;color:var(--neon-red);margin-left:0.5rem">Danger ${danger}</span>
+          ${gangName && !controlled ? `<span style="font-size:0.7rem;color:#ffaa00;margin-left:0.5rem">⚔ ${gangName}</span>` : ''}
+        </div>
+        <button class="btn btn-sm btn-secondary" onclick="mapSelectDistrict('${id}')">✕</button>
+      </div>
+      ${assets ? `<div style="font-size:0.72rem;color:var(--neon-pink);margin:0.2rem 0">${assets}</div>` : ''}
+      <div style="font-size:0.75rem;color:var(--text-dim)">${loc.desc || ''}</div>
+      ${ecoHtml}
+      ${intelHtml}
+      ${stashHtml}
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">
+        ${isCurrent ? '<span style="color:var(--neon-cyan);font-size:0.8rem;padding:0.4rem 0">📍 You are here</span>' : `<button class="btn btn-sm btn-primary" onclick="mapSelectedDistrict=null; selectDestination('${id}')">🚗 TRAVEL HERE</button>`}
+        ${controlled ? `<button class="btn btn-sm btn-secondary" style="border-color:#39ff14;color:#39ff14" onclick="currentScreen='districts'; render();">🏘️ MANAGE</button>` : ''}
       </div>
     </div>
   `;
