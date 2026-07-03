@@ -143,7 +143,19 @@ var TUTORIAL_STEPS = [
     id: 'welcome',
     title: 'WELCOME',
     getText: function() {
-      return '<b>$' + (gameState ? gameState.cash.toLocaleString() : '1,500') + '</b> cash, <b>$5,000</b> debt. Buy drugs cheap, sell high. Build your empire.';
+      var cash = gameState ? (gameState.cash || 0) : 1500;
+      var debt = gameState ? (gameState.debt || 0) : 5000;
+      var charName = '';
+      var roster = typeof MIAMI_CHARACTERS !== 'undefined' ? MIAMI_CHARACTERS :
+        (typeof CHARACTER_ARCHETYPES !== 'undefined' ? CHARACTER_ARCHETYPES : []);
+      if (gameState && gameState.characterId) {
+        var c = roster.find(function(ch) { return ch.id === gameState.characterId; });
+        if (c) charName = c.name + ': ';
+      }
+      var debtStr = debt > 0
+        ? ', <b>$' + debt.toLocaleString() + '</b> debt (the loan shark compounds daily — pay it down early)'
+        : ' and <b>no debt</b> — a rare clean start';
+      return charName + '<b>$' + cash.toLocaleString() + '</b> cash' + debtStr + '. Buy drugs cheap, sell high. Build your empire.';
     },
     action: 'next',
     highlight: null,

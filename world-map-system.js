@@ -614,10 +614,13 @@ function renderDistrictIntelPanel(regionId, coords) {
   return `
     <div class="district-intel-panel" style="border-top:1px solid rgba(0,240,255,0.15);background:rgba(0,15,30,0.85);padding:0.6rem 0.8rem">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
-        <div>
-          <span style="font-weight:bold;color:var(--neon-cyan);font-size:1rem">${loc.emoji || ''} ${loc.name}</span>
-          <span style="font-size:0.7rem;color:var(--neon-red);margin-left:0.5rem">Danger ${danger}</span>
-          ${gangName && !controlled ? `<span style="font-size:0.7rem;color:#ffaa00;margin-left:0.5rem">⚔ ${gangName}</span>` : ''}
+        <div style="display:flex;align-items:center;gap:0.55rem">
+          ${typeof buildDistrictThumb === 'function' ? buildDistrictThumb(loc, 64, 40) : ''}
+          <div>
+            <span style="font-weight:bold;color:var(--neon-cyan);font-size:1rem">${loc.emoji || ''} ${loc.name}</span><br>
+            <span style="font-size:0.7rem;color:var(--neon-red)">Danger ${danger}</span>
+            ${gangName && !controlled ? `<span style="font-size:0.7rem;color:#ffaa00;margin-left:0.5rem">⚔ ${gangName}</span>` : ''}
+          </div>
         </div>
         <button class="btn btn-sm btn-secondary" onclick="mapSelectDistrict('${id}')">✕</button>
       </div>

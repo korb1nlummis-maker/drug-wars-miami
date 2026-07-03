@@ -177,6 +177,8 @@ body::before {
   justify-content: center;
   min-height: 100vh;
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .title-neon-border {
@@ -838,6 +840,7 @@ body::before {
 .gameover-screen .title-neon-border {
   border-color: var(--neon-red);
   box-shadow: 0 0 30px var(--neon-red-glow);
+  background: rgba(17, 17, 40, 0.82);
 }
 
 .score-breakdown {
@@ -1433,7 +1436,32 @@ body::before {
 .char-card-name { font-family: var(--font-display); font-size: 0.95rem; color: var(--neon-cyan); }
 .char-card-tagline { font-size: 0.9rem; color: var(--text-main); }
 .char-detail-desc { font-size: 1.05rem; color: var(--text-main); line-height: 1.6; margin: 0.5rem 0; }
-.intro-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; padding: 2rem; text-align: center; animation: introFadeIn 1s ease-out; overflow: hidden; box-sizing: border-box; width: 100%; }
+.intro-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; padding: 2rem; text-align: center; animation: introFadeIn 1s ease-out; overflow: hidden; box-sizing: border-box; width: 100%; position: relative; }
+.intro-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; animation: introTextFade 0.9s ease-out; width: 100%; }
+.scene-skyline { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; min-height: 160px; pointer-events: none; z-index: 0; opacity: 0.6; animation: skylineFade 2.2s ease-out; }
+.scene-skyline-svg { width: 100%; height: 100%; display: block; }
+.skyline-sun { animation: sunPulse 5s ease-in-out infinite; }
+.skyline-windows rect { animation: windowFlicker 4s ease-in-out infinite; }
+.skyline-windows rect:nth-child(2n) { animation-delay: 1.3s; }
+.skyline-windows rect:nth-child(3n) { animation-delay: 2.6s; }
+.gameover-hero { height: 150px; overflow: hidden; border-radius: 6px; margin-bottom: 1.2rem; border: 1px solid rgba(255,45,149,0.25); animation: skylineFade 1.8s ease-out forwards; }
+.gameover-hero .scene-skyline-svg { width: 100%; height: 100%; }
+@keyframes skylineFade { from { opacity: 0; transform: translateY(14px); } to { opacity: 0.6; transform: none; } }
+@keyframes sunPulse { 0%, 100% { filter: drop-shadow(0 0 6px rgba(255,45,149,0.7)); } 50% { filter: drop-shadow(0 0 18px rgba(255,45,149,1)); } }
+@keyframes windowFlicker { 0%, 92%, 100% { opacity: 1; } 96% { opacity: 0.25; } }
+/* --- JUICE: shake, cash pulse, trade row + tick flashes --- */
+@keyframes screenShake { 0%, 100% { transform: none; } 15% { transform: translate(-7px, 3px); } 30% { transform: translate(6px, -3px); } 45% { transform: translate(-5px, 2px); } 60% { transform: translate(4px, -2px); } 80% { transform: translate(-2px, 1px); } }
+.screen-shake { animation: screenShake 0.45s ease; }
+[data-cash-counter] { transition: text-shadow 0.3s, color 0.3s; }
+[data-cash-counter].cash-up { text-shadow: 0 0 14px rgba(57,255,20,0.95); }
+[data-cash-counter].cash-down { color: var(--neon-red) !important; text-shadow: 0 0 14px rgba(255,68,68,0.85); }
+@keyframes rowFlashBuy { 0% { background: rgba(0,240,255,0.22); } 100% { background: transparent; } }
+@keyframes rowFlashSell { 0% { background: rgba(57,255,20,0.24); } 100% { background: transparent; } }
+tr.row-flash-buy { animation: rowFlashBuy 0.95s ease-out; }
+tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
+[data-tick-price] { transition: color 0.35s; }
+[data-tick-price].tick-up { color: var(--neon-green); }
+[data-tick-price].tick-down { color: var(--neon-red); }
 .intro-text { font-size: 1.1rem; color: var(--text-main); max-width: 580px; line-height: 1.8; margin: 2rem auto; font-family: var(--font-main); letter-spacing: 0.02em; animation: introTextFade 1.2s ease-out; padding: 0 1rem; }
 .intro-speaker { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.5rem; }
 .intro-page-dots { display: flex; gap: 0.5rem; margin: 2rem 0; }
@@ -1479,7 +1507,8 @@ body::before {
 .char-detail-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; }
 .char-detail-placeholder { background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 10px; padding: 3rem 1.5rem; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 300px; }
 .char-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; margin: 0.5rem 0; font-size: 0.8rem; }
-.char-stat-row { display: flex; justify-content: space-between; padding: 0.2rem 0.4rem; background: rgba(255,255,255,0.03); border-radius: 4px; }
+.char-stat-row { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.2rem 0.4rem; background: rgba(255,255,255,0.03); border-radius: 4px; }
+.char-stat-row > span:last-child { text-align: right; }
 .char-stat-label { color: var(--text-mid); }
 .char-passive { margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,230,0,0.05); border: 1px solid rgba(255,230,0,0.2); border-radius: 6px; font-size: 0.75rem; color: var(--neon-yellow); }
 .char-passive-label { font-family: var(--font-display); font-weight: 700; }
@@ -2103,6 +2132,7 @@ body::before {
 <script src="side-missions-v2.js"></script>
 <script src="procedural-missions.js"></script>
 <script src="phone-system.js"></script>
+<script src="early-game-script.js"></script>
 <script src="supplier-system.js"></script>
 <script src="news-market-system.js"></script>
 <script src="district-ecology.js"></script>

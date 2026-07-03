@@ -33,6 +33,9 @@ function ensureNewsState(state) {
 let _newsIdCounter = 1;
 function pushNews(state, item) {
   ensureNewsState(state);
+  // Dedupe: an identical headline within the last dozen items / 5 days is noise
+  const _day = state.day || 1;
+  if (state.newsFeed.slice(0, 12).some(n => n.headline === item.headline && _day - n.day <= 5)) return;
   const hour = 6 + Math.floor(Math.random() * 17);
   const minute = Math.floor(Math.random() * 60);
   state.newsFeed.unshift({
@@ -103,12 +106,25 @@ function getMarketImpactMult(state, locId, drugId) {
 // ------------------------------------------------------------
 // Player-driven news
 // ------------------------------------------------------------
+// One headline per (event type, district, drug) per cooldown window — the
+// market impact still lands every time, but the paper doesn't reprint itself.
+function newsCooldownOk(state, key, days) {
+  if (!state.newsCooldowns) state.newsCooldowns = {};
+  const day = state.day || 1;
+  if (state.newsCooldowns[key] !== undefined && day - state.newsCooldowns[key] < days) return false;
+  state.newsCooldowns[key] = day;
+  return true;
+}
+
 function reportPlayerEvent(state, type, data) {
   if (!state) return;
   ensureNewsState(state);
   data = data || {};
   const loc = newsLocName(data.locId);
   const rnd = (a, b) => a + Math.random() * (b - a);
+  // Cooldown windows per event type (days without a repeat headline)
+  const cdDays = { shootout_won: 3, shootout_lost: 3, territory_taken: 5, police_raid: 4, busted: 4, big_sale: 3, big_buy: 3, boss_hit: 7 }[type] || 3;
+  const canPrint = newsCooldownOk(state, type + ':' + (data.locId || '') + ':' + (data.drugId || ''), cdDays);
 
   // Neighborhood ecology reacts to the same events the news reports
   if (typeof notifyDistrictEvent === 'function' && data.locId) {
@@ -125,17 +141,22 @@ function reportPlayerEvent(state, type, data) {
     case 'shootout_lost': {
       const mult = 1 + rnd(0.08, 0.15);
       addMarketImpact(state, data.locId, null, mult, 3 + Math.floor(Math.random() * 3), 'shootout');
-      pushNews(state, {
+      if (canPrint) pushNews(state, {
         headline: newsPick([
           `GUNFIRE ERUPTS IN ${loc.toUpperCase()}`,
           `DAYLIGHT SHOOTOUT SHAKES ${loc.toUpperCase()}`,
           `WITNESSES REPORT ARMED CLASH IN ${loc.toUpperCase()}`,
+          `SHELL CASINGS LITTER ${loc.toUpperCase()} INTERSECTION`,
+          `${loc.toUpperCase()} RESIDENTS DUCK FOR COVER AS SHOTS RING OUT`,
+          `TURF DISPUTE TURNS VIOLENT IN ${loc.toUpperCase()}`,
         ]),
         body: newsPick([
           `Residents describe masked gunmen exchanging fire before fleeing the scene. Police have flooded the area with patrols. Street sources say product is suddenly scarce and corner prices are climbing.`,
           `No arrests have been made after a violent confrontation between unidentified crews. With officers on every corner, dealers have gone to ground and prices are surging.`,
+          `A witness who asked not to be named said the shooters "knew exactly who they came for." Corner traffic has evaporated and what little product moves is moving at a premium.`,
+          `Detectives canvassed the block for hours and left with nothing. The silence is its own answer, one officer admitted. Until the patrols thin out, buyers are paying scared-money prices.`,
         ]),
-        source: newsPick(['Miami Herald', 'Channel 7 News', 'Street Wire']),
+        source: newsPick(['Miami Herald', 'Channel 7 News', 'Street Wire', 'Local 10 News']),
         category: 'street', locId: data.locId,
         impact: { dir: 'up', pct: Math.round((mult - 1) * 100) },
       });
@@ -144,16 +165,19 @@ function reportPlayerEvent(state, type, data) {
     case 'territory_taken': {
       const mult = 1 - rnd(0.10, 0.18);
       addMarketImpact(state, data.locId, null, mult, 4 + Math.floor(Math.random() * 3), 'takeover');
-      pushNews(state, {
+      if (canPrint) pushNews(state, {
         headline: newsPick([
           `POWER SHIFT IN ${loc.toUpperCase()}: ${String(data.gang || 'OLD CREW').toUpperCase()} PUSHED OUT`,
           `NEW MANAGEMENT ON THE CORNERS OF ${loc.toUpperCase()}`,
+          `${loc.toUpperCase()} CHANGES HANDS OVERNIGHT`,
+          `OLD GUARD GONE: NEW CREW RUNS ${loc.toUpperCase()}`,
         ]),
         body: newsPick([
           `Long-time operators have vanished from their usual spots overnight. Whoever moved in is undercutting the old rates to win the block's loyalty. Buyers are calling it a fire sale.`,
           `Community leaders report a sudden change in who runs the corners. The new outfit is flooding the block with cheap product to announce itself.`,
+          `The barbershop knows, the bodega knows, everyone knows — but nobody's saying a name. Introductory prices on every corner while the new operation settles in.`,
         ]),
-        source: newsPick(['Street Wire', 'Local 10 News']),
+        source: newsPick(['Street Wire', 'Local 10 News', 'Miami New Times']),
         category: 'you', locId: data.locId,
         impact: { dir: 'down', pct: Math.round((1 - mult) * 100) },
       });
@@ -163,15 +187,18 @@ function reportPlayerEvent(state, type, data) {
     case 'busted': {
       const mult = 1 + rnd(0.12, 0.20);
       addMarketImpact(state, data.locId, null, mult, 4 + Math.floor(Math.random() * 4), 'raid');
-      pushNews(state, {
+      if (canPrint) pushNews(state, {
         headline: newsPick([
           `DEA RAID SHUTS DOWN ${loc.toUpperCase()} CORNERS`,
           `NARCOTICS SWEEP HITS ${loc.toUpperCase()}`,
           `FEDERAL AGENTS DESCEND ON ${loc.toUpperCase()}`,
+          `PRE-DAWN OPERATION NETS ARRESTS IN ${loc.toUpperCase()}`,
+          `TASK FORCE KICKS DOORS ACROSS ${loc.toUpperCase()}`,
         ]),
         body: newsPick([
           `Agents in tactical gear made multiple arrests in a pre-dawn operation. Supply lines through the district are severed and street prices have spiked overnight.`,
           `A months-long investigation culminated in coordinated raids. Dealers who escaped the net are charging desperation prices.`,
+          `Evidence vans sat outside three addresses until noon. What's left of the local supply is trading hand-to-hand at double the usual number.`,
         ]),
         source: newsPick(['Miami Herald', 'Channel 7 News', 'Associated Press']),
         category: 'police', locId: data.locId,
@@ -183,9 +210,16 @@ function reportPlayerEvent(state, type, data) {
       if (!data.drugId) break;
       const mult = 1 - rnd(0.10, 0.20);
       addMarketImpact(state, data.locId, data.drugId, mult, 2 + Math.floor(Math.random() * 3), 'flood');
-      pushNews(state, {
-        headline: `STREET FLOODED WITH ${newsDrugName(data.drugId).toUpperCase()} IN ${loc.toUpperCase()}`,
-        body: `A massive quantity moved through the district in a single day. With every corner holding weight, prices are collapsing while the surplus lasts.`,
+      if (canPrint) pushNews(state, {
+        headline: newsPick([
+          `STREET FLOODED WITH ${newsDrugName(data.drugId).toUpperCase()} IN ${loc.toUpperCase()}`,
+          `${newsDrugName(data.drugId).toUpperCase()} GLUT HITS ${loc.toUpperCase()} CORNERS`,
+          `BOTTOM FALLS OUT OF ${newsDrugName(data.drugId).toUpperCase()} PRICES IN ${loc.toUpperCase()}`,
+        ]),
+        body: newsPick([
+          `A massive quantity moved through the district in a single day. With every corner holding weight, prices are collapsing while the surplus lasts.`,
+          `Veteran dealers say they've never seen this much product hit the block at once. Everyone's undercutting everyone until the surplus burns off.`,
+        ]),
         source: 'Street Wire', category: 'market', locId: data.locId, drugId: data.drugId,
         impact: { dir: 'down', pct: Math.round((1 - mult) * 100) },
       });
@@ -195,9 +229,16 @@ function reportPlayerEvent(state, type, data) {
       if (!data.drugId) break;
       const mult = 1 + rnd(0.08, 0.15);
       addMarketImpact(state, data.locId, data.drugId, mult, 2 + Math.floor(Math.random() * 3), 'shortage');
-      pushNews(state, {
-        headline: `${newsDrugName(data.drugId).toUpperCase()} DRIES UP IN ${loc.toUpperCase()}`,
-        body: `An unknown buyer cleared out local stock in one move. Dealers who still hold product are naming their own price.`,
+      if (canPrint) pushNews(state, {
+        headline: newsPick([
+          `${newsDrugName(data.drugId).toUpperCase()} DRIES UP IN ${loc.toUpperCase()}`,
+          `BUYER CLEANS OUT ${loc.toUpperCase()}'S ${newsDrugName(data.drugId).toUpperCase()} SUPPLY`,
+          `${loc.toUpperCase()} CORNERS EMPTY-HANDED ON ${newsDrugName(data.drugId).toUpperCase()}`,
+        ]),
+        body: newsPick([
+          `An unknown buyer cleared out local stock in one move. Dealers who still hold product are naming their own price.`,
+          `Somebody bought weight today and the whole district felt it. Regulars are being told to come back tomorrow — or pay tourist prices now.`,
+        ]),
         source: 'Street Wire', category: 'market', locId: data.locId, drugId: data.drugId,
         impact: { dir: 'up', pct: Math.round((mult - 1) * 100) },
       });
@@ -206,7 +247,7 @@ function reportPlayerEvent(state, type, data) {
     case 'boss_hit': {
       const mult = 1 + rnd(0.08, 0.12);
       addMarketImpact(state, data.locId, null, mult, 5, 'power vacuum');
-      pushNews(state, {
+      if (canPrint) pushNews(state, {
         headline: `UNDERWORLD FIGURE ${String(data.bossName || 'KINGPIN').toUpperCase()} REPORTED DEAD`,
         body: `The sudden power vacuum has supply chains in chaos. Lieutenants are fighting over routes while shipments sit frozen. Premium product is spiking across the region.`,
         source: newsPick(['DEA Intelligence Brief', 'Miami Herald']),
@@ -234,6 +275,25 @@ const NEWS_ATMOSPHERE = [
   { headline: 'GATOR FOUND IN CORAL GABLES SWIMMING POOL', body: 'Trappers removed the eight-footer before breakfast. The homeowner is billing the county.', source: 'Local 10 News', category: 'world' },
   { headline: 'VICE SQUAD SWEEPS THE STRIP CLUBS', body: 'Six licenses suspended. Management companies shuffle paperwork and reopen by the weekend.', source: 'Sun Sentinel', category: 'police' },
   { headline: 'RECORD SEASON FOR MARLIN FISHING CHARTERS', body: 'Captains report full bookings. Some boats seem to fish at odd hours with no rods aboard.', source: 'Waterfront Report', category: 'world' },
+  { headline: 'CALLE OCHO FESTIVAL DRAWS HALF A MILLION', body: 'The salsa never stopped for eight blocks. Pickpocket reports tripled; nobody filed charges.', source: 'Miami Herald', category: 'world' },
+  { headline: 'CIGARETTE BOAT RACES RETURN TO THE BAY', body: 'Thirty hulls, two thousand horsepower each. Customs agents watched from the marina with binoculars and long faces.', source: 'Waterfront Report', category: 'world' },
+  { headline: 'FLAMINGO FLOCK RELOCATES TO HIALEAH RACETRACK', body: 'Groundskeepers say the birds "just showed up." Bettors consider them good luck. The birds decline comment.', source: 'Local 10 News', category: 'world' },
+  { headline: 'BANK TELLER CHARGED IN STRUCTURING SCHEME', body: 'Prosecutors say deposits were sliced to duck the $10,000 reporting line. Her lawyer calls it "aggressive arithmetic."', source: 'Business Journal', category: 'police' },
+  { headline: 'MEDICAL EXAMINER REQUESTS SECOND COOLER TRUCK', body: 'The county morgue is over capacity for the third month running. Officials blame "the general climate."', source: 'Sun Sentinel', category: 'police' },
+  { headline: 'PASTEL SUITS SELL OUT ACROSS THE COUNTY', body: 'Menswear shops can\'t keep white linen in stock. "Everyone wants to look like they own a boat," one tailor shrugged.', source: 'Miami New Times', category: 'world' },
+  { headline: 'ORANGE JUICE FUTURES SWING ON FROST SCARE', body: 'Commodity desks in New York spent the morning yelling about Florida weather. Growers spent it laughing.', source: 'Business Journal', category: 'world' },
+  { headline: 'UNCLAIMED SPEEDBOAT AUCTIONED BY SHERIFF', body: 'The 38-footer, seized with a false hull, sold for a tenth of its value — to a bidder who paid cash.', source: 'Local 10 News', category: 'police' },
+  { headline: 'NIGHTCLUB LINE STRETCHES FOUR BLOCKS ON OPENING NIGHT', body: 'The Mutiny\'s newest rival spared no expense. Where the money came from is the only question nobody asks out loud.', source: 'Miami New Times', category: 'world' },
+  { headline: 'CORAL REEF SURVEY FINDS SUNKEN CESSNA', body: 'Divers mapping the reef found a light aircraft, doors open, cargo hold empty. The FAA has no matching flight plan.', source: 'Channel 7 News', category: 'world' },
+  { headline: 'LITTLE HAITI MURAL PROJECT WINS ARTS GRANT', body: 'Three blocks of fresh color by summer. Organizers say the neighborhood "paints its own story now."', source: 'Miami Herald', category: 'world' },
+  { headline: 'AIRPORT CUSTOMS ADDS THIRD K-9 SHIFT', body: 'MIA now runs dogs around the clock. Freight handlers were reportedly the last to be told.', source: 'Associated Press', category: 'police' },
+  { headline: 'RETIRED SMUGGLER PUBLISHES COOKBOOK', body: '"Everything I know about timing I learned from stone crabs," writes the author, whose federal plea deal forbids specifics.', source: 'Miami New Times', category: 'world' },
+  { headline: 'CONDO BOARD BANS CASH PURCHASES OVER $50,000', body: 'The vote followed the third all-cash penthouse sale this quarter. Realtors call the rule "quaint."', source: 'Business Journal', category: 'world' },
+  { headline: 'THUNDERSTORM KNOCKS OUT POWER TO SOUTH GRID', body: 'Four hours dark from the river to the bay. Police report looting was "minimal and professional."', source: 'Channel 7 Weather', category: 'world' },
+  { headline: 'HIGH SCHOOL BASEBALL PHENOM SIGNS PRO DEAL', body: 'The whole neighborhood turned out. His mother cried. Three men in linen suits paid for the party and left early.', source: 'Miami Sports Desk', category: 'world' },
+  { headline: 'COUNTY COMMISSIONER\'S YACHT RAISES EYEBROWS', body: 'Financial disclosures list a salary of $41,000. The yacht lists for considerably more. An inquiry is "being considered."', source: 'Sun Sentinel', category: 'world' },
+  { headline: 'PAWN SHOPS REPORT RUN ON GOLD CHAINS', body: 'Buyers pay cash and don\'t haggle. "Business is beautiful," said one owner, closing early for the third day straight.', source: 'Street Wire', category: 'world' },
+  { headline: 'EVERGLADES AIRSTRIP MYSTERY DEEPENS', body: 'The packed-dirt runway appeared sometime last month. No permits, no owner, fresh tire tracks every Sunday.', source: 'Associated Press', category: 'police' },
 ];
 
 function processNewsDaily(state) {
@@ -298,7 +358,15 @@ function marketTick() {
     gameState.prices[id] = next;
     // In-place DOM update — no full render (would reset scroll/focus)
     const priceEl = document.querySelector('[data-tick-price="' + id + '"]');
-    if (priceEl) priceEl.textContent = '$' + next.toLocaleString();
+    if (priceEl) {
+      priceEl.textContent = '$' + next.toLocaleString();
+      // Brief color pulse in the move's direction
+      if (dir !== 0) {
+        priceEl.classList.remove('tick-up', 'tick-down');
+        priceEl.classList.add(dir > 0 ? 'tick-up' : 'tick-down');
+        setTimeout(() => priceEl.classList.remove('tick-up', 'tick-down'), 700);
+      }
+    }
     const trendEl = document.querySelector('[data-tick-trend="' + id + '"]');
     if (trendEl && dir !== 0) {
       trendEl.textContent = dir > 0 ? '▲' : '▼';

@@ -619,7 +619,11 @@ function renderDistrictEcology() {
       <div class="prop-card" style="border-color:${borderColor};margin-bottom:0.5rem;padding:0.6rem;${controlled ? 'cursor:pointer' : ''}"
         ${controlled ? `onclick="doDistrictToggle('${locId}')"` : ''}>
         <div class="card-header" style="margin-bottom:0.2rem">
-          <span style="font-weight:bold">${emoji} ${name}</span>
+          <span style="font-weight:bold;display:inline-flex;align-items:center;gap:0.45rem">${(() => {
+            if (typeof buildDistrictThumb !== 'function' || typeof LOCATIONS === 'undefined') return emoji;
+            const _l = LOCATIONS.find(x => x.id === locId);
+            return _l ? buildDistrictThumb(_l, 52, 32) + ' ' + emoji : emoji;
+          })()} ${name}</span>
           <span style="display:flex;gap:0.4rem;flex-wrap:wrap">${badges.join('')}</span>
         </div>
         ${body}

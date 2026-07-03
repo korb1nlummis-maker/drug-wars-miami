@@ -36,16 +36,251 @@ function backButton(label) {
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================
+// Single-lane notification queue: one toast on screen at a time, duplicates
+// merged into a ×N counter, hold time shrinks when a backlog builds so bursts
+// drain quickly. Tap a toast to advance to the next one.
+let _notifQueue = [];
+let _notifShowing = false;
 function showNotification(msg, type = 'info') {
+  const last = _notifQueue[_notifQueue.length - 1];
+  if (last && last.msg === msg && last.type === type) { last.count++; return; }
+  _notifQueue.push({ msg, type, count: 1 });
+  if (_notifQueue.length > 8) _notifQueue.splice(0, _notifQueue.length - 8);
+  if (!_notifShowing) _drainNotifQueue();
+}
+function _drainNotifQueue() {
+  if (_notifQueue.length === 0) { _notifShowing = false; return; }
+  _notifShowing = true;
+  const n = _notifQueue.shift();
   const toast = document.createElement('div');
-  toast.className = 'notification-toast notification-' + type;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 50);
-  setTimeout(() => {
+  toast.className = 'notification-toast notification-' + n.type;
+  toast.textContent = n.msg + (n.count > 1 ? '  (×' + n.count + ')' : '');
+  let advanced = false;
+  const advance = () => {
+    if (advanced) return;
+    advanced = true;
     toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 500);
-  }, 2500);
+    setTimeout(() => { toast.remove(); _drainNotifQueue(); }, 300);
+  };
+  toast.onclick = advance;
+  document.body.appendChild(toast);
+  const hold = _notifQueue.length >= 3 ? 1100 : _notifQueue.length >= 1 ? 1700 : 2500;
+  setTimeout(() => toast.classList.add('show'), 30);
+  setTimeout(advance, hold);
+}
+
+// ============================================================
+// MIAMI SKYLINE BACKDROP — inline SVG scene used by the intro,
+// endings, and title. Variants: 'sunset' | 'dawn' | 'night'
+// ============================================================
+function buildMiamiSkyline(variant) {
+  const v = {
+    sunset: { skyTop: '#12061f', skyMid: '#3d1054', horizon: '#ff2d95', sun1: '#ffe600', sun2: '#ff2d95', water: '#0a0618', glow: 'rgba(255,45,149,0.55)', win1: '#00f0ff', win2: '#ffe600' },
+    dawn:   { skyTop: '#041520', skyMid: '#0a3550', horizon: '#00f0ff', sun1: '#fffbe0', sun2: '#ffe600', water: '#02101a', glow: 'rgba(0,240,255,0.45)',  win1: '#ffe600', win2: '#00f0ff' },
+    night:  { skyTop: '#050508', skyMid: '#1c0a14', horizon: '#8b1130', sun1: '#ff4444', sun2: '#8b1130', water: '#040406', glow: 'rgba(255,68,68,0.35)',  win1: '#ff4444', win2: '#553355' },
+  }[variant] || {};
+  const uid = 'sky_' + (variant || 'sunset');
+  // Two rows of tower silhouettes + palms + sun with synthwave slats + reflection
+  return `
+  <svg class="scene-skyline-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="${uid}_sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.skyTop}"/><stop offset="62%" stop-color="${v.skyMid}"/><stop offset="100%" stop-color="${v.horizon}"/>
+      </linearGradient>
+      <linearGradient id="${uid}_sun" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.sun1}"/><stop offset="100%" stop-color="${v.sun2}"/>
+      </linearGradient>
+      <linearGradient id="${uid}_refl" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.glow}"/><stop offset="100%" stop-color="transparent"/>
+      </linearGradient>
+      <clipPath id="${uid}_sunclip"><rect x="310" y="60" width="180" height="150"/></clipPath>
+    </defs>
+    <rect x="0" y="0" width="800" height="212" fill="url(#${uid}_sky)"/>
+    <g clip-path="url(#${uid}_sunclip)">
+      <circle class="skyline-sun" cx="400" cy="150" r="72" fill="url(#${uid}_sun)"/>
+      <rect x="310" y="128" width="180" height="5"  fill="${v.skyMid}"/>
+      <rect x="310" y="146" width="180" height="7"  fill="${v.skyMid}"/>
+      <rect x="310" y="166" width="180" height="9"  fill="${v.skyMid}"/>
+      <rect x="310" y="188" width="180" height="11" fill="${v.skyMid}"/>
+    </g>
+    <!-- back row towers -->
+    <g fill="#0d0a18" opacity="0.85">
+      <rect x="20" y="120" width="42" height="92"/><rect x="70" y="95" width="30" height="117"/>
+      <rect x="150" y="130" width="55" height="82"/><rect x="240" y="105" width="26" height="107"/>
+      <rect x="520" y="112" width="34" height="100"/><rect x="600" y="90" width="46" height="122"/>
+      <rect x="700" y="125" width="38" height="87"/><rect x="748" y="102" width="26" height="110"/>
+    </g>
+    <!-- front row towers with lit windows -->
+    <g fill="#070512">
+      <rect x="0" y="150" width="34" height="62"/><rect x="105" y="140" width="40" height="72"/>
+      <rect x="210" y="152" width="46" height="60"/><rect x="268" y="132" width="30" height="80"/>
+      <rect x="475" y="145" width="40" height="67"/><rect x="560" y="155" width="34" height="57"/>
+      <rect x="655" y="138" width="36" height="74"/><rect x="770" y="150" width="30" height="62"/>
+    </g>
+    <g class="skyline-windows">
+      <rect x="112" y="148" width="4" height="4" fill="${v.win1}"/><rect x="126" y="160" width="4" height="4" fill="${v.win2}"/>
+      <rect x="219" y="162" width="4" height="4" fill="${v.win2}"/><rect x="236" y="174" width="4" height="4" fill="${v.win1}"/>
+      <rect x="274" y="140" width="4" height="4" fill="${v.win1}"/><rect x="283" y="156" width="4" height="4" fill="${v.win2}"/>
+      <rect x="482" y="153" width="4" height="4" fill="${v.win2}"/><rect x="497" y="167" width="4" height="4" fill="${v.win1}"/>
+      <rect x="662" y="146" width="4" height="4" fill="${v.win1}"/><rect x="676" y="170" width="4" height="4" fill="${v.win2}"/>
+      <rect x="610" y="100" width="4" height="4" fill="${v.win1}"/><rect x="626" y="118" width="4" height="4" fill="${v.win2}"/>
+    </g>
+    <!-- palms -->
+    <g fill="#05030c">
+      <path d="M 60 212 q 4 -38 -6 -52 q 14 10 12 24 q 8 -22 24 -26 q -14 12 -16 26 q 12 -14 28 -12 q -18 8 -26 20 q 10 -4 20 2 q -14 2 -22 10 l -4 8 z"/>
+      <path d="M 736 212 q -4 -34 6 -46 q -12 8 -11 21 q -7 -19 -21 -23 q 12 11 14 23 q -11 -12 -25 -10 q 16 7 23 18 q -9 -3 -18 2 q 13 2 20 9 l 4 6 z"/>
+    </g>
+    <!-- water + reflection -->
+    <rect x="0" y="210" width="800" height="90" fill="${v.water}"/>
+    <rect x="330" y="210" width="140" height="90" fill="url(#${uid}_refl)" opacity="0.8"/>
+    <g stroke="${v.horizon}" stroke-width="1" opacity="0.35">
+      <line x1="345" y1="222" x2="455" y2="222"/><line x1="358" y1="238" x2="442" y2="238"/>
+      <line x1="336" y1="256" x2="464" y2="256"/><line x1="352" y1="276" x2="448" y2="276"/>
+    </g>
+  </svg>`;
+}
+
+// ============================================================
+// JUICE — screen shake, cash count-up, trade row flashes
+// ============================================================
+function _shakeScreen() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  app.classList.remove('screen-shake');
+  void app.offsetWidth; // restart the animation if already running
+  app.classList.add('screen-shake');
+  setTimeout(() => app.classList.remove('screen-shake'), 500);
+}
+
+function _animateCashCounter(from, to) {
+  const el = document.querySelector('[data-cash-counter]');
+  if (!el || from === to || typeof requestAnimationFrame !== 'function') return;
+  const dur = 600;
+  const t0 = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = '$' + Math.round(from + (to - from) * eased).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  el.classList.add(to > from ? 'cash-up' : 'cash-down');
+  setTimeout(() => el.classList.remove('cash-up', 'cash-down'), 800);
+}
+
+function _flashTradeRow(drugId, mode) {
+  const cell = document.querySelector('[data-tick-price="' + drugId + '"]');
+  const tr = cell && cell.closest('tr');
+  if (!tr) return;
+  const cls = mode === 'buy' ? 'row-flash-buy' : 'row-flash-sell';
+  tr.classList.remove('row-flash-buy', 'row-flash-sell');
+  void tr.offsetWidth;
+  tr.classList.add(cls);
+  setTimeout(() => tr.classList.remove(cls), 1000);
+}
+
+// ============================================================
+// CHARACTER PORTRAITS — neon SVG medallions (no image assets)
+// ============================================================
+const CHAR_PORTRAIT_STYLE = {
+  corner_kid:    { accent: '#00f0ff', accessory: 'cap' },
+  dropout:       { accent: '#ffe600', accessory: 'glasses' },
+  ex_con:        { accent: '#ff4444', accessory: 'buzz' },
+  hustler:       { accent: '#ff2d95', accessory: 'fedora' },
+  connected_kid: { accent: '#ffb700', accessory: 'slick' },
+  cleanskin:     { accent: '#39ff14', accessory: 'tie' },
+  veteran:       { accent: '#9dbf4e', accessory: 'beret' },
+  immigrant:     { accent: '#ff8800', accessory: 'curly' },
+  undercover:    { accent: '#b455ff', accessory: 'shades' },
+  classic:       { accent: '#ff2d95', accessory: 'none' },
+};
+
+function buildCharPortrait(charId, size) {
+  size = size || 64;
+  const st = CHAR_PORTRAIT_STYLE[charId] || CHAR_PORTRAIT_STYLE.classic;
+  const a = st.accent;
+  const uid = 'port_' + charId;
+  // Accessory shapes drawn over a common bust silhouette
+  const acc = {
+    cap:     `<path d="M 33 26 q 17 -13 34 0 l 3 5 l -40 0 z" fill="${a}"/><rect x="28" y="30" width="26" height="4" rx="2" fill="${a}"/>`,
+    glasses: `<rect x="36" y="36" width="11" height="8" rx="2" fill="none" stroke="${a}" stroke-width="2"/><rect x="53" y="36" width="11" height="8" rx="2" fill="none" stroke="${a}" stroke-width="2"/><line x1="47" y1="39" x2="53" y2="39" stroke="${a}" stroke-width="2"/>`,
+    buzz:    `<path d="M 36 27 q 14 -7 28 0 l 0 4 l -28 0 z" fill="${a}" opacity="0.85"/>`,
+    fedora:  `<path d="M 34 27 q 16 -12 32 0 l 6 4 q -22 6 -44 0 z" fill="${a}"/><rect x="38" y="20" width="24" height="6" rx="3" fill="${a}"/>`,
+    slick:   `<path d="M 35 30 q 15 -13 30 -1 q -4 -3 -14 -4 q -10 -1 -16 5 z" fill="${a}"/>`,
+    tie:     `<path d="M 48 62 l 4 -4 l 4 4 l -3 14 l -2 0 z" fill="${a}"/>`,
+    beret:   `<path d="M 34 29 q 16 -12 33 -2 l -4 4 q -13 -7 -26 0 z" fill="${a}"/><circle cx="62" cy="24" r="2.5" fill="${a}"/>`,
+    curly:   `<circle cx="38" cy="30" r="5" fill="${a}" opacity="0.8"/><circle cx="46" cy="26" r="5.5" fill="${a}" opacity="0.8"/><circle cx="55" cy="26" r="5.5" fill="${a}" opacity="0.8"/><circle cx="62" cy="30" r="5" fill="${a}" opacity="0.8"/>`,
+    shades:  `<path d="M 35 36 l 30 0 l -2 9 q -5 3 -11 0 l -2 -5 l -2 5 q -6 3 -11 0 z" fill="${a}"/>`,
+    none:    '',
+  }[st.accessory] || '';
+  return `
+  <svg width="${size}" height="${size}" viewBox="0 0 100 100" class="char-portrait" aria-hidden="true">
+    <defs>
+      <radialGradient id="${uid}_bg" cx="0.5" cy="0.35" r="0.8">
+        <stop offset="0%" stop-color="${a}" stop-opacity="0.35"/>
+        <stop offset="60%" stop-color="#141026"/>
+        <stop offset="100%" stop-color="#0a0814"/>
+      </radialGradient>
+      <clipPath id="${uid}_clip"><circle cx="50" cy="50" r="46"/></clipPath>
+    </defs>
+    <circle cx="50" cy="50" r="46" fill="url(#${uid}_bg)"/>
+    <g clip-path="url(#${uid}_clip)">
+      <circle cx="50" cy="42" r="17" fill="#05030c"/>
+      <path d="M 20 96 q 4 -28 30 -28 q 26 0 30 28 z" fill="#05030c"/>
+      <circle cx="50" cy="42" r="17" fill="none" stroke="${a}" stroke-width="1" opacity="0.35"/>
+      ${acc}
+    </g>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="${a}" stroke-width="2" opacity="0.8"/>
+    <circle cx="50" cy="50" r="49" fill="none" stroke="${a}" stroke-width="0.75" opacity="0.3"/>
+  </svg>`;
+}
+
+// ============================================================
+// DISTRICT THUMBNAILS — tiny neon scene per district flavor
+// ============================================================
+function buildDistrictThumb(loc, w, h) {
+  w = w || 72; h = h || 44;
+  const id = (loc && loc.id) || '';
+  const danger = (loc && loc.dangerLevel) || 3;
+  const kind =
+    /beach|key_biscayne|bal_harbour/.test(id) ? 'beach' :
+    /downtown|brickell|omni|edgewater/.test(id) ? 'towers' :
+    /port|river|industrial|doral|airport|opa_locka|hialeah/.test(id) ? 'industrial' :
+    /grove|gables|kendall|pinecrest/.test(id) ? 'suburb' : 'blocks';
+  const accent = danger >= 4 ? '#ff4444' : danger >= 3 ? '#ff8800' : '#00f0ff';
+  const uid = 'thumb_' + id;
+  let scene = '';
+  if (kind === 'beach') {
+    scene = `<circle cx="50" cy="26" r="10" fill="#ffe600" opacity="0.85"/>
+      <rect x="0" y="28" width="72" height="16" fill="#0a2535"/>
+      <path d="M 12 30 q 3 -12 -2 -16 q 7 4 6 11 q 4 -8 10 -9 q -6 5 -7 12 z" fill="#05030c"/>
+      <line x1="38" y1="32" x2="62" y2="32" stroke="${accent}" stroke-width="1" opacity="0.5"/>`;
+  } else if (kind === 'towers') {
+    scene = `<rect x="6" y="10" width="10" height="34" fill="#05030c"/><rect x="20" y="4" width="12" height="40" fill="#0a0818"/>
+      <rect x="36" y="14" width="9" height="30" fill="#05030c"/><rect x="49" y="8" width="11" height="36" fill="#0a0818"/>
+      <rect x="8" y="14" width="2" height="2" fill="${accent}"/><rect x="24" y="10" width="2" height="2" fill="#ffe600"/>
+      <rect x="52" y="12" width="2" height="2" fill="${accent}"/><rect x="39" y="18" width="2" height="2" fill="#ffe600"/>`;
+  } else if (kind === 'industrial') {
+    scene = `<rect x="4" y="26" width="18" height="18" fill="#0a0818"/><rect x="26" y="30" width="22" height="14" fill="#05030c"/>
+      <rect x="52" y="24" width="6" height="20" fill="#0a0818"/><rect x="47" y="12" width="2" height="14" fill="${accent}"/>
+      <line x1="48" y1="12" x2="66" y2="12" stroke="${accent}" stroke-width="2"/><line x1="64" y1="12" x2="64" y2="20" stroke="${accent}" stroke-width="1"/>`;
+  } else if (kind === 'suburb') {
+    scene = `<path d="M 6 44 l 0 -10 l 8 -6 l 8 6 l 0 10 z" fill="#0a0818"/><path d="M 30 44 l 0 -9 l 7 -5 l 7 5 l 0 9 z" fill="#05030c"/>
+      <path d="M 56 36 q 2 -10 -2 -13 q 6 3 5 9 q 3 -6 8 -7 q -5 4 -6 11 z" fill="#05030c"/>
+      <rect x="12" y="38" width="3" height="3" fill="${accent}"/>`;
+  } else {
+    scene = `<rect x="4" y="22" width="14" height="22" fill="#0a0818"/><rect x="22" y="28" width="12" height="16" fill="#05030c"/>
+      <rect x="38" y="24" width="13" height="20" fill="#0a0818"/><rect x="55" y="30" width="12" height="14" fill="#05030c"/>
+      <rect x="7" y="26" width="2" height="2" fill="${accent}"/><rect x="42" y="28" width="2" height="2" fill="#ffe600"/>`;
+  }
+  return `
+  <svg width="${w}" height="${h}" viewBox="0 0 72 44" class="district-thumb" aria-hidden="true" style="border-radius:4px;border:1px solid rgba(0,240,255,0.2);background:#070512">
+    <defs><linearGradient id="${uid}_sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#12061f"/><stop offset="100%" stop-color="#2a0f3a"/>
+    </linearGradient></defs>
+    <rect x="0" y="0" width="72" height="44" fill="url(#${uid}_sky)"/>
+    ${scene}
+  </svg>`;
 }
 
 // Progressive unlock toast notification
@@ -554,7 +789,7 @@ function renderCharacterSelect() {
     const diffColor = diffColorMap[c.difficulty] || 'neon-yellow';
     return `
       <div class="char-card ${isSelected ? 'selected' : ''}" onclick="selectedCharacterId='${c.id}'; render();">
-        <div class="char-card-emoji">${c.emoji}</div>
+        <div class="char-card-emoji">${typeof buildCharPortrait === 'function' ? buildCharPortrait(c.id, 56) : c.emoji}</div>
         <div class="char-card-name">${c.name}</div>
         <div class="char-card-tagline">${c.subtitle || c.tagline || ''}</div>
         <div class="char-card-difficulty">
@@ -595,7 +830,7 @@ function renderCharacterSelect() {
     detailPanel = `
       <div class="char-detail-panel">
         <div class="char-detail-header">
-          <span style="font-size:2.5rem">${c.emoji}</span>
+          <span>${buildCharPortrait(c.id, 72)}</span>
           <div>
             <h3 class="neon-pink" style="margin:0">${c.name}</h3>
             <p style="margin:0;font-size:0.95rem;color:var(--text-main)">${c.subtitle || c.tagline || ''}</p>
@@ -644,6 +879,10 @@ function renderCharacterSelect() {
 // ============================================================
 function render() {
   const app = document.getElementById('app');
+  // Keep the money ledger honest (cash = dirty + clean) before drawing it
+  if (typeof gameState !== 'undefined' && gameState && typeof normalizeMoneyLedger === 'function') {
+    normalizeMoneyLedger(gameState);
+  }
   // Changing screens dismisses any lingering modal (bank, loan shark, etc.)
   if (render._lastScreen !== currentScreen) {
     const mc = document.getElementById('modal-container');
@@ -722,6 +961,13 @@ function render() {
       !['title', 'charselect', 'intro', 'howtoplay', 'highscores', 'gameover'].includes(_screenBeforeSwitch)) {
     try { app.insertAdjacentHTML('beforeend', renderTutorialOverlay()); } catch (e) { /* never break render */ }
   }
+  // Juice: count the cash readout up/down when it changed since last render
+  if (typeof gameState !== 'undefined' && gameState) {
+    if (render._lastCash !== undefined && render._lastCash !== gameState.cash) {
+      _animateCashCounter(render._lastCash, gameState.cash);
+    }
+    render._lastCash = gameState.cash;
+  }
   updateMusic();
 }
 
@@ -788,7 +1034,8 @@ function renderTitle() {
 
   return `
     <div class="title-screen">
-      <div class="title-neon-border">
+      <div class="scene-skyline" style="height:55%">${buildMiamiSkyline('sunset')}</div>
+      <div class="title-neon-border" style="position:relative;z-index:1">
         <div class="title-palm">🌴</div>
         <h1 class="title-main">DRUG WARS</h1>
         <h2 class="title-sub">M I A M I &nbsp; V I C E &nbsp; E D I T I O N</h2>
@@ -861,6 +1108,7 @@ function renderHowToPlay() {
 
       ${S('💰', 'Trading & the Living Market', `
         <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
+        <p><b>The spread:</b> street dealers buy from you at ~85% of the listed market price. Buying and re-selling in the same district <b>loses money</b> — real profit means moving product to a district where the price beats your cost by more than the dealer's cut. That's the whole game.</p>
         <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
         ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
       `)}
@@ -1529,7 +1777,7 @@ function renderGame() {
     <div class="status-bar">
       <div class="status-row">
         <span class="stat"><span class="stat-label">DAY</span> <span class="stat-value">${GAME_CONFIG.endlessMode ? gameState.day : gameState.day + '/' + GAME_CONFIG.totalDays}</span>${typeof getTimePeriod === 'function' ? ` <span style="font-size:0.7rem">${getTimePeriod(gameState).emoji}</span>` : ''}</span>
-        <span class="stat" title="Total cash. Dirty money needs laundering through front businesses."><span class="stat-label">CASH</span> <span class="stat-value neon-green">$${gameState.cash.toLocaleString()}</span>${(gameState.dirtyMoney || 0) > 1000 ? `<span style="font-size:0.55rem;color:var(--neon-red);margin-left:2px" title="Dirty money draws investigation. Launder through fronts!">💰${Math.round((gameState.dirtyMoney || 0) / Math.max(1, gameState.cash) * 100)}%🔴</span>` : ''}</span>
+        <span class="stat" title="Total cash. Dirty money needs laundering through front businesses."><span class="stat-label">CASH</span> <span class="stat-value neon-green" data-cash-counter>$${gameState.cash.toLocaleString()}</span>${(gameState.dirtyMoney || 0) > 1000 ? `<span style="font-size:0.55rem;color:var(--neon-red);margin-left:2px" title="Dirty money draws investigation. Launder through fronts!">💰${Math.round((gameState.dirtyMoney || 0) / Math.max(1, gameState.cash) * 100)}%🔴</span>` : ''}</span>
         <span class="stat"><span class="stat-label">BANK</span> <span class="stat-value neon-cyan">$${gameState.bank.toLocaleString()}</span></span>
         <span class="stat"><span class="stat-label">DEBT</span> <span class="stat-value ${gameState.debt > 0 ? 'neon-red' : 'neon-green'}">$${gameState.debt.toLocaleString()}</span></span>
       </div>
@@ -1666,8 +1914,11 @@ function renderGame() {
       (() => { const cond = getMarketCondition(gameState, drug.id, gameState.currentLocation);
         return cond.label !== 'STABLE' ? `<span style="font-size:0.55rem;margin-left:0.3rem;color:${cond.color}">${cond.label}</span>` : '';
       })() : '';
+    // Reserve fixed width for the ticking price + trend so 1.5s updates never
+    // reflow the table and shift the BUY/SELL buttons under the player's finger
+    const _priceCh = price === null ? 0 : ('$' + Math.round(price * 1.07).toLocaleString()).length;
     const priceDisplay = price === null ? '<span class="unavailable">—</span>' :
-      `<span data-tick-price="${drug.id}">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
+      `<span data-tick-price="${drug.id}" style="display:inline-block;min-width:${_priceCh}ch;text-align:right;font-variant-numeric:tabular-nums">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px;display:inline-block;width:1.1em;text-align:center"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
     const hasEvent = gameState.priceEvents.find(e => e.drugId === drug.id);
     const rowClass = hasEvent ? (hasEvent.effect === 'spike' ? 'row-spike' : 'row-crash') : '';
     let spark = '';
@@ -1708,8 +1959,10 @@ function renderGame() {
       const ledger = gameState.stats && gameState.stats.drugLedger && gameState.stats.drugLedger[drug.id];
       const avgCost = ledger ? (ledger.avgCost || 0) : 0;
       if (avgCost > 0) {
-        const pnl = (price - avgCost) * owned;
-        const pnlPct = ((price - avgCost) / avgCost * 100).toFixed(1);
+        // P&L against what dealers actually pay (street price), not the list price
+        const realizable = typeof getStreetSellPrice === 'function' ? (getStreetSellPrice(gameState, drug.id) || price) : price;
+        const pnl = (realizable - avgCost) * owned;
+        const pnlPct = ((realizable - avgCost) / avgCost * 100).toFixed(1);
         pnlCell = pnl >= 0
           ? `<span style="color:var(--neon-green);font-size:0.7rem">▲ +$${Math.round(pnl).toLocaleString()} (${pnlPct}%)</span>`
           : `<span style="color:var(--neon-red);font-size:0.7rem">▼ -$${Math.abs(Math.round(pnl)).toLocaleString()} (${pnlPct}%)</span>`;
@@ -2246,6 +2499,9 @@ function renderGame() {
 function renderTradeModal() {
   const drug = DRUGS.find(d => d.id === selectedDrug);
   const price = gameState.prices[selectedDrug] || 0;
+  // Dealers pay below list price — this is the number the player actually receives
+  const streetPrice = typeof getStreetSellPrice === 'function' ? (getStreetSellPrice(gameState, selectedDrug) || 0) : price;
+  const unitPrice = tradeMode === 'sell' ? streetPrice : price;
   const owned = gameState.inventory[selectedDrug] || 0;
 
   if (!drug || (price <= 0 && tradeMode === 'buy')) {
@@ -2272,9 +2528,20 @@ function renderTradeModal() {
     <div class="trade-modal">
       <div class="trade-content">
         <h3>${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
-        <p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>
+        ${tradeMode === 'sell'
+          ? `<p>Dealers pay: <span class="neon-green">$${streetPrice.toLocaleString()}</span> per unit <span style="font-size:0.7rem;color:var(--text-dim)">(market $${price.toLocaleString()} — street buyers take a cut)</span></p>`
+          : `<p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>`}
         <p>You have: ${owned} units | Cash: $${gameState.cash.toLocaleString()} | Space: ${getFreeSpace(gameState)}</p>
         ${tradeMode === 'sell' ? `<p style="font-size:0.75rem;color:var(--neon-red);">⚠️ Drug sales produce <b>dirty money</b>. Launder through front businesses to avoid investigation.</p>` : ''}
+        ${(() => {
+          if (tradeMode !== 'sell') return '';
+          const sdb = gameState.sameDayBuys;
+          if (sdb && sdb.day === gameState.day && sdb.loc === gameState.currentLocation &&
+              sdb.drugs && sdb.drugs[selectedDrug] && sdb.drugs[selectedDrug].qty > 0) {
+            return `<p style="font-size:0.75rem;color:var(--neon-yellow);">🚫 You bought ${sdb.drugs[selectedDrug].qty} units here <b>today</b> — dealers won't buy their own product back at a profit (max 95% of what you paid). Move it to another district or wait a day.</p>`;
+          }
+          return '';
+        })()}
         ${(() => {
           // Show price comparison from known locations
           if (!gameState.knownPrices || !selectedDrug) return '';
@@ -2315,7 +2582,7 @@ function renderTradeModal() {
           <button class="btn btn-sm" onclick="adjustTradeAmount(10)">+10</button>
           <button class="btn btn-sm btn-max" onclick="setTradeMax(${maxAmount})">MAX</button>
         </div>
-        <p class="trade-total">Total: <span id="tradeTotal" class="neon-yellow">$${(price * Math.min(1, maxAmount)).toLocaleString()}</span></p>
+        <p class="trade-total">Total: <span id="tradeTotal" class="neon-yellow">$${(unitPrice * Math.min(1, maxAmount)).toLocaleString()}</span></p>
         <div class="trade-actions">
           <button class="btn ${tradeMode === 'buy' ? 'btn-buy' : 'btn-sell'}" onclick="executeTrade()">${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'}</button>
           <button class="btn btn-secondary" onclick="closeTrade()">CANCEL</button>
@@ -2352,7 +2619,10 @@ function setTradeMax(max) {
 
 function updateTradeTotal() {
   const amount = parseInt(document.getElementById('tradeAmount').value || 0);
-  const price = gameState.prices[selectedDrug] || 0;
+  let price = gameState.prices[selectedDrug] || 0;
+  if (tradeMode === 'sell' && typeof getStreetSellPrice === 'function') {
+    price = getStreetSellPrice(gameState, selectedDrug) || price;
+  }
   const totalEl = document.getElementById('tradeTotal');
   if (totalEl) totalEl.textContent = '$' + (price * amount).toLocaleString();
 }
@@ -2398,7 +2668,10 @@ function executeTrade() {
         showNotification(fMsg, fMsg.includes('ambush') || fMsg.includes('😡') ? 'error' : 'info');
       }
     }
+    const tradedDrug = selectedDrug;
+    const tradedMode = tradeMode;
     closeTrade();
+    _flashTradeRow(tradedDrug, tradedMode);
   } else {
     alert(result.msg);
   }
@@ -3321,8 +3594,8 @@ function selectDestination(destId) {
         ${isTerr ? '<div style="color:var(--neon-purple);font-weight:bold;font-size:0.8rem;">🏴 YOUR TERRITORY</div>' : ''}
       </div>
       ${contactHtml}
-      <div class="transport-grid">
-        ${allTransports.map(t => `
+      ${(() => {
+        const cardFor = t => `
           <div class="transport-card ${t.locked || !t.canAfford || !t.canCarry ? 'disabled' : ''}" onclick="${!t.locked && t.canAfford && t.canCarry ? `doTravel('${destId}', '${t.id}'${t.isWorldTransport ? ', true' : ''})` : ''}" style="${t.locked ? 'opacity:0.4' : ''}">
             <div class="transport-name">${t.emoji || ''} ${t.name}</div>
             <div class="transport-cost">$${t.cost.toLocaleString()}</div>
@@ -3331,9 +3604,24 @@ function selectDestination(destId) {
             <div class="transport-carry">Carry: ${t.inventoryLimit.toLocaleString()} units ${!t.canCarry && !t.locked ? '<span class="neon-red">(TOO MUCH CARGO!)</span>' : ''}</div>
             ${t.locked ? '<div class="neon-red">🔒 Requires Lvl ' + (t.minLevel || t.minRegionTier || '?') + '</div>' : !t.canAfford ? '<div class="neon-red">Can\'t afford</div>' : ''}
             ${t.desc ? `<div style="font-size:0.6rem;color:var(--text-dim);margin-top:0.2rem">${t.desc}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
+          </div>`;
+        const open = allTransports.filter(t => !t.locked);
+        const locked = allTransports.filter(t => t.locked)
+          .sort((a, b) => (a.minLevel || a.minRegionTier || 99) - (b.minLevel || b.minRegionTier || 99));
+        let html = `<div class="transport-grid">${open.map(cardFor).join('')}</div>`;
+        // Locked tiers fold into one line instead of a wall of grey cards
+        if (locked.length) {
+          const next = locked[0];
+          html += `
+            <details style="margin-top:0.4rem;">
+              <summary style="cursor:pointer;font-size:0.75rem;color:var(--text-dim);padding:0.35rem 0.5rem;border:1px dashed var(--border-color);border-radius:6px;list-style:none;">
+                🔒 ${locked.length} more transport${locked.length > 1 ? 's' : ''} locked — next: <b style="color:var(--neon-yellow)">${next.emoji || ''} ${next.name}</b> at Lvl ${next.minLevel || next.minRegionTier || '?'} <span style="float:right">▾ show</span>
+              </summary>
+              <div class="transport-grid" style="margin-top:0.3rem;">${locked.map(cardFor).join('')}</div>
+            </details>`;
+        }
+        return html;
+      })()}
     </div>
   `;
   document.getElementById('transport-panel').innerHTML = html;
@@ -3565,7 +3853,7 @@ function doCombat(action) {
   playSound(action === 'fight' ? 'fight' : 'click');
   const result = resolveCombatRound(gameState, action, combatEvent);
 
-  if (result.playerDamage > 0) playSound('hurt');
+  if (result.playerDamage > 0) { playSound('hurt'); _shakeScreen(); }
 
   const log = document.getElementById('combat-log');
   if (log) {
@@ -3647,7 +3935,8 @@ function renderGameOver() {
 
   return `
     <div class="title-screen gameover-screen">
-      <div class="title-neon-border">
+      <div class="title-neon-border" style="position:relative;z-index:1">
+        <div class="gameover-hero">${buildMiamiSkyline(won ? 'dawn' : 'night')}</div>
         <h1 class="${won ? 'neon-green' : 'neon-red'}">${won ? '🏆 GAME OVER' : '💀 GAME OVER'}</h1>
         <h2 class="title-sub">${gameState.health <= 0 ? 'YOU DIED' : (gameState.debt > 0 && !won ? 'THE LOAN SHARK SENDS HIS REGARDS...' : (won ? 'YOU MADE IT OUT ALIVE' : 'TIME\'S UP'))}</h2>
         <div class="title-divider"></div>
@@ -5308,13 +5597,17 @@ function renderIntro() {
     return `<div class="intro-dot ${cls}"></div>`;
   }).join('');
 
+  // Mood → skyline variant: red/dark pages read as night, the rest as sunset
+  const skyVariant = (page.mood === 'red' || page.mood === 'dark') ? 'night' : 'sunset';
   return `
     <div class="intro-screen intro-mood-${page.mood || 'dark'}" key="intro-${introPageIndex}">
+      <div class="scene-skyline">${buildMiamiSkyline(skyVariant)}</div>
+      <div class="intro-content">
       ${char ? `<div class="intro-char-name">${char.emoji} ${char.name}</div>
       <div class="intro-char-tagline">${char.tagline || char.subtitle || ''}</div>` : ''}
       <div class="intro-text">${page.text}</div>
       <div class="intro-page-dots">${dots}</div>
-      <div style="display:flex;gap:1rem;margin-top:1rem">
+      <div style="display:flex;gap:1rem;margin-top:1rem;justify-content:center">
         ${introPageIndex > 0 ? `<button class="btn btn-secondary" onclick="introPageIndex--;render()">◀ Back</button>` : ''}
         ${isLast
           ? `<button class="btn btn-primary btn-glow" onclick="startGameAfterIntro()">▶ BEGIN YOUR STORY</button>`
@@ -5322,6 +5615,7 @@ function renderIntro() {
         }
       </div>
       <button class="btn btn-secondary" style="margin-top:1rem;opacity:0.5;font-size:0.8rem" onclick="startGameAfterIntro()">Skip Intro</button>
+      </div>
     </div>`;
 }
 
@@ -6369,7 +6663,6 @@ function renderStats() {
       ${renderToolbar()}
       ${backButton()}
       <h2 class="section-title" style="text-align:center;margin:1rem 0;">📊 EMPIRE STATS</h2>
-      <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-bottom:1rem;">← BACK</button>
 
       <!-- Overview Cards -->
       <div class="stats-overview">
@@ -6559,18 +6852,23 @@ function buildLineChart(values, color, width, height) {
 
   const fillPoints = `0,${height} ${points.join(' ')} ${width},${height}`;
 
-  return `<svg viewBox="0 0 ${width} ${height}" class="stats-line-chart" preserveAspectRatio="none">
-    <defs>
-      <linearGradient id="grad-${color.replace(/[^a-z]/g, '')}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-      </linearGradient>
-    </defs>
-    <polygon points="${fillPoints}" fill="url(#grad-${color.replace(/[^a-z]/g, '')})" />
-    <polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
-    <text x="2" y="12" fill="${color}" font-size="10" opacity="0.7">$${max.toLocaleString()}</text>
-    <text x="2" y="${height - 2}" fill="${color}" font-size="10" opacity="0.7">$${min.toLocaleString()}</text>
-  </svg>`;
+  // Axis labels live in HTML, not the stretched SVG — preserveAspectRatio="none"
+  // distorts <text> and let the min/max labels collide with the line on flat data
+  const labelStyle = `position:absolute;left:4px;font-size:0.6rem;color:${color};opacity:0.75;pointer-events:none;text-shadow:0 0 3px #000`;
+  return `<div style="position:relative">
+    <svg viewBox="0 0 ${width} ${height}" class="stats-line-chart" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad-${color.replace(/[^a-z]/g, '')}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${fillPoints}" fill="url(#grad-${color.replace(/[^a-z]/g, '')})" />
+      <polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <span style="${labelStyle};top:2px">$${max.toLocaleString()}</span>
+    ${max !== min ? `<span style="${labelStyle};bottom:2px">$${min.toLocaleString()}</span>` : ''}
+  </div>`;
 }
 
 // Build a horizontal bar chart for drug profits
