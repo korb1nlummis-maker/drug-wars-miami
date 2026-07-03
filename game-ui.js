@@ -861,6 +861,7 @@ function renderHowToPlay() {
 
       ${S('💰', 'Trading & the Living Market', `
         <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
+        <p><b>The spread:</b> street dealers buy from you at ~85% of the listed market price. Buying and re-selling in the same district <b>loses money</b> — real profit means moving product to a district where the price beats your cost by more than the dealer's cut. That's the whole game.</p>
         <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
         ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
       `)}
@@ -1708,8 +1709,10 @@ function renderGame() {
       const ledger = gameState.stats && gameState.stats.drugLedger && gameState.stats.drugLedger[drug.id];
       const avgCost = ledger ? (ledger.avgCost || 0) : 0;
       if (avgCost > 0) {
-        const pnl = (price - avgCost) * owned;
-        const pnlPct = ((price - avgCost) / avgCost * 100).toFixed(1);
+        // P&L against what dealers actually pay (street price), not the list price
+        const realizable = typeof getStreetSellPrice === 'function' ? (getStreetSellPrice(gameState, drug.id) || price) : price;
+        const pnl = (realizable - avgCost) * owned;
+        const pnlPct = ((realizable - avgCost) / avgCost * 100).toFixed(1);
         pnlCell = pnl >= 0
           ? `<span style="color:var(--neon-green);font-size:0.7rem">▲ +$${Math.round(pnl).toLocaleString()} (${pnlPct}%)</span>`
           : `<span style="color:var(--neon-red);font-size:0.7rem">▼ -$${Math.abs(Math.round(pnl)).toLocaleString()} (${pnlPct}%)</span>`;
@@ -2246,6 +2249,9 @@ function renderGame() {
 function renderTradeModal() {
   const drug = DRUGS.find(d => d.id === selectedDrug);
   const price = gameState.prices[selectedDrug] || 0;
+  // Dealers pay below list price — this is the number the player actually receives
+  const streetPrice = typeof getStreetSellPrice === 'function' ? (getStreetSellPrice(gameState, selectedDrug) || 0) : price;
+  const unitPrice = tradeMode === 'sell' ? streetPrice : price;
   const owned = gameState.inventory[selectedDrug] || 0;
 
   if (!drug || (price <= 0 && tradeMode === 'buy')) {
@@ -2272,9 +2278,20 @@ function renderTradeModal() {
     <div class="trade-modal">
       <div class="trade-content">
         <h3>${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
-        <p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>
+        ${tradeMode === 'sell'
+          ? `<p>Dealers pay: <span class="neon-green">$${streetPrice.toLocaleString()}</span> per unit <span style="font-size:0.7rem;color:var(--text-dim)">(market $${price.toLocaleString()} — street buyers take a cut)</span></p>`
+          : `<p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>`}
         <p>You have: ${owned} units | Cash: $${gameState.cash.toLocaleString()} | Space: ${getFreeSpace(gameState)}</p>
         ${tradeMode === 'sell' ? `<p style="font-size:0.75rem;color:var(--neon-red);">⚠️ Drug sales produce <b>dirty money</b>. Launder through front businesses to avoid investigation.</p>` : ''}
+        ${(() => {
+          if (tradeMode !== 'sell') return '';
+          const sdb = gameState.sameDayBuys;
+          if (sdb && sdb.day === gameState.day && sdb.loc === gameState.currentLocation &&
+              sdb.drugs && sdb.drugs[selectedDrug] && sdb.drugs[selectedDrug].qty > 0) {
+            return `<p style="font-size:0.75rem;color:var(--neon-yellow);">🚫 You bought ${sdb.drugs[selectedDrug].qty} units here <b>today</b> — dealers won't buy their own product back at a profit (max 95% of what you paid). Move it to another district or wait a day.</p>`;
+          }
+          return '';
+        })()}
         ${(() => {
           // Show price comparison from known locations
           if (!gameState.knownPrices || !selectedDrug) return '';
@@ -2315,7 +2332,7 @@ function renderTradeModal() {
           <button class="btn btn-sm" onclick="adjustTradeAmount(10)">+10</button>
           <button class="btn btn-sm btn-max" onclick="setTradeMax(${maxAmount})">MAX</button>
         </div>
-        <p class="trade-total">Total: <span id="tradeTotal" class="neon-yellow">$${(price * Math.min(1, maxAmount)).toLocaleString()}</span></p>
+        <p class="trade-total">Total: <span id="tradeTotal" class="neon-yellow">$${(unitPrice * Math.min(1, maxAmount)).toLocaleString()}</span></p>
         <div class="trade-actions">
           <button class="btn ${tradeMode === 'buy' ? 'btn-buy' : 'btn-sell'}" onclick="executeTrade()">${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'}</button>
           <button class="btn btn-secondary" onclick="closeTrade()">CANCEL</button>
@@ -2352,7 +2369,10 @@ function setTradeMax(max) {
 
 function updateTradeTotal() {
   const amount = parseInt(document.getElementById('tradeAmount').value || 0);
-  const price = gameState.prices[selectedDrug] || 0;
+  let price = gameState.prices[selectedDrug] || 0;
+  if (tradeMode === 'sell' && typeof getStreetSellPrice === 'function') {
+    price = getStreetSellPrice(gameState, selectedDrug) || price;
+  }
   const totalEl = document.getElementById('tradeTotal');
   if (totalEl) totalEl.textContent = '$' + (price * amount).toLocaleString();
 }

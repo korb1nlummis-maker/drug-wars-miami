@@ -4179,6 +4179,15 @@ function buyDrug(state, drugId, amount) {
     const threshold = (drug && drug.category === 'premium') ? 5000 : 10000;
     if (totalCost >= threshold) updateInvestigation(state, 'buy_large', Math.floor(totalCost / 5000));
   }
+  // Wash-trade tracking: remember what was bought here today so dealers
+  // refuse to buy their own product back at a profit (see sellDrug)
+  if (!state.sameDayBuys || state.sameDayBuys.day !== state.day || state.sameDayBuys.loc !== state.currentLocation) {
+    state.sameDayBuys = { day: state.day, loc: state.currentLocation, drugs: {} };
+  }
+  const _sdb = state.sameDayBuys.drugs[drugId] || { qty: 0, spent: 0 };
+  _sdb.qty += amount;
+  _sdb.spent += totalCost;
+  state.sameDayBuys.drugs[drugId] = _sdb;
   // Update market memory (supply/demand)
   if (typeof updateMarketOnBuy === 'function') {
     updateMarketOnBuy(state, drugId, amount, state.currentLocation);
@@ -4235,18 +4244,29 @@ function buyDrug(state, drugId, amount) {
   return result;
 }
 
-function sellDrug(state, drugId, amount) {
-  if (!state.inventory) state.inventory = {};
-  let price = state.prices[drugId];
+// Street dealers buy from you below the listed market price. This spread is what
+// kills same-district buy-low-sell-high scalping: profit requires moving product
+// to a district where the market price beats your cost by more than the spread.
+const STREET_SELL_SPREAD = 0.85;
+
+// Base price a street buyer pays for a drug at the current location (before
+// faction/perk/skill bonuses). Used by both sellDrug and the trade UI so the
+// number shown to the player matches the cash they receive.
+function getStreetSellPrice(state, drugId) {
+  let price = state.prices ? state.prices[drugId] : null;
   // If drug unavailable at location, sell at 50% average price (emergency sale)
   if (price === null || price === undefined) {
     const drug = DRUGS.find(d => d.id === drugId);
-    if (drug) {
-      price = Math.round((drug.minPrice + drug.maxPrice) / 2 * 0.5);
-    } else {
-      return { success: false, msg: 'Unknown drug.' };
-    }
+    if (!drug) return null;
+    price = Math.round((drug.minPrice + drug.maxPrice) / 2 * 0.5);
   }
+  return Math.max(1, Math.round(price * STREET_SELL_SPREAD));
+}
+
+function sellDrug(state, drugId, amount) {
+  if (!state.inventory) state.inventory = {};
+  let price = getStreetSellPrice(state, drugId);
+  if (price === null) return { success: false, msg: 'Unknown drug.' };
   if (!state.inventory[drugId] || state.inventory[drugId] < amount) return { success: false, msg: 'You don\'t have that much.' };
   price = applyTerritoryPriceMod(state, state.currentLocation, price, false);
   // Faction sell bonus (gang standing affects sell prices)
@@ -4298,6 +4318,25 @@ function sellDrug(state, drugId, amount) {
   const locTradesSell = state.locationTrades[state.currentLocation] || 0;
   if (locTradesSell >= 20) price = Math.round(price * 1.08);       // 8% premium after 20+ trades
   else if (locTradesSell >= 5) price = Math.round(price * 1.03);   // 3% premium after 5+ trades
+  // Wash-trade guard: dealers recognize product you bought from them today and
+  // won't pay more than 95% of what you paid for it. No bonus stack can turn a
+  // same-day, same-district buy-then-sell into profit.
+  let washMsg = '';
+  const sdbSell = state.sameDayBuys;
+  if (sdbSell && sdbSell.day === state.day && sdbSell.loc === state.currentLocation &&
+      sdbSell.drugs && sdbSell.drugs[drugId] && sdbSell.drugs[drugId].qty > 0) {
+    const rec = sdbSell.drugs[drugId];
+    const washQty = Math.min(amount, rec.qty);
+    const avgPaid = rec.spent / rec.qty;
+    const washPrice = Math.min(price, Math.floor(avgPaid * 0.95));
+    if (washPrice < price) {
+      // Blend: bought-back units at wash price, the rest at street price
+      price = Math.round((washQty * washPrice + (amount - washQty) * price) / amount);
+      washMsg = ' (dealers lowball product they sold you today)';
+    }
+    rec.spent = Math.max(0, rec.spent - Math.round(avgPaid * washQty));
+    rec.qty -= washQty;
+  }
   const totalRevenue = price * amount;
   state.cash += totalRevenue;
   // Drug sales produce DIRTY money
@@ -4376,7 +4415,7 @@ function sellDrug(state, drugId, amount) {
   if (amount >= 50 && typeof reportPlayerEvent === 'function') {
     reportPlayerEvent(state, 'big_sale', { locId: state.currentLocation, drugId: drugId, qty: amount });
   }
-  const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${tapMsg}${ambushSellMsg}` };
+  const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${washMsg}${tapMsg}${ambushSellMsg}` };
   if (factionSellMsgs.length > 0) result.factionMsgs = factionSellMsgs;
   return result;
 }
