@@ -665,6 +665,13 @@ window.renderTutorialOverlay = function() {
   var step = TUTORIAL_STEPS[t.step];
   if (!step) return '';
 
+  // Collapsed: a small pill that never blocks anything — tap to re-open
+  if (t._collapsed) {
+    return '<div class="tutorial-pill" onclick="toggleTutorialCollapse()">' +
+      '📖 ' + (t.step + 1) + '/' + TUTORIAL_STEPS.length + ' · ' + step.title +
+      ' <span style="color:var(--neon-cyan)">▲ Show</span></div>';
+  }
+
   var totalSteps = TUTORIAL_STEPS.length;
   var progressPct = Math.round((t.step / totalSteps) * 100);
 
@@ -705,7 +712,7 @@ window.renderTutorialOverlay = function() {
     buttons = '<button class="btn btn-primary" onclick="advanceTutorial()" style="width:100%;margin-top:0.5rem;background:linear-gradient(135deg,var(--neon-green),var(--neon-cyan));">Start Your Empire!</button>';
   }
 
-  // For wait steps: non-blocking banner at top so player can interact with the game
+  // For wait steps: non-blocking banner so player can interact with the game
   if (!isBlocking) {
     return '<div class="tutorial-banner">' +
       '<div class="tutorial-banner-content">' +
@@ -715,13 +722,17 @@ window.renderTutorialOverlay = function() {
         progressBar +
         '<div class="tutorial-progress" style="margin:0.3rem 0 0">' + dots + '</div>' +
       '</div>' +
-      '<button class="tutorial-skip" onclick="skipTutorial()" style="margin:0;color:#888;font-size:0.7rem">Skip</button>' +
+      '<div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end">' +
+        '<button class="tutorial-hide-btn" onclick="toggleTutorialCollapse()">▼ Hide</button>' +
+        '<button class="tutorial-skip" onclick="skipTutorial()" style="margin:0;color:#888;font-size:0.7rem">Skip</button>' +
+      '</div>' +
     '</div>';
   }
 
   // Blocking overlay for informational steps
   return '<div class="tutorial-overlay">' +
     '<div class="tutorial-card">' +
+      '<button class="tutorial-hide-btn" style="position:absolute;top:6px;right:6px" onclick="toggleTutorialCollapse()">▼ Hide</button>' +
       '<div class="tutorial-step-label">TUTORIAL ' + stepBadge + '</div>' +
       arrowIndicator +
       '<div class="tutorial-title">' + step.title + interactiveBadge + '</div>' +
@@ -736,6 +747,14 @@ window.renderTutorialOverlay = function() {
 };
 
 
+// ---- COLLAPSE / EXPAND (so the card never blocks what you must tap) ----
+window.toggleTutorialCollapse = function() {
+  var t = getTutorial();
+  if (!t) return;
+  t._collapsed = !t._collapsed;
+  if (typeof render === 'function') render();
+};
+
 // ---- ADVANCE TUTORIAL (called by "Got it!" buttons) ----
 window.advanceTutorial = function() {
   var t = getTutorial();
@@ -746,6 +765,8 @@ window.advanceTutorial = function() {
 
   // Clear highlights from current step
   clearHighlights();
+
+  t._collapsed = false; // each new step starts visible
 
   t.step++;
   if (t.step >= TUTORIAL_STEPS.length) {
