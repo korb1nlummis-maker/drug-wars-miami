@@ -140,6 +140,110 @@ function buildMiamiSkyline(variant) {
   </svg>`;
 }
 
+// ============================================================
+// CHARACTER PORTRAITS — neon SVG medallions (no image assets)
+// ============================================================
+const CHAR_PORTRAIT_STYLE = {
+  corner_kid:    { accent: '#00f0ff', accessory: 'cap' },
+  dropout:       { accent: '#ffe600', accessory: 'glasses' },
+  ex_con:        { accent: '#ff4444', accessory: 'buzz' },
+  hustler:       { accent: '#ff2d95', accessory: 'fedora' },
+  connected_kid: { accent: '#ffb700', accessory: 'slick' },
+  cleanskin:     { accent: '#39ff14', accessory: 'tie' },
+  veteran:       { accent: '#9dbf4e', accessory: 'beret' },
+  immigrant:     { accent: '#ff8800', accessory: 'curly' },
+  undercover:    { accent: '#b455ff', accessory: 'shades' },
+  classic:       { accent: '#ff2d95', accessory: 'none' },
+};
+
+function buildCharPortrait(charId, size) {
+  size = size || 64;
+  const st = CHAR_PORTRAIT_STYLE[charId] || CHAR_PORTRAIT_STYLE.classic;
+  const a = st.accent;
+  const uid = 'port_' + charId;
+  // Accessory shapes drawn over a common bust silhouette
+  const acc = {
+    cap:     `<path d="M 33 26 q 17 -13 34 0 l 3 5 l -40 0 z" fill="${a}"/><rect x="28" y="30" width="26" height="4" rx="2" fill="${a}"/>`,
+    glasses: `<rect x="36" y="36" width="11" height="8" rx="2" fill="none" stroke="${a}" stroke-width="2"/><rect x="53" y="36" width="11" height="8" rx="2" fill="none" stroke="${a}" stroke-width="2"/><line x1="47" y1="39" x2="53" y2="39" stroke="${a}" stroke-width="2"/>`,
+    buzz:    `<path d="M 36 27 q 14 -7 28 0 l 0 4 l -28 0 z" fill="${a}" opacity="0.85"/>`,
+    fedora:  `<path d="M 34 27 q 16 -12 32 0 l 6 4 q -22 6 -44 0 z" fill="${a}"/><rect x="38" y="20" width="24" height="6" rx="3" fill="${a}"/>`,
+    slick:   `<path d="M 35 30 q 15 -13 30 -1 q -4 -3 -14 -4 q -10 -1 -16 5 z" fill="${a}"/>`,
+    tie:     `<path d="M 48 62 l 4 -4 l 4 4 l -3 14 l -2 0 z" fill="${a}"/>`,
+    beret:   `<path d="M 34 29 q 16 -12 33 -2 l -4 4 q -13 -7 -26 0 z" fill="${a}"/><circle cx="62" cy="24" r="2.5" fill="${a}"/>`,
+    curly:   `<circle cx="38" cy="30" r="5" fill="${a}" opacity="0.8"/><circle cx="46" cy="26" r="5.5" fill="${a}" opacity="0.8"/><circle cx="55" cy="26" r="5.5" fill="${a}" opacity="0.8"/><circle cx="62" cy="30" r="5" fill="${a}" opacity="0.8"/>`,
+    shades:  `<path d="M 35 36 l 30 0 l -2 9 q -5 3 -11 0 l -2 -5 l -2 5 q -6 3 -11 0 z" fill="${a}"/>`,
+    none:    '',
+  }[st.accessory] || '';
+  return `
+  <svg width="${size}" height="${size}" viewBox="0 0 100 100" class="char-portrait" aria-hidden="true">
+    <defs>
+      <radialGradient id="${uid}_bg" cx="0.5" cy="0.35" r="0.8">
+        <stop offset="0%" stop-color="${a}" stop-opacity="0.35"/>
+        <stop offset="60%" stop-color="#141026"/>
+        <stop offset="100%" stop-color="#0a0814"/>
+      </radialGradient>
+      <clipPath id="${uid}_clip"><circle cx="50" cy="50" r="46"/></clipPath>
+    </defs>
+    <circle cx="50" cy="50" r="46" fill="url(#${uid}_bg)"/>
+    <g clip-path="url(#${uid}_clip)">
+      <circle cx="50" cy="42" r="17" fill="#05030c"/>
+      <path d="M 20 96 q 4 -28 30 -28 q 26 0 30 28 z" fill="#05030c"/>
+      <circle cx="50" cy="42" r="17" fill="none" stroke="${a}" stroke-width="1" opacity="0.35"/>
+      ${acc}
+    </g>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="${a}" stroke-width="2" opacity="0.8"/>
+    <circle cx="50" cy="50" r="49" fill="none" stroke="${a}" stroke-width="0.75" opacity="0.3"/>
+  </svg>`;
+}
+
+// ============================================================
+// DISTRICT THUMBNAILS — tiny neon scene per district flavor
+// ============================================================
+function buildDistrictThumb(loc, w, h) {
+  w = w || 72; h = h || 44;
+  const id = (loc && loc.id) || '';
+  const danger = (loc && loc.dangerLevel) || 3;
+  const kind =
+    /beach|key_biscayne|bal_harbour/.test(id) ? 'beach' :
+    /downtown|brickell|omni|edgewater/.test(id) ? 'towers' :
+    /port|river|industrial|doral|airport|opa_locka|hialeah/.test(id) ? 'industrial' :
+    /grove|gables|kendall|pinecrest/.test(id) ? 'suburb' : 'blocks';
+  const accent = danger >= 4 ? '#ff4444' : danger >= 3 ? '#ff8800' : '#00f0ff';
+  const uid = 'thumb_' + id;
+  let scene = '';
+  if (kind === 'beach') {
+    scene = `<circle cx="50" cy="26" r="10" fill="#ffe600" opacity="0.85"/>
+      <rect x="0" y="28" width="72" height="16" fill="#0a2535"/>
+      <path d="M 12 30 q 3 -12 -2 -16 q 7 4 6 11 q 4 -8 10 -9 q -6 5 -7 12 z" fill="#05030c"/>
+      <line x1="38" y1="32" x2="62" y2="32" stroke="${accent}" stroke-width="1" opacity="0.5"/>`;
+  } else if (kind === 'towers') {
+    scene = `<rect x="6" y="10" width="10" height="34" fill="#05030c"/><rect x="20" y="4" width="12" height="40" fill="#0a0818"/>
+      <rect x="36" y="14" width="9" height="30" fill="#05030c"/><rect x="49" y="8" width="11" height="36" fill="#0a0818"/>
+      <rect x="8" y="14" width="2" height="2" fill="${accent}"/><rect x="24" y="10" width="2" height="2" fill="#ffe600"/>
+      <rect x="52" y="12" width="2" height="2" fill="${accent}"/><rect x="39" y="18" width="2" height="2" fill="#ffe600"/>`;
+  } else if (kind === 'industrial') {
+    scene = `<rect x="4" y="26" width="18" height="18" fill="#0a0818"/><rect x="26" y="30" width="22" height="14" fill="#05030c"/>
+      <rect x="52" y="24" width="6" height="20" fill="#0a0818"/><rect x="47" y="12" width="2" height="14" fill="${accent}"/>
+      <line x1="48" y1="12" x2="66" y2="12" stroke="${accent}" stroke-width="2"/><line x1="64" y1="12" x2="64" y2="20" stroke="${accent}" stroke-width="1"/>`;
+  } else if (kind === 'suburb') {
+    scene = `<path d="M 6 44 l 0 -10 l 8 -6 l 8 6 l 0 10 z" fill="#0a0818"/><path d="M 30 44 l 0 -9 l 7 -5 l 7 5 l 0 9 z" fill="#05030c"/>
+      <path d="M 56 36 q 2 -10 -2 -13 q 6 3 5 9 q 3 -6 8 -7 q -5 4 -6 11 z" fill="#05030c"/>
+      <rect x="12" y="38" width="3" height="3" fill="${accent}"/>`;
+  } else {
+    scene = `<rect x="4" y="22" width="14" height="22" fill="#0a0818"/><rect x="22" y="28" width="12" height="16" fill="#05030c"/>
+      <rect x="38" y="24" width="13" height="20" fill="#0a0818"/><rect x="55" y="30" width="12" height="14" fill="#05030c"/>
+      <rect x="7" y="26" width="2" height="2" fill="${accent}"/><rect x="42" y="28" width="2" height="2" fill="#ffe600"/>`;
+  }
+  return `
+  <svg width="${w}" height="${h}" viewBox="0 0 72 44" class="district-thumb" aria-hidden="true" style="border-radius:4px;border:1px solid rgba(0,240,255,0.2);background:#070512">
+    <defs><linearGradient id="${uid}_sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#12061f"/><stop offset="100%" stop-color="#2a0f3a"/>
+    </linearGradient></defs>
+    <rect x="0" y="0" width="72" height="44" fill="url(#${uid}_sky)"/>
+    ${scene}
+  </svg>`;
+}
+
 // Progressive unlock toast notification
 let _unlockToastQueue = [];
 let _unlockToastShowing = false;
@@ -646,7 +750,7 @@ function renderCharacterSelect() {
     const diffColor = diffColorMap[c.difficulty] || 'neon-yellow';
     return `
       <div class="char-card ${isSelected ? 'selected' : ''}" onclick="selectedCharacterId='${c.id}'; render();">
-        <div class="char-card-emoji">${c.emoji}</div>
+        <div class="char-card-emoji">${typeof buildCharPortrait === 'function' ? buildCharPortrait(c.id, 56) : c.emoji}</div>
         <div class="char-card-name">${c.name}</div>
         <div class="char-card-tagline">${c.subtitle || c.tagline || ''}</div>
         <div class="char-card-difficulty">
@@ -687,7 +791,7 @@ function renderCharacterSelect() {
     detailPanel = `
       <div class="char-detail-panel">
         <div class="char-detail-header">
-          <span style="font-size:2.5rem">${c.emoji}</span>
+          <span>${buildCharPortrait(c.id, 72)}</span>
           <div>
             <h3 class="neon-pink" style="margin:0">${c.name}</h3>
             <p style="margin:0;font-size:0.95rem;color:var(--text-main)">${c.subtitle || c.tagline || ''}</p>
