@@ -654,6 +654,7 @@ function render() {
   if (currentScreen === 'game' && typeof _maybeShowUnlockCard === 'function') {
     setTimeout(_maybeShowUnlockCard, 0);
   }
+  const _screenBeforeSwitch = currentScreen;
   switch (currentScreen) {
     case 'title': app.innerHTML = renderTitle(); break;
     case 'charselect': app.innerHTML = renderCharacterSelect(); break;
@@ -712,6 +713,14 @@ function render() {
     case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
     case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
     case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
+  }
+  // Keep the tutorial visible on every in-game screen — navigating to
+  // Travel (or anywhere else) must not make the guide vanish.
+  // renderGame embeds the overlay itself; menus and end screens skip it.
+  if (typeof renderTutorialOverlay === 'function' && typeof gameState !== 'undefined' && gameState &&
+      _screenBeforeSwitch !== 'game' &&
+      !['title', 'charselect', 'intro', 'howtoplay', 'highscores', 'gameover'].includes(_screenBeforeSwitch)) {
+    try { app.insertAdjacentHTML('beforeend', renderTutorialOverlay()); } catch (e) { /* never break render */ }
   }
   updateMusic();
 }
@@ -3025,14 +3034,17 @@ function doFire(index) {
 let travelViewMode = 'map'; // 'map' or 'list'
 
 function renderWorldMap() {
-  // Delegate to multi-level world map if system is loaded and player has unlocked regions beyond Miami
+  // Always use the multi-level map when available — it carries the
+  // district intel panel (ecology, price intel, stash, travel actions).
   if (typeof renderWorldMapMultiLevel === 'function') {
     const unlockedRegions = gameState.worldState && gameState.worldState.unlockedRegions
       ? gameState.worldState.unlockedRegions : ['miami'];
-    // Show world map if player has unlocked any region beyond Miami, OR if zoomed to world view
-    if (unlockedRegions.length > 1 || (typeof mapZoomLevel !== 'undefined' && mapZoomLevel === 'world')) {
-      return renderWorldMapMultiLevel();
+    // Miami-only players go straight to the Miami region view; the world
+    // view is reachable once more regions unlock
+    if (unlockedRegions.length <= 1 && typeof mapZoomLevel !== 'undefined' && mapZoomLevel === 'world') {
+      mapZoomLevel = 'region'; mapCurrentRegion = 'miami';
     }
+    return renderWorldMapMultiLevel();
   }
 
   // Default: Miami-only District Map - positioned roughly geographically
