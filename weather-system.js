@@ -65,6 +65,9 @@ function initWeatherState() {
 function processWeatherDaily(state) {
   if (!state.weather) state.weather = initWeatherState();
   const w = state.weather;
+  if (!state.stats) state.stats = {};
+  if (!state.stats.weatherSeen) state.stats.weatherSeen = {};
+  if (w && w.current) state.stats.weatherSeen[w.current] = 1;
   const msgs = [];
   const month = getGameMonth(state.day);
 
@@ -79,6 +82,8 @@ function processWeatherDaily(state) {
       w.postHurricaneSpike = true;
       w.postHurricaneDays = 7;
       msgs.push('🌀 The hurricane has passed! Damage assessment underway. Expect supply disruptions and price spikes.');
+      if (!state.stats) state.stats = {};
+      state.stats.hurricanesSurvived = (state.stats.hurricanesSurvived || 0) + 1;
     } else {
       msgs.push('🌀 Hurricane continues. Day ' + (4 - w.hurricaneDaysRemaining) + ' — all operations suspended.');
       // Property damage check

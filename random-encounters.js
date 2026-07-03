@@ -142,6 +142,8 @@ function getEncounterWeights(state) {
 }
 
 function resolveEncounterOutcome(state, outcomeIndex) {
+  if (!state.stats) state.stats = {};
+  state.stats.encountersResolved = (state.stats.encountersResolved || 0) + 1;
   if (!state.encounters || !state.encounters.activeEncounter) return null;
   const enc = state.encounters.activeEncounter;
   if (enc.resolved) return null;

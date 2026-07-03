@@ -185,6 +185,7 @@ function checkWiretapRisk(state) {
 
     if (Math.random() < chance) {
       phone.wiretapped = true;
+      phone.everWiretapped = true;
     }
   }
 }
@@ -533,6 +534,7 @@ function generatePoliticalMessage(state, day) {
 // HELPER: Add message to inbox
 // ============================================================
 function addMessageToInbox(phone, msg, day) {
+  if (msg && msg.category === 'spam') phone.spamReceived = (phone.spamReceived || 0) + 1;
   msg.id = phone._nextMsgId++;
   msg.day = day;
   phone.inbox.push(msg);

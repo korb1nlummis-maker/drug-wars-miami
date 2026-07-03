@@ -119,7 +119,10 @@ function settleFuturesContract(state, contractIndex, early = false) {
   // Cap at max payout
   pnl = Math.max(-contract.maxPayout, Math.min(contract.maxPayout, pnl));
 
-  state.cash += pnl + contract.premium; // Return premium + P&L (can be negative net)
+  // The premium is a broker fee — it is NOT returned. A contract only pays
+  // if the price moves further than the fee you already sank (8-18% of
+  // notional), so scalping the live ticker's ±7% intraday wiggle loses money.
+  state.cash += pnl;
   state.cash = Math.max(0, state.cash);
 
   if (pnl > 0) ft.totalProfits += pnl;

@@ -78,7 +78,8 @@ function addMarketImpact(state, locId, drugId, mult, days, reason) {
   ensureNewsState(state);
   state.marketImpacts.push({ locId, drugId: drugId || null, mult, expiresDay: (state.day || 1) + days, reason: reason || '' });
   // Apply immediately to live prices if the player is standing there
-  if (state.currentLocation === locId && state.prices) {
+  // (locId === null → global story, hits the local market too)
+  if ((locId === null || state.currentLocation === locId) && state.prices) {
     for (const id in state.prices) {
       if (state.prices[id] === null || state.prices[id] === undefined) continue;
       if (drugId && id !== drugId) continue;
@@ -95,7 +96,8 @@ function getMarketImpactMult(state, locId, drugId) {
   const day = state.day || 1;
   for (const imp of state.marketImpacts) {
     if (imp.expiresDay < day) continue;
-    if (imp.locId !== locId) continue;
+    // locId === null → global impact (hits that drug in EVERY district)
+    if (imp.locId !== null && imp.locId !== locId) continue;
     if (imp.drugId && imp.drugId !== drugId) continue;
     mult *= imp.mult;
   }
@@ -314,9 +316,219 @@ function processNewsDaily(state) {
       });
     }
   }
+  // Procedural news economy: the day's market-moving stories
+  try { processProceduralNews(state); } catch (e) { /* news must never break the day */ }
   // Atmospheric filler
   if (Math.random() < 0.25) pushNews(state, newsPick(NEWS_ATMOSPHERE));
   return [];
+}
+
+
+// ============================================================
+// PROCEDURAL NEWS ECONOMY
+// Money moves because SOMETHING HAPPENED. Every day the city
+// generates stories from a combinatorial grammar — agencies ×
+// gangs × districts × drugs × infrastructure × magnitudes —
+// and every story carries a real market impact. Template pool
+// × 12 drugs × 14+ districts × 40+ actors × magnitude/duration
+// rolls ≈ hundreds of thousands of distinct market events.
+// ============================================================
+
+const PROC_AGENCIES = ['DEA', 'Coast Guard', 'U.S. Customs', 'Metro-Dade Narcotics', 'FBI Miami Field Office', 'ATF', 'Florida Marine Patrol', 'Border Patrol', 'IRS Criminal Division', 'Interpol'];
+const PROC_OFFICIALS = ['the Mayor', 'the Police Chief', 'a County Commissioner', 'the State Attorney', 'a Federal Judge', 'the Governor', 'a City Councilman', 'the Port Director', 'a Grand Jury', 'the Sheriff'];
+const PROC_INFRA = ['the Port of Miami', 'Miami International Airport', 'the MacArthur Causeway', 'the river docks', 'the rail yard', 'Dinner Key Marina', 'the Opa-Locka airfield', 'the Krome corridor', 'the Government Cut channel', 'the cargo terminal'];
+const PROC_ROUTES = ['the Colombian pipeline', 'the Bahamas run', 'the Gulf route', 'the Caribbean corridor', 'the Yucatán channel', 'the Keys smuggling lanes', 'the Haitian connection', 'the Panama route'];
+const PROC_SOURCES = ['Miami Herald', 'Channel 7 News', 'Street Wire', 'Sun Sentinel', 'Local 10 News', 'Associated Press', 'Miami New Times', 'DEA Intelligence Brief', 'Business Journal', 'Radio Ritmo'];
+
+function procGangName(state) {
+  if (typeof MIAMI_FACTIONS !== 'undefined' && MIAMI_FACTIONS.length) {
+    return newsPick(MIAMI_FACTIONS).name;
+  }
+  return newsPick(['the Marielito crews', 'the River Gang', 'the Little Haiti Kings', 'the Cartel Remnants']);
+}
+
+function procEligibleDrug(state) {
+  const pool = (typeof DRUGS !== 'undefined' ? DRUGS : []).filter(d => !d.minDay || (state.day || 1) >= d.minDay);
+  return pool.length ? newsPick(pool) : null;
+}
+
+function procDistrict(state) {
+  const pool = LOCATIONS.filter(l => (l.region || 'miami') === 'miami');
+  return pool.length ? newsPick(pool) : LOCATIONS[0];
+}
+
+// Each template: scope ('drug_global' | 'district' | 'pair'), dir (+1 up / -1 down),
+// mag [min,max] price move, dur [min,max] days, weight, and text builders.
+// {drug} {loc} {agency} {official} {infra} {route} {gang} {pct} fill from ctx.
+const PROC_NEWS_TEMPLATES = [
+  // ---- SUPPLY SHOCKS: drug up everywhere ----
+  { id: 'mother_ship_seized', scope: 'drug_global', dir: 1, mag: [0.10, 0.30], dur: [3, 7], weight: 6,
+    h: c => `${c.agency.toUpperCase()} SEIZES ${c.drug.name.toUpperCase()} MOTHER SHIP OFF THE COAST`,
+    b: c => `${c.agency} intercepted a vessel on ${c.route} carrying multi-ton weight. Wholesalers city-wide are rationing what they have — street prices are jumping everywhere.` },
+  { id: 'route_collapse', scope: 'drug_global', dir: 1, mag: [0.08, 0.22], dur: [4, 9], weight: 5,
+    h: c => `${c.route.toUpperCase()} GOES DARK — ${c.drug.name.toUpperCase()} PIPELINE SEVERED`,
+    b: c => `Suppliers on ${c.route} stopped answering their phones after a wave of arrests upstream. Until a new route opens, every corner in the city pays more for ${c.drug.name}.` },
+  { id: 'precursor_shortage', scope: 'drug_global', dir: 1, mag: [0.08, 0.20], dur: [5, 10], weight: 4,
+    h: c => `CHEMICAL CRACKDOWN CHOKES ${c.drug.name.toUpperCase()} PRODUCTION`,
+    b: c => `New federal controls on precursor chemicals have labs from the Everglades to the islands cutting output. Analysts expect ${c.drug.name} to stay expensive for a week or more.` },
+  { id: 'cartel_embargo', scope: 'drug_global', dir: 1, mag: [0.10, 0.25], dur: [3, 6], weight: 4,
+    h: c => `SUPPLIERS HALT ${c.drug.name.toUpperCase()} SHIPMENTS IN PRICE DISPUTE`,
+    b: c => `The organizations that control ${c.route} are holding back product to force wholesale prices up. It is working.` },
+  { id: 'purity_scare_supply', scope: 'drug_global', dir: 1, mag: [0.06, 0.16], dur: [3, 6], weight: 3,
+    h: c => `BAD BATCH SCARE — CLEAN ${c.drug.name.toUpperCase()} COMMANDS A PREMIUM`,
+    b: c => `After a contaminated shipment hit the streets, buyers pay extra for product from trusted hands. Verified-clean ${c.drug.name} is suddenly worth more.` },
+
+  // ---- SUPPLY GLUTS: drug down everywhere ----
+  { id: 'record_harvest', scope: 'drug_global', dir: -1, mag: [0.08, 0.22], dur: [4, 8], weight: 5,
+    h: c => `BUMPER SEASON FLOODS MARKET WITH CHEAP ${c.drug.name.toUpperCase()}`,
+    b: c => `A record production season abroad has ${c.route} running at full capacity. Wholesale prices are collapsing and the street is following.` },
+  { id: 'new_route_opens', scope: 'drug_global', dir: -1, mag: [0.06, 0.18], dur: [4, 9], weight: 4,
+    h: c => `NEW SMUGGLING CORRIDOR UNDERCUTS ${c.drug.name.toUpperCase()} PRICES`,
+    b: c => `A fresh pipeline through ${c.route} is moving weight past ${c.infra} untouched. Competition among suppliers is a buyer's dream.` },
+  { id: 'rival_dump', scope: 'drug_global', dir: -1, mag: [0.08, 0.20], dur: [2, 5], weight: 4,
+    h: c => `${procTitleCase(c.gang)} DUMPS STOCKPILED ${c.drug.name.toUpperCase()} ON THE MARKET`,
+    b: c => `Street sources say ${c.gang} is liquidating inventory fast — maybe cash trouble, maybe something coming. Either way, ${c.drug.name} is cheap while it lasts.` },
+  { id: 'lab_boom', scope: 'drug_global', dir: -1, mag: [0.06, 0.15], dur: [4, 8], weight: 3,
+    h: c => `HOME LABS PROLIFERATE — ${c.drug.name.toUpperCase()} SUPPLY SURGES`,
+    b: c => `Cheap local production is eating into import prices. Quality varies wildly, but quantity is not a problem anymore.` },
+
+  // ---- DISTRICT SHOCKS: all drugs in one district ----
+  { id: 'district_sweep', scope: 'district', dir: 1, mag: [0.10, 0.25], dur: [3, 6], weight: 6,
+    h: c => `${c.agency.toUpperCase()} FLOODS ${c.loc.name.toUpperCase()} WITH AGENTS`,
+    b: c => `A saturation operation has ${c.loc.name} crawling with law enforcement. Dealers who have not gone to ground are charging danger-pay prices.` },
+  { id: 'district_festival', scope: 'district', dir: 1, mag: [0.08, 0.20], dur: [2, 4], weight: 5,
+    h: c => `HUGE CROWDS DESCEND ON ${c.loc.name.toUpperCase()} — DEMAND SPIKES`,
+    b: c => `A festival weekend has ${c.loc.name} packed to the seawalls. Out-of-towners pay whatever the corner asks.` },
+  { id: 'district_blackout', scope: 'district', dir: 1, mag: [0.06, 0.15], dur: [1, 3], weight: 3,
+    h: c => `POWER OUTAGE PLUNGES ${c.loc.name.toUpperCase()} INTO CHAOS`,
+    b: c => `With the grid down and police stretched thin, ${c.loc.name} is a seller's market for anyone brave enough to work it.` },
+  { id: 'district_checkpoints', scope: 'district', dir: 1, mag: [0.08, 0.18], dur: [2, 5], weight: 4,
+    h: c => `ROADBLOCKS RING ${c.loc.name.toUpperCase()} AFTER ${c.official.toUpperCase()} ORDERS CRACKDOWN`,
+    b: c => `Checkpoints on every artery into ${c.loc.name} are strangling resupply. Local stock is running out and prices show it.` },
+  { id: 'district_gang_flood', scope: 'district', dir: -1, mag: [0.08, 0.20], dur: [2, 5], weight: 5,
+    h: c => `${procTitleCase(c.gang)} MOVES WEIGHT INTO ${c.loc.name.toUpperCase()}`,
+    b: c => `A convoy of product hit ${c.loc.name} overnight as ${c.gang} pushes for market share. Corners are undercutting each other block by block.` },
+  { id: 'district_cop_scandal', scope: 'district', dir: -1, mag: [0.06, 0.16], dur: [3, 7], weight: 4,
+    h: c => `CORRUPTION SCANDAL GUTS ${c.loc.name.toUpperCase()} NARCOTICS UNIT`,
+    b: c => `Half the district's plainclothes squad is suspended pending an internal affairs probe. With nobody watching, supply is flowing freely and prices are sliding.` },
+  { id: 'district_buyers_flee', scope: 'district', dir: -1, mag: [0.06, 0.15], dur: [2, 5], weight: 3,
+    h: c => `VIOLENCE SCARES THE MONEY OUT OF ${c.loc.name.toUpperCase()}`,
+    b: c => `After a bloody week, the buying crowd has moved on to safer blocks. Dealers left holding product in ${c.loc.name} are discounting to move it.` },
+
+  // ---- PAIR SHOCKS: one drug, one district ----
+  { id: 'pair_celebrity', scope: 'pair', dir: 1, mag: [0.10, 0.28], dur: [2, 4], weight: 5,
+    h: c => `${c.loc.name.toUpperCase()} NIGHTLIFE CAN'T GET ENOUGH ${c.drug.name.toUpperCase()}`,
+    b: c => `A touring act's entourage and the club crowd that follows them have cleaned out ${c.loc.name}. Anyone still holding ${c.drug.name} is naming their price.` },
+  { id: 'pair_stash_seized', scope: 'pair', dir: 1, mag: [0.10, 0.24], dur: [2, 5], weight: 5,
+    h: c => `${c.agency.toUpperCase()} HITS ${c.loc.name.toUpperCase()} STASH HOUSE — ${c.drug.name.toUpperCase()} SCARCE`,
+    b: c => `The district's main ${c.drug.name} depot is now an evidence locker. Until resupply arrives, scarcity pricing rules.` },
+  { id: 'pair_convention', scope: 'pair', dir: 1, mag: [0.06, 0.18], dur: [2, 3], weight: 3,
+    h: c => `CONVENTION CROWD IN ${c.loc.name.toUpperCase()} DRIVES QUIET DEMAND FOR ${c.drug.name.toUpperCase()}`,
+    b: c => `Twenty thousand visitors with expense accounts. The market adapts instantly.` },
+  { id: 'pair_dump', scope: 'pair', dir: -1, mag: [0.10, 0.25], dur: [2, 4], weight: 5,
+    h: c => `${c.drug.name.toUpperCase()} PRICES CRATER IN ${c.loc.name.toUpperCase()} AFTER MYSTERY SHIPMENT`,
+    b: c => `Nobody knows whose container it was, but half of it is already on the corners of ${c.loc.name}. A flooded market has no dignity.` },
+  { id: 'pair_od_scare', scope: 'pair', dir: -1, mag: [0.08, 0.20], dur: [3, 6], weight: 4,
+    h: c => `OVERDOSE CLUSTER IN ${c.loc.name.toUpperCase()} SCARES ${c.drug.name.toUpperCase()} BUYERS`,
+    b: c => `Hospitals in ${c.loc.name} logged a bad night. Regulars are staying away from ${c.drug.name} until word says it's clean again.` },
+  { id: 'pair_rehab_drive', scope: 'pair', dir: -1, mag: [0.05, 0.14], dur: [3, 7], weight: 2,
+    h: c => `${procTitleCase(c.official)} LAUNCHES TREATMENT PUSH IN ${c.loc.name.toUpperCase()}`,
+    b: c => `Outreach vans and free clinics are pulling customers off the ${c.drug.name} market in ${c.loc.name}, at least for a while.` },
+
+  // ---- MULTI-DAY CHAINS: a story that develops ----
+  { id: 'port_strike', scope: 'drug_global', dir: 1, mag: [0.05, 0.10], dur: [2, 3], weight: 3, chain: {
+      delay: 3, mag: [0.10, 0.20], dur: [3, 5],
+      h: c => `PORT STRIKE DAY ${c.chainDay}: ${c.drug.name.toUpperCase()} RESERVES RUN DRY`,
+      b: c => `With ${c.infra} still shut down, what came in before the walkout is gone. The shortage is no longer theoretical.` },
+    h: c => `DOCKWORKERS WALK OUT AT ${c.infra.toUpperCase()}`,
+    b: c => `A wildcat strike has frozen cargo movement. Smugglers who ride the legitimate freight lanes are cut off — ${c.drug.name} supply lines feel it first.` },
+  { id: 'hurricane_watch', scope: 'district', dir: 1, mag: [0.04, 0.10], dur: [2, 3], weight: 2, chain: {
+      delay: 2, mag: [0.12, 0.22], dur: [2, 4],
+      h: c => `STORM MAKES LANDFALL — ${c.loc.name.toUpperCase()} CUT OFF`,
+      b: c => `Flooded streets and downed bridges have isolated ${c.loc.name}. Anything worth selling there is worth double.` },
+    h: c => `STORM WATCH ISSUED FOR ${c.loc.name.toUpperCase()}`,
+    b: c => `Forecasters give it two days. Locals are stocking up on everything — legal and otherwise.` },
+  { id: 'indictment_chain', scope: 'drug_global', dir: -1, mag: [0.04, 0.10], dur: [2, 3], weight: 2, chain: {
+      delay: 3, mag: [0.08, 0.18], dur: [3, 6],
+      h: c => `KINGPIN FLIPS — ORGANIZATION LIQUIDATES ${c.drug.name.toUpperCase()} STOCK`,
+      b: c => `Facing federal time, the indicted boss is cooperating. His lieutenants are dumping inventory for getaway money and the market is drowning in it.` },
+    h: c => `GRAND JURY INDICTS MAJOR ${c.drug.name.toUpperCase()} TRAFFICKER`,
+    b: c => `${c.official} announced the indictment this morning. The organization's response will decide which way the market breaks.` },
+];
+
+function procTitleCase(s) { return String(s || '').replace(/\b[a-z]/g, ch => ch.toUpperCase()); }
+
+function procBuildCtx(state) {
+  return {
+    drug: procEligibleDrug(state),
+    loc: procDistrict(state),
+    agency: newsPick(PROC_AGENCIES),
+    official: newsPick(PROC_OFFICIALS),
+    infra: newsPick(PROC_INFRA),
+    route: newsPick(PROC_ROUTES),
+    gang: procGangName(state),
+  };
+}
+
+function procApplyImpact(state, tpl, ctx, magPair, durPair) {
+  const mag = magPair[0] + Math.random() * (magPair[1] - magPair[0]);
+  const mult = tpl.dir > 0 ? 1 + mag : 1 - mag;
+  const days = durPair[0] + Math.floor(Math.random() * (durPair[1] - durPair[0] + 1));
+  if (tpl.scope === 'drug_global') addMarketImpact(state, null, ctx.drug.id, mult, days, tpl.id);
+  else if (tpl.scope === 'district') addMarketImpact(state, ctx.loc.id, null, mult, days, tpl.id);
+  else addMarketImpact(state, ctx.loc.id, ctx.drug.id, mult, days, tpl.id);
+  return { mag, days };
+}
+
+function processProceduralNews(state) {
+  ensureNewsState(state);
+  if (!state.newsChains) state.newsChains = [];
+  const day = state.day || 1;
+
+  // Fire due follow-ups from developing stories
+  for (let i = state.newsChains.length - 1; i >= 0; i--) {
+    const ch = state.newsChains[i];
+    if (day < ch.fireDay) continue;
+    state.newsChains.splice(i, 1);
+    const tpl = PROC_NEWS_TEMPLATES.find(t => t.id === ch.templateId);
+    if (!tpl || !tpl.chain) continue;
+    const ctx = ch.ctx;
+    ctx.chainDay = day - ch.startDay;
+    const applied = procApplyImpact(state, tpl, ctx, tpl.chain.mag, tpl.chain.dur);
+    pushNews(state, {
+      headline: tpl.chain.h(ctx), body: tpl.chain.b(ctx),
+      source: newsPick(PROC_SOURCES), category: 'market',
+      locId: tpl.scope !== 'drug_global' ? ctx.loc.id : null,
+      drugId: tpl.scope !== 'district' ? ctx.drug.id : null,
+      impact: { dir: tpl.dir > 0 ? 'up' : 'down', pct: Math.round(applied.mag * 100) },
+    });
+  }
+
+  // Generate 1-3 fresh procedural stories a day (weighted draw, no repeats via cooldowns)
+  const count = 1 + (Math.random() < 0.6 ? 1 : 0) + (Math.random() < 0.25 ? 1 : 0);
+  const totalWeight = PROC_NEWS_TEMPLATES.reduce((s, t) => s + t.weight, 0);
+  for (let n = 0; n < count; n++) {
+    let roll = Math.random() * totalWeight;
+    let tpl = PROC_NEWS_TEMPLATES[0];
+    for (const t of PROC_NEWS_TEMPLATES) { roll -= t.weight; if (roll <= 0) { tpl = t; break; } }
+    const ctx = procBuildCtx(state);
+    if (!ctx.drug) continue;
+    // Cooldown: same template + same target can't reprint within 6 days
+    const key = 'proc:' + tpl.id + ':' + (tpl.scope === 'district' ? ctx.loc.id : ctx.drug.id);
+    if (!newsCooldownOk(state, key, 6)) continue;
+    const applied = procApplyImpact(state, tpl, ctx, tpl.mag, tpl.dur);
+    pushNews(state, {
+      headline: tpl.h(ctx), body: tpl.b(ctx),
+      source: newsPick(PROC_SOURCES), category: 'market',
+      locId: tpl.scope !== 'drug_global' ? ctx.loc.id : null,
+      drugId: tpl.scope !== 'district' ? ctx.drug.id : null,
+      impact: { dir: tpl.dir > 0 ? 'up' : 'down', pct: Math.round(applied.mag * 100) },
+    });
+    // Kick off a developing story
+    if (tpl.chain && Math.random() < 0.8) {
+      state.newsChains.push({ templateId: tpl.id, ctx, startDay: day, fireDay: day + tpl.chain.delay });
+    }
+  }
 }
 
 // ------------------------------------------------------------

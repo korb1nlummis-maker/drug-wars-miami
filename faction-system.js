@@ -282,6 +282,7 @@ function resolveFactionBattle(state, factionId) {
   // Check for war end
   if (war.playerWins >= 3) {
     // Player wins the war
+    if (state.achievementStats) state.achievementStats.warsWon = (state.achievementStats.warsWon || 0) + 1;
     delete state.factions.wars[factionId];
     state.factions.factionPower[factionId] = Math.max(10, factionPower - 30);
     state.factions.diplomacyCooldowns[factionId] = state.day + 30;
@@ -650,6 +651,11 @@ function checkGangAmbush(state, locationId) {
     }
     // Feared reputation makes gangs think twice
     if (state.rep && state.rep.fear > 60) ambushChance *= 0.7;
+    // Skill: crime lord charm — even enemies would rather talk than shoot
+    if (typeof getSkillEffect === 'function') {
+      const hostSkill = getSkillEffect(state, 'npcHostilityMod');
+      if (hostSkill < 0) ambushChance *= Math.max(0.2, 1 + hostSkill);
+    }
 
     if (ambushChance > 0 && Math.random() < ambushChance) {
       const faction = f.faction;
@@ -794,6 +800,11 @@ function bribeFaction(state, factionId) {
   if (state.henchmen && state.henchmen.some(h => h.type === 'diplomat_crew' && !h.injured)) {
     baseCost = Math.round(baseCost * 0.7);
   }
+  // Skill: diplomat — you know what a man's silence actually costs
+  if (typeof getSkillEffect === 'function') {
+    const bribeSkill = getSkillEffect(state, 'bribeMod');
+    if (bribeSkill < 0) baseCost = Math.round(baseCost * Math.max(0.25, 1 + bribeSkill));
+  }
 
   if (state.cash < baseCost) return { success: false, msg: `Need $${baseCost.toLocaleString()} to bribe ${faction.name}.` };
 
@@ -886,6 +897,7 @@ function negotiatePeace(state, factionId) {
   }
 
   state.cash -= cost;
+  if (state.achievementStats) state.achievementStats.peaceNegotiated = (state.achievementStats.peaceNegotiated || 0) + 1;
   delete state.factions.wars[factionId];
   state.factions.standings[factionId] = Math.max(-30, state.factions.standings[factionId] || 0);
   state.factions.diplomacyCooldowns[factionId] = state.day + 30;

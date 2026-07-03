@@ -744,7 +744,18 @@ function checkAchievements(state) {
       case 'price_crash': unlocked = (stats.boughtDuringCrash || 0) > 0; break;
       case 'price_spike': unlocked = (stats.soldDuringSpike || 0) > 0; break;
       case 'quick_flip': unlocked = (stats.sameDayFlips || 0) > 0; break;
-      case 'stash_value_50k': unlocked = (stats.stashValue || 0) >= 50000; break;
+      case 'stash_value_50k': unlocked = (() => {
+        let v = 0;
+        for (const locId in (state.stashes || {})) {
+          for (const dId in state.stashes[locId]) {
+            const qty = state.stashes[locId][dId];
+            if (typeof qty !== 'number') continue;
+            const d = typeof DRUGS !== 'undefined' ? DRUGS.find(x => x.id === dId) : null;
+            if (d) v += qty * (d.minPrice + d.maxPrice) / 2;
+          }
+        }
+        return v >= 50000;
+      })(); break;
       case 'no_debt_early': unlocked = state.debt === 0 && state.day <= 15; break;
       case 'loan_shark_max': unlocked = state.debt >= 50000; break;
       case 'broke': unlocked = state.cash === 0 && Object.keys(state.inventory).length === 0; break;
@@ -993,7 +1004,12 @@ function checkAchievements(state) {
       case 'secret_5_dist_locations': unlocked = Object.values(state.distribution || {}).filter(d => d.active).length >= 5; break;
       case 'secret_saved_by_bulletproof': unlocked = (stats.bulletproofSaves || 0) > 0; break;
       case 'secret_speech_resolved': unlocked = (stats.speechResolutions || 0) >= 10; break;
-      case 'secret_lost_everything': unlocked = (stats.lostEverything || false) && total >= 100000; break;
+      case 'secret_lost_everything': {
+        // Track hitting zero with nothing, then reward the comeback
+        if (state.cash === 0 && (state.bank || 0) === 0 && Object.keys(state.inventory || {}).length === 0) stats.lostEverything = true;
+        unlocked = (stats.lostEverything || false) && total >= 100000;
+        break;
+      }
 
       // BUFF ACHIEVEMENTS
       case 'first_buff': unlocked = (state.activeBuffs || []).length >= 1; break;
@@ -1230,6 +1246,153 @@ function checkAchievements(state) {
         } catch(e) { unlocked = false; }
         break;
       }
+
+      // === RACKETS (mafia operations) ===
+      case 'first_racket': unlocked = (stats.racketsStarted || 0) >= 1; break;
+      case 'loan_shark_king': unlocked = !!(stats.racketTypes && stats.racketTypes.loan_sharking); break;
+      case 'casino_royale': unlocked = !!(stats.racketTypes && stats.racketTypes.gambling_ops); break;
+      case 'arms_dealer_ach': unlocked = !!(stats.racketTypes && stats.racketTypes.arms_trafficking); break;
+      case 'chop_shop_champ': unlocked = !!(stats.racketTypes && stats.racketTypes.chop_shop); break;
+      case 'counterfeit_king': unlocked = !!(stats.racketTypes && stats.racketTypes.counterfeiting); break;
+      case 'digital_criminal': unlocked = !!(stats.racketTypes && stats.racketTypes.cyber_crimes); break;
+      case 'fight_promoter': unlocked = !!(stats.racketTypes && stats.racketTypes.fight_club); break;
+      case 'contract_killer': unlocked = !!(stats.racketTypes && stats.racketTypes.assassination_contracts); break;
+      case 'diversified_criminal': unlocked = Object.keys(stats.racketTypes || {}).length >= 5; break;
+
+      // === HEISTS ===
+      case 'first_score': unlocked = ((state.heists && state.heists.completedHeists) || []).length >= 1; break;
+      case 'smash_and_grab': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => /jewelry|store|pawn/i.test(h.heistId || h.name || '')); break;
+      case 'bank_robber': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => /bank/i.test(h.heistId || h.name || '')); break;
+      case 'armored_car_heist': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => /armored/i.test(h.heistId || h.name || '')); break;
+      case 'oceans_eleven': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => /casino/i.test(h.heistId || h.name || '')); break;
+      case 'evidence_destroyer': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => /evidence|precinct|police/i.test(h.heistId || h.name || '')); break;
+      case 'federal_reserve_heist': unlocked = !!(state.heists && state.heists.legendaryHeistCompleted); break;
+      case 'perfect_heist': unlocked = ((state.heists && state.heists.completedHeists) || []).some(h => h.flawless || h.noCasualties || h.perfect); break;
+
+      // === PRISON ===
+      case 'first_bid': unlocked = (stats.prisonSentencesServed || 0) >= 1 || (state.prison && state.prison.inPrison); break;
+      case 'jailbreak': unlocked = (stats.prisonEscapes || 0) >= 1; break;
+      case 'prison_king': unlocked = !!(state.prison && (state.prison.respect || 0) >= 80); break;
+      case 'recruited_inside': unlocked = !!(stats.prisonConnected || (state.prison && (state.prison.connections || 0) >= 3)); break;
+      case 'time_served': unlocked = (stats.prisonDaysTotal || 0) >= 30; break;
+      case 'empire_survived': unlocked = !!stats.prisonEmpireSurvived; break;
+      case 'shanked': unlocked = !!stats.prisonShanked; break;
+      case 'connected_inside': unlocked = !!(state.prison && (state.prison.connections || 0) >= 5); break;
+
+      // === VEHICLES ===
+      case 'gearhead': unlocked = ((state.vehicleState && state.vehicleState.garage) || []).length >= 1; break;
+      case 'speed_demon': unlocked = (() => {
+        if (!state.vehicleState || typeof VEHICLES === 'undefined') return false;
+        return (state.vehicleState.garage || []).some(g => { const v = VEHICLES.find(x => x.id === g.vehicleId); return v && v.speed >= 90; });
+      })(); break;
+      case 'fleet_commander': unlocked = ((state.vehicleState && state.vehicleState.garage) || []).length >= 5; break;
+      case 'classic_collection': unlocked = (() => {
+        if (!state.vehicleState || typeof VEHICLES === 'undefined') return false;
+        return (state.vehicleState.garage || []).filter(g => { const v = VEHICLES.find(x => x.id === g.vehicleId); return v && /classic|vintage|ferrari|lamborghini|delorean|testarossa/i.test(v.id + ' ' + v.name); }).length >= 3;
+      })(); break;
+      case 'captain_ach': unlocked = (() => {
+        if (!state.vehicleState || typeof VEHICLES === 'undefined') return false;
+        return (state.vehicleState.garage || []).some(g => { const v = VEHICLES.find(x => x.id === g.vehicleId); return v && v.type === 'boat'; });
+      })(); break;
+      case 'pilot_license': unlocked = (() => {
+        if (!state.vehicleState || typeof VEHICLES === 'undefined') return false;
+        return (state.vehicleState.garage || []).some(g => { const v = VEHICLES.find(x => x.id === g.vehicleId); return v && v.type === 'plane'; });
+      })(); break;
+      case 'sub_commander': unlocked = (() => {
+        if (!state.vehicleState || typeof VEHICLES === 'undefined') return false;
+        return (state.vehicleState.garage || []).some(g => { const v = VEHICLES.find(x => x.id === g.vehicleId); return v && /sub/i.test(v.id); });
+      })(); break;
+      case 'ice_cream_man': unlocked = (() => {
+        if (!state.vehicleState) return false;
+        return (state.vehicleState.garage || []).some(g => /ice_cream/i.test(g.vehicleId || ''));
+      })(); break;
+
+      // === REGIONAL BOSSES ===
+      case 'boss_killer': unlocked = ((state.defeatedBosses) || []).length >= 1; break;
+      case 'kingslayer': unlocked = ((state.defeatedBosses) || []).length >= 10; break;
+      case 'world_conqueror_ach': unlocked = ((state.defeatedBosses) || []).length >= 40; break;
+      case 'diplomatic_victory': unlocked = Object.keys(state.bossBribes || {}).length >= 3; break;
+      case 'boss_replacement': unlocked = ((state.defeatedBosses) || []).length >= 5 && (state.territories || []).length >= 5; break;
+      case 'untouchable_boss': unlocked = ((state.defeatedBosses) || []).length >= 3 && (state.health || 0) >= 100; break;
+      case 'puppet_master': unlocked = Object.keys(state.bossBribes || {}).length >= 5; break;
+      case 'ghost_boss': unlocked = ((state.defeatedBosses) || []).length >= 3 && (state.heat || 0) <= 10; break;
+
+      // === ROMANCE ===
+      case 'first_date': unlocked = (stats.datesCount || 0) >= 1; break;
+      case 'ride_or_die': unlocked = (() => {
+        const rom = state.romance;
+        if (!rom || !rom.npcs) return false;
+        return Object.values(rom.npcs).some(n => (n.points || 0) >= 200);
+      })(); break;
+      case 'heartbreaker': unlocked = (stats.breakups || 0) >= 3; break;
+      case 'family_man': unlocked = !!(state.relationships && (state.relationships.children || []).length >= 2); break;
+
+      // === WEATHER ===
+      case 'hurricane_survivor': unlocked = (stats.hurricanesSurvived || 0) >= 1; break;
+      case 'storm_profiteer': unlocked = (stats.stormSales || 0) >= 1; break;
+      case 'weatherman': unlocked = Object.keys(stats.weatherSeen || {}).length >= 5; break;
+      case 'stormbreaker': unlocked = (stats.stormTravels || 0) >= 1; break;
+
+      // === RANDOM ENCOUNTERS ===
+      case 'first_encounter': unlocked = (stats.encountersResolved || 0) >= 1; break;
+      case 'encounter_veteran': unlocked = (stats.encountersResolved || 0) >= 25; break;
+      case 'encounter_master': unlocked = (stats.encountersResolved || 0) >= 100; break;
+      case 'good_samaritan': unlocked = !!(state.rep && (state.rep.trust || 0) >= 60) && (stats.encountersResolved || 0) >= 5; break;
+      case 'opportunist': unlocked = !!(state.rep && (state.rep.fear || 0) >= 60) && (stats.encountersResolved || 0) >= 5; break;
+      case 'pet_owner': unlocked = !!(state.encounters && state.encounters.companions && state.encounters.companions.pet); break;
+      case 'lottery_winner': unlocked = (stats.foundCashTotal || 0) >= 5000; break;
+      case 'wildcard': unlocked = (stats.encountersResolved || 0) >= 50; break;
+      case 'crew_counselor': unlocked = (stats.encountersResolved || 0) >= 10 && (state.henchmen || []).length >= 3; break;
+      case 'law_dodger': unlocked = (stats.successfulEscapes || 0) >= 5; break;
+
+      // === NAMED NPCS ===
+      case 'first_npc_meet': unlocked = Object.keys((state.npcStories && state.npcStories.metNPCs) || {}).length >= 1; break;
+      case 'npc_networker': unlocked = Object.keys((state.npcStories && state.npcStories.metNPCs) || {}).length >= 10; break;
+      case 'npc_all_met': unlocked = Object.keys((state.npcStories && state.npcStories.metNPCs) || {}).length >= 20; break;
+      case 'npc_story_complete': unlocked = Object.values((state.npcStories && state.npcStories.metNPCs) || {}).some(n => n.outcome); break;
+      case 'npc_5_stories': unlocked = Object.values((state.npcStories && state.npcStories.metNPCs) || {}).filter(n => n.outcome).length >= 5; break;
+      case 'npc_dr_rosa': unlocked = !!((state.npcStories && state.npcStories.metNPCs) || {}).dr_rosa; break;
+      case 'npc_judge': unlocked = Object.keys((state.npcStories && state.npcStories.metNPCs) || {}).some ? Object.keys((state.npcStories && state.npcStories.metNPCs) || {}).some(k => /judge/i.test(k)) : false; break;
+      case 'npc_betrayed': unlocked = Object.values((state.npcStories && state.npcStories.metNPCs) || {}).some(n => n.outcome === 'betrayed' || (n.relationship || 0) <= -50); break;
+
+      // === BUSINESSES V2 ===
+      case 'business_empire': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 3; break;
+      case 'business_mogul': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 6; break;
+      case 'music_mogul': unlocked = (((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).some(b => /record|studio|music/i.test(b.id || b.businessId || ''))); break;
+      case 'laundromat_king': unlocked = (state.frontBusinesses || []).filter(b => b.id === 'laundromat').length >= 1 && (stats.totalLaunderedMoney || state.stats && state.stats.totalLaunderedMoney || 0) >= 50000; break;
+      case 'strip_club_owner': unlocked = (((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).some(b => /strip|gentlemen/i.test(b.id || b.businessId || ''))); break;
+      case 'pharmacy_baron': unlocked = (((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).some(b => /pharma|clinic/i.test(b.id || b.businessId || ''))); break;
+      case 'business_synergy': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 4 && (state.frontBusinesses || []).length >= 2; break;
+      case 'million_biz_income': unlocked = (state.cleanMoney || 0) >= 1000000 || ((state.stats && state.stats.totalLaunderedMoney) || 0) >= 1000000; break;
+      case 'construction_king': unlocked = (state.frontBusinesses || []).some(b => b.id === 'construction'); break;
+
+      // === SIDE CHAINS V2 ===
+      case 'first_chain': unlocked = (stats.chainsCompleted || []).length >= 1; break;
+      case 'chain_complete': unlocked = (stats.chainsCompleted || []).length >= 3; break;
+      case 'chain_master': unlocked = (stats.chainsCompleted || []).length >= 10; break;
+      case 'super_bowl_king': unlocked = (stats.chainsCompleted || []).some(c => /super_bowl|superbowl/i.test(c)); break;
+      case 'blue_sky': unlocked = (stats.chainsCompleted || []).some(c => /blue_sky|chemist|cook/i.test(c)); break;
+      case 'tunnel_network': unlocked = (stats.chainsCompleted || []).some(c => /tunnel/i.test(c)); break;
+      case 'everglades_base': unlocked = (stats.chainsCompleted || []).some(c => /everglade/i.test(c)); break;
+      case 'body_farm_found': unlocked = (stats.chainsCompleted || []).some(c => /body_farm|disposal/i.test(c)); break;
+      case 'poker_winner': unlocked = (stats.chainsCompleted || []).some(c => /poker|card/i.test(c)); break;
+      case 'final_stash_found': unlocked = (stats.chainsCompleted || []).some(c => /stash|legacy|80s/i.test(c)); break;
+
+      // === PHONE ===
+      case 'first_message': unlocked = !!(state.phone && (state.phone.totalMessagesReceived || 0) >= 1); break;
+      case 'spam_collector': unlocked = !!(state.phone && (state.phone.spamReceived || 0) >= 10); break;
+      case 'burner_expert': unlocked = !!(state.phone && (state.phone.phoneHistory || []).length >= 3); break;
+      case 'wiretapped': unlocked = !!(state.phone && (state.phone.everWiretapped || state.phone.wiretapped)); break;
+
+      // === PROCEDURAL MISSIONS ===
+      case 'first_procedural': unlocked = (stats.procCompleted || 0) >= 1; break;
+      case 'proc_10': unlocked = (stats.procCompleted || 0) >= 10; break;
+      case 'proc_50': unlocked = (stats.procCompleted || 0) >= 50; break;
+      case 'proc_no_fail': unlocked = (stats.procCompleted || 0) >= 10 && (stats.procFailed || 0) === 0; break;
+      case 'proc_complication': unlocked = (stats.procCompleted || 0) >= 5; break;
+      case 'proc_rescue': unlocked = !!(stats.procTypes && (stats.procTypes.rescue || stats.procTypes.extraction)); break;
+      case 'proc_espionage': unlocked = !!(stats.procTypes && (stats.procTypes.espionage || stats.procTypes.intel || stats.procTypes.surveillance)); break;
+      case 'proc_negotiator': unlocked = !!(stats.procTypes && (stats.procTypes.negotiation || stats.procTypes.diplomacy)); break;
     }
 
     if (unlocked) {
@@ -1268,7 +1431,17 @@ function updateAchievementStats(state, event, data) {
       s.drugsSoldById[data.drugId] = (s.drugsSoldById[data.drugId] || 0) + data.amount;
       if (!s.drugsTraded) s.drugsTraded = [];
       if (!s.drugsTraded.includes(data.drugId)) s.drugsTraded.push(data.drugId);
-      if (data.duringSpike) s.soldDuringSpike = (s.soldDuringSpike || 0) + 1;
+      if (data.duringSpike) {
+        s.soldDuringSpike = (s.soldDuringSpike || 0) + 1;
+        s.supplyDemandProfits = (s.supplyDemandProfits || 0) + 1;
+      }
+      if (state.weather && (state.weather.current === 'hurricane' || state.weather.current === 'tropical_storm')) s.stormSales = (s.stormSales || 0) + 1;
+      // Premium-only streak: consecutive premium-category sales
+      {
+        const _d = typeof DRUGS !== 'undefined' ? DRUGS.find(x => x.id === data.drugId) : null;
+        if (_d && _d.category === 'premium') s.premiumOnlyStreak = (s.premiumOnlyStreak || 0) + 1;
+        else s.premiumOnlyStreak = 0;
+      }
       if (data.profitRatio) s.bestProfitRatio = Math.max(s.bestProfitRatio || 0, data.profitRatio);
       // Check clean sweep
       const remaining = Object.values(state.inventory).reduce((a, b) => a + b, 0);
@@ -1290,6 +1463,14 @@ function updateAchievementStats(state, event, data) {
       break;
 
     case 'travel':
+      if (state.weather && (state.weather.current === 'hurricane' || state.weather.current === 'tropical_storm')) s.stormTravels = (s.stormTravels || 0) + 1;
+      // Rolling 5-day city window for Speed Runner
+      if (!s.recentTravels) s.recentTravels = [];
+      s.recentTravels.push({ day: state.day, loc: state.currentLocation });
+      s.recentTravels = s.recentTravels.filter(t => state.day - t.day <= 5);
+      s.citiesIn5Days = Math.max(s.citiesIn5Days || 0, new Set(s.recentTravels.map(t => t.loc)).size);
+      // Arriving into a hot market (active spike event)
+      if ((state.priceEvents || []).some(e => e.effect === 'spike')) s.hotMarketsFound = (s.hotMarketsFound || 0) + 1;
       s.totalTravels = (s.totalTravels || 0) + 1;
       if (data.transport === 'flight') s.flightsTaken = (s.flightsTaken || 0) + 1;
       if (data.transport === 'car') s.carTravels = (s.carTravels || 0) + 1;

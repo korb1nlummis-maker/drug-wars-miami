@@ -304,7 +304,7 @@ function useItem(state, itemId) {
 
   // Apply effect
   if (item.effect.heal) {
-    state.health = Math.min(state.maxHealth || 100, (state.health || 100) + item.effect.heal);
+    state.health = Math.min(getEffectiveMaxHp(state), (state.health || 100) + item.effect.heal);
     state.items.splice(idx, 1);
     return { success: true, msg: item.emoji + ' Used ' + item.name + '. Healed ' + item.effect.heal + ' HP!' };
   }
@@ -509,6 +509,9 @@ function launderMoney(state, amount) {
   }
   const charLaunderBonus = typeof getCharacterPassiveValue === 'function' ? getCharacterPassiveValue(state, 'launderBonus') : 0;
   if (charLaunderBonus > 0) totalCapacity = Math.round(totalCapacity * (1 + charLaunderBonus));
+  // Skill: laundry king — bigger daily laundering capacity
+  const skillLaunderMod = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'launderMod') : 0;
+  if (skillLaunderMod > 0) totalCapacity = Math.round(totalCapacity * (1 + skillLaunderMod));
 
   const actual = Math.min(amount, totalCapacity);
   if (actual <= 0) return { success: false, msg: 'Laundering capacity maxed out for today.' };
@@ -562,7 +565,14 @@ function processFrontBusinessIncome(state) {
     }
   }
 
+  // Skills: network builder / the fence / laundry king / dynasty front income
+  if (typeof getSkillEffect === 'function') {
+    const bizMod = getSkillEffect(state, 'bizIncomeMod') + getSkillEffect(state, 'bizIncomeMod2');
+    if (bizMod > 0) totalIncome = Math.round(totalIncome * (1 + bizMod));
+  }
+
   state.cash += totalIncome;
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
   state.heat = Math.max(0, state.heat - totalHeatReduction);
 
   return totalIncome;
@@ -594,7 +604,9 @@ const DISTRIBUTOR_NAMES = [
 ];
 
 function setupDistribution(state, locationId) {
-  if (!isTerritory(state, locationId)) return { success: false, msg: 'You must control this territory first.' };
+  // Skill: crime syndicate — distribution anywhere, territory or not
+  const anywhere = typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'globalDistribution');
+  if (!anywhere && !isTerritory(state, locationId)) return { success: false, msg: 'You must control this territory first.' };
   if (state.distribution[locationId]) return { success: false, msg: 'Distribution already set up here.' };
   state.distribution[locationId] = {
     tier: 1, dealers: [], stock: {},
@@ -623,7 +635,9 @@ function hireDistributor(state, locationId, roleId) {
   const dist = state.distribution[locationId];
   if (!dist) return { success: false, msg: 'No distribution here.' };
   const tierData = DISTRIBUTION_TIERS[dist.tier - 1];
-  if (dist.dealers.length >= tierData.maxDealers) return { success: false, msg: `Max ${tierData.maxDealers} dealers at tier ${dist.tier}.` };
+  // Skill: cartel network — extra dealer slots per tier
+  const maxDealers = tierData.maxDealers + (typeof getSkillEffect === 'function' ? getSkillEffect(state, 'extraDealers') : 0);
+  if (dist.dealers.length >= maxDealers) return { success: false, msg: `Max ${maxDealers} dealers at tier ${dist.tier}.` };
   const role = DISTRIBUTION_ROLES.find(r => r.id === roleId);
   if (!role) return { success: false, msg: 'Unknown role.' };
   if (state.cash < role.cost) return { success: false, msg: `Need $${role.cost.toLocaleString()} to hire.` };
@@ -714,6 +728,9 @@ function processDistributionDaily(state) {
       // Calculate units to sell
       const demandFactor = location.priceModifier * 0.8;
       let unitsSell = Math.floor(role.sellRate * tierData.demandMult * ltBonus * demandFactor * (0.7 + Math.random() * 0.6));
+      // Skill: supply chain — dealers move more units
+      const distSellSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'distSellMod') : 0;
+      if (distSellSkill > 0) unitsSell = Math.floor(unitsSell * (1 + distSellSkill));
 
       // Find available stock and sell
       let dealerRevenue = 0;
@@ -774,7 +791,11 @@ function processDistributionDaily(state) {
       if (hasPerk(state, 'untouchable')) bustMult *= 0.5;
       if (hasPerk(state, 'immortal')) bustMult *= 0.8;
     }
-    if (Math.random() < tierData.bustChance * bustMult) {
+    // Skill: empire builder / shadow state — harder to bust
+    const distBustSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'distBustMod') : 0;
+    if (distBustSkill < 0) bustMult *= Math.max(0.2, 1 + distBustSkill);
+    const bustImmuneSkill = typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'bustImmune');
+    if (!bustImmuneSkill && Math.random() < tierData.bustChance * bustMult) {
       // Bust! Lose stock and a dealer
       const stockLoss = 0.2 + Math.random() * 0.3;
       let unitsLost = 0;
@@ -798,8 +819,11 @@ function processDistributionDaily(state) {
       if (state.stats) state.stats.totalDistributionLost += Math.round(locationRevenue * 0.5);
     }
 
-    // Rival attack check
-    if (Math.random() < tierData.rivalAttackChance) {
+    // Rival attack check — Iron Fist skill deters rivals
+    let rivalChance = tierData.rivalAttackChance;
+    const rivalSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'rivalMod') : 0;
+    if (rivalSkill < 0) rivalChance *= Math.max(0.2, 1 + rivalSkill);
+    if (Math.random() < rivalChance) {
       const stockLoss = 0.1 + Math.random() * 0.2;
       let unitsLost = 0;
       for (const drugId in dist.stock) {
@@ -834,6 +858,9 @@ function processDistributionDaily(state) {
       if (hasPerk(state, 'untouchable')) locationRevenue = Math.round(locationRevenue * 1.20);
       if (hasPerk(state, 'immortal')) locationRevenue = Math.round(locationRevenue * 1.15);
     }
+    // Skill: distribution empire — bigger cut of every network dollar
+    const distRevSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'distRevenueMod') : 0;
+    if (distRevSkill > 0) locationRevenue = Math.round(locationRevenue * (1 + distRevSkill));
 
     dist.revenue.today = locationRevenue;
     dist.revenue.total += locationRevenue;
@@ -2139,13 +2166,40 @@ function snapshotNetWorth(state) {
 // ============================================================
 // WAIT / DAILY PRICE DRIFT
 // ============================================================
+// Effective max HP — juggernaut skill raises the ceiling
+function getEffectiveMaxHp(state) {
+  let mx = state.maxHealth || 100;
+  if (typeof getSkillEffect === 'function') {
+    const hpSkill = getSkillEffect(state, 'maxHpMod');
+    if (hpSkill > 0) mx = Math.round(mx * (1 + hpSkill));
+  }
+  return mx;
+}
+
+// Apply daily bank interest and track earnings for the Interest King achievement
+function applyBankInterest(state) {
+  const gain = Math.round(state.bank * getEffectiveBankRate(state));
+  state.bank += gain;
+  if (gain > 0 && state.achievementStats) state.achievementStats.bankInterestEarned = (state.achievementStats.bankInterestEarned || 0) + gain;
+}
+
+// Bank rate = base + Money Man / War Chest skill bonuses
+function getEffectiveBankRate(state) {
+  let rate = GAME_CONFIG.bankInterestRate;
+  if (typeof getSkillEffect === 'function') {
+    const bonus = getSkillEffect(state, 'bankInterestBonus');
+    if (bonus > 0) rate += bonus;
+  }
+  return rate;
+}
+
 function waitDay(state) {
   state.day += 1;
 
   // Daily processing (same as travel)
   const debtRate = GAME_CONFIG.debtInterestRate * getNgPlusMod(state, 'loanSharkInterest', 1);
   state.debt = Math.round(state.debt * (1 + debtRate));
-  state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
+  applyBankInterest(state);
   const msgs = [];
 
   // Loan shark enforcement - consequences for unpaid debt
@@ -2201,7 +2255,7 @@ function waitDay(state) {
     // Old Injury (Veteran): health recovers 25% slower, occasional pain flare
     if (hasCharacterFlag(state, 'oldInjury') && state.health < 100) {
       // Slow healing: remove 25% of daily health regen
-      if (state.health < (state.maxHealth || 100) && Math.random() < 0.15) {
+      if (state.health < getEffectiveMaxHp(state) && Math.random() < 0.15) {
         state.health = Math.max(1, state.health - 2);
         msgs.push('🩹 Old injury flares up. -2 HP.');
       }
@@ -3142,7 +3196,7 @@ function waitDay(state) {
     if (charId === 'dropout' && day >= 2550 && !bt.dropout_a4_rehab) {
       bt.dropout_a4_rehab = true;
       msgs.push('💊 You checked yourself into a private rehab. Three days. Nobody knows. The irony: the chemist who cooks for a city can\'t stop using his own product. Day 1 is the hardest.');
-      state.health = Math.min(state.maxHealth || 100, (state.health || 50) + 20);
+      state.health = Math.min(getEffectiveMaxHp(state), (state.health || 50) + 20);
       if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { recovery: 1 } }, 'backstory', 'dropout_a4_rehab');
     }
     if (charId === 'dropout' && day >= 2800 && !bt.dropout_a4_operation_periodic) {
@@ -3311,7 +3365,7 @@ function waitDay(state) {
       bt.veteran_a4_heart_surgery = true;
       msgs.push('🏥 Heart surgery. $60,000. Six weeks recovery. Razor runs things while you\'re down. From the hospital bed, you watch your empire through phone updates. Helpless.');
       state.cash = Math.max(0, state.cash - 60000);
-      state.health = Math.min(state.maxHealth || 100, (state.health || 50) + 30);
+      state.health = Math.min(getEffectiveMaxHp(state), (state.health || 50) + 30);
       state.maxHealth = Math.max(50, (state.maxHealth || 100) - 10);
     }
     if (charId === 'veteran' && day >= 3100 && !bt.veteran_a4_daughter_plea) {
@@ -3961,6 +4015,28 @@ function waitDay(state) {
     }
   }
 
+  // Skill: shadow broker — sell intel to whoever pays, every day
+  const intelPay = getSkillEffect(state, 'intelIncome');
+  if (intelPay > 0) {
+    state.cash += intelPay;
+    msgs.push(`🕶️ Shadow broker: sold intel for $${intelPay.toLocaleString()}.`);
+  }
+  // Skill: blackmail — shake down a mark some days
+  const extort = getSkillEffect(state, 'extortChance');
+  if (extort > 0 && Math.random() < extort * 0.5) {
+    const take = 200 + Math.floor(Math.random() * 1800);
+    state.cash += take;
+    state.dirtyMoney = (state.dirtyMoney || 0) + take;
+    msgs.push(`📸 Your photos of a councilman's bad night earned $${take.toLocaleString()} in hush money.`);
+  }
+  // Skill: dynasty — the machine launders everything automatically
+  if (hasSkillEffect(state, 'autoLaunder') && (state.dirtyMoney || 0) > 0) {
+    const washed = state.dirtyMoney;
+    state.dirtyMoney = 0;
+    if (state.investigation) state.investigation.points = Math.max(0, state.investigation.points - Math.min(3, washed / 20000));
+    msgs.push(`🧼 Dynasty: $${washed.toLocaleString()} auto-laundered through the empire.`);
+  }
+
   // Safety: prevent negative cash from any source
   if (state.cash < 0) state.cash = 0;
 
@@ -3983,6 +4059,9 @@ function waitDay(state) {
 
   // Process random street events while waiting
   const streetEvent = processWaitEvent(state);
+
+  // Street events touch cash too — final ledger re-square for the day
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
 
   return { success: true, msgs, events, streetEvent };
 }
@@ -4015,6 +4094,7 @@ function processWaitEvent(state) {
     // Found cash
     const found = Math.round(50 + Math.random() * 500);
     state.cash += found;
+    if (state.achievementStats) state.achievementStats.foundCashTotal = (state.achievementStats.foundCashTotal || 0) + found;
     return { type: 'good', msg: `💵 Found $${found.toLocaleString()} on the ground!` };
   } else if (eventRoll < 0.60 && state.heat > 20) {
     // Police patrol
@@ -4111,6 +4191,18 @@ function buyDrug(state, drugId, amount) {
   if (typeof getPerkBuyDiscount === 'function') {
     const discount = getPerkBuyDiscount(state);
     if (discount > 0) price = Math.round(price * (1 - discount));
+  }
+  // Skill: regional expert — you know the fair price in cities you've worked
+  {
+    const visitedDisc = getSkillEffect(state, 'visitedCityDiscount');
+    if (visitedDisc < 0 && (state.citiesVisited || []).includes(state.currentLocation)) {
+      price = Math.round(price * (1 + visitedDisc));
+    }
+    // Skill: silk road — premium product through exclusive routes at 20% off
+    const _drugDefBuy = DRUGS.find(d => d.id === drugId);
+    if (hasSkillEffect(state, 'silkRoadAccess') && _drugDefBuy && _drugDefBuy.category === 'premium') {
+      price = Math.round(price * 0.80);
+    }
   }
   // Skill tree: haggler buy discount
   const skillBuyMod = getSkillEffect(state, 'buyMod');
@@ -4219,6 +4311,18 @@ function buyDrug(state, drugId, amount) {
     if (!state.heatSystem.dealingPatterns) state.heatSystem.dealingPatterns = {};
     state.heatSystem.dealingPatterns[state.currentLocation] = (state.heatSystem.dealingPatterns[state.currentLocation] || 0) + 1;
   }
+  // Street heat on the buy side — half of what selling draws. Corner-boy
+  // quantities (≤5 units) stay invisible.
+  {
+    let buyHeat = amount >= 100 ? 2 : amount >= 50 ? 1.5 : amount >= 20 ? 1 : amount >= 6 ? 0.5 : 0;
+    buyHeat += Math.min(4, totalCost / 10000);
+    const _locPolB = LOCATIONS.find(l => l.id === state.currentLocation);
+    if (_locPolB && _locPolB.policeIntensity === 'high') buyHeat *= 1.35;
+    else if (_locPolB && _locPolB.policeIntensity === 'low') buyHeat *= 0.7;
+    const _hgmB = getSkillEffect(state, 'heatGainMod');
+    if (_hgmB) buyHeat *= Math.max(0.3, 1 + _hgmB);
+    if (buyHeat > 0) state.heat = Math.min(100, (state.heat || 0) + buyHeat);
+  }
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
   state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
@@ -4253,6 +4357,7 @@ function buyDrug(state, drugId, amount) {
   // Large buys create visible shortages the street notices
   if (amount >= 50 && typeof reportPlayerEvent === 'function') {
     reportPlayerEvent(state, 'big_buy', { locId: state.currentLocation, drugId: drugId, qty: amount });
+    if (state.achievementStats) state.achievementStats.marketManipulations = (state.achievementStats.marketManipulations || 0) + 1;
   }
   const result = { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}${ambushMsg}` };
   if (factionDealMsgs.length > 0) result.factionMsgs = factionDealMsgs;
@@ -4321,6 +4426,15 @@ function sellDrug(state, drugId, amount) {
     const bonus = getPerkSellBonus(state);
     if (bonus > 0) price = Math.round(price * (1 + bonus));
   }
+  // Skill: nomad — the road teaches you every market's appetite
+  {
+    const nomad = getSkillEffect(state, 'nomadSellBonus');
+    if (nomad > 0) {
+      const cities = (state.citiesVisited || []).length;
+      const nomadBonus = Math.min(0.18, nomad * Math.min(cities, 9) / 3);
+      if (nomadBonus > 0) price = Math.round(price * (1 + nomadBonus));
+    }
+  }
   // Skill tree: haggler sell bonus
   const skillSellMod = getSkillEffect(state, 'sellMod');
   if (skillSellMod > 0) price = Math.round(price * (1 + skillSellMod));
@@ -4343,11 +4457,24 @@ function sellDrug(state, drugId, amount) {
   }
   // Bulk premium: selling 10+ units at once gets 5% premium
   if (amount >= 10) price = Math.round(price * 1.05);
+  // Market absorption: past 50 units the street runs out of ready buyers and
+  // the price slips (-0.15%/unit, max -30%). Splitting big loads across days
+  // or districts is how real weight gets moved — one-corner dumps eat the loss.
+  if (amount > 50) {
+    let slip = Math.min(0.30, (amount - 50) * 0.0015);
+    // Skill: market maker — you set the price, the corner follows
+    const pInf = getSkillEffect(state, 'priceInfluence');
+    if (pInf > 0) slip *= Math.max(0.25, 1 - pInf);
+    price = Math.max(1, Math.round(price * (1 - slip)));
+  }
   // Market reputation: frequent trading at a location gives better prices
   if (!state.locationTrades) state.locationTrades = {};
   const locTradesSell = state.locationTrades[state.currentLocation] || 0;
   if (locTradesSell >= 20) price = Math.round(price * 1.08);       // 8% premium after 20+ trades
   else if (locTradesSell >= 5) price = Math.round(price * 1.03);   // 3% premium after 5+ trades
+  // Skill: brand loyalty — returning buyers pay extra where you're known
+  const loyaltySkill = getSkillEffect(state, 'loyaltySellMod');
+  if (loyaltySkill > 0 && locTradesSell >= 5) price = Math.round(price * (1 + loyaltySkill));
   // Wash-trade guard: dealers recognize product you bought from them today and
   // won't pay more than 95% of what you paid for it. No bonus stack can turn a
   // same-day, same-district buy-then-sell into profit.
@@ -4355,6 +4482,10 @@ function sellDrug(state, drugId, amount) {
   const sdbSell = state.sameDayBuys;
   if (sdbSell && sdbSell.day === state.day && sdbSell.loc === state.currentLocation &&
       sdbSell.drugs && sdbSell.drugs[drugId] && sdbSell.drugs[drugId].qty > 0) {
+    if (state.achievementStats) {
+      state.achievementStats.sameDayFlips = (state.achievementStats.sameDayFlips || 0) + 1;
+      state.achievementStats.sameCityArbitrage = (state.achievementStats.sameCityArbitrage || 0) + 1;
+    }
     const rec = sdbSell.drugs[drugId];
     const washQty = Math.min(amount, rec.qty);
     const avgPaid = rec.spent / rec.qty;
@@ -4421,6 +4552,21 @@ function sellDrug(state, drugId, amount) {
       state.heat = Math.max(0, Math.min(100, (state.heat || 0) + sellHeatMod));
     }
   }
+  // Street heat: moving weight gets noticed. Small hand-to-hand sales (≤5
+  // units, pocket money) fly under the radar; real volume draws eyes fast.
+  // Countered by heatGainMod skills, hot districts make it worse. This is
+  // the pressure that keeps pure trading from being a risk-free money pump.
+  {
+    let dealHeat = amount >= 100 ? 4 : amount >= 50 ? 3 : amount >= 20 ? 2 : amount >= 6 ? 1 : 0;
+    dealHeat += Math.min(8, totalRevenue / 5000);
+    if (isPremium) dealHeat *= 1.3;
+    const _locPol = LOCATIONS.find(l => l.id === state.currentLocation);
+    if (_locPol && _locPol.policeIntensity === 'high') dealHeat *= 1.35;
+    else if (_locPol && _locPol.policeIntensity === 'low') dealHeat *= 0.7;
+    const _hgm = getSkillEffect(state, 'heatGainMod');
+    if (_hgm) dealHeat *= Math.max(0.3, 1 + _hgm);
+    if (dealHeat > 0) state.heat = Math.min(100, (state.heat || 0) + dealHeat);
+  }
   // Faction standing adjustment from selling in gang territory
   let factionSellMsgs = [];
   if (typeof adjustFactionStandingFromDeal === 'function') {
@@ -4445,6 +4591,10 @@ function sellDrug(state, drugId, amount) {
   // Flooding the street with product makes the news
   if (amount >= 50 && typeof reportPlayerEvent === 'function') {
     reportPlayerEvent(state, 'big_sale', { locId: state.currentLocation, drugId: drugId, qty: amount });
+    if (state.achievementStats) {
+      state.achievementStats.marketsCrashed = (state.achievementStats.marketsCrashed || 0) + 1;
+      state.achievementStats.marketManipulations = (state.achievementStats.marketManipulations || 0) + 1;
+    }
   }
   const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${washMsg}${tapMsg}${ambushSellMsg}` };
   if (factionSellMsgs.length > 0) result.factionMsgs = factionSellMsgs;
@@ -4544,12 +4694,15 @@ function getAvailableTransport(state, destinationId) {
 
   const playerLevel = typeof getKingpinLevel === 'function' ? getKingpinLevel(state.xp || 0).level : 1;
   const TRANSPORT_TIER_LEVEL = { budget: 1, standard: 3, premium: 7, lord: 12 };
+  // Skill: caravan master — bigger loads on every transport
+  const cargoBonus = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'cargoBonusMod') : 0;
   for (const [id, t] of Object.entries(TRANSPORT)) {
     if (t.sameRegionOnly && !sameRegion) continue;
     const minLvl = TRANSPORT_TIER_LEVEL[t.tier] || 1;
     const locked = playerLevel < minLvl;
     const cost = Math.round(t.costPerRegion * (sameRegion ? 1 : 2.5) * state.transportCostMultiplier);
-    results.push({ id, ...t, cost, canAfford: state.cash >= cost && !locked, canCarry: getInventoryCount(state) <= t.inventoryLimit, locked, minLevel: minLvl });
+    const carryLimit = cargoBonus > 0 ? Math.round(t.inventoryLimit * (1 + cargoBonus)) : t.inventoryLimit;
+    results.push({ id, ...t, inventoryLimit: carryLimit, cost, canAfford: state.cash >= cost && !locked, canCarry: getInventoryCount(state) <= carryLimit, locked, minLevel: minLvl });
   }
   return results;
 }
@@ -4613,6 +4766,20 @@ function travel(state, destinationId, transportId) {
   // Skill tree: road_warrior transport cost reduction
   const roadWarriorMod = getSkillEffect(state, 'transportCostMod');
   if (roadWarriorMod < 0) transportCost = Math.round(transportCost * (1 + roadWarriorMod));
+  // Skill: fuel efficiency — flat discount on all travel
+  const fuelMod = getSkillEffect(state, 'travelCostMod');
+  if (fuelMod < 0) transportCost = Math.round(transportCost * (1 + fuelMod));
+  // Skill: border hopper — cheaper region switches
+  {
+    const _fromLoc = LOCATIONS.find(l => l.id === state.currentLocation);
+    const _crossRegion = (_fromLoc ? (_fromLoc.region || 'miami') : 'miami') !== (destination.region || 'miami');
+    const regionMod = getSkillEffect(state, 'regionCostMod');
+    if (_crossRegion && regionMod < 0) transportCost = Math.round(transportCost * (1 + Math.max(-0.6, regionMod)));
+  }
+  // Skill: global network — travel to your own territory is free
+  if (hasSkillEffect(state, 'freeTerritoryTravel') && isTerritory(state, destinationId)) {
+    transportCost = 0;
+  }
   // Permanent transport discount from smuggler captain
   if (state.transportCostMultiplier && state.transportCostMultiplier < 1) {
     transportCost = Math.round(transportCost * state.transportCostMultiplier);
@@ -4651,6 +4818,31 @@ function travel(state, destinationId, transportId) {
       daysUsed = Math.max(1, Math.ceil(daysUsed / wxTravel.travelSpeed));
     }
   }
+  // Skill: pathfinder / logistics master — shave travel days
+  const pathMod = getSkillEffect(state, 'travelDayMod');
+  if (pathMod < 0) daysUsed = Math.max(1, daysUsed + pathMod);
+  // Skill: express lanes — nothing takes longer than a day
+  const expressCap = getSkillEffect(state, 'expressTravelCap');
+  if (expressCap > 0) daysUsed = Math.min(daysUsed, expressCap);
+  // Skill: speed runner — chance to save a day outright
+  const saveDay = getSkillEffect(state, 'saveDayChance');
+  if (saveDay > 0 && daysUsed > 1 && Math.random() < saveDay) {
+    daysUsed -= 1;
+  }
+  // Skill: tunnel network — instant cross-border run once every 5 days
+  {
+    const _fromLoc2 = LOCATIONS.find(l => l.id === state.currentLocation);
+    const _cross2 = (_fromLoc2 ? (_fromLoc2.region || 'miami') : 'miami') !== (destination.region || 'miami');
+    if (_cross2 && hasSkillEffect(state, 'tunnelAccess') && (state.day - (state.lastTunnelDay || -99)) >= 5) {
+      state.lastTunnelDay = state.day;
+      daysUsed = 1;
+    }
+  }
+  // Skill: warp gate — teleport anywhere once every 3 days
+  if (hasSkillEffect(state, 'warpGateAccess') && (state.day - (state.lastWarpDay || -99)) >= 3) {
+    state.lastWarpDay = state.day;
+    daysUsed = 1;
+  }
   } // end if (!isLocalTravel)
   state.day += daysUsed;
 
@@ -4658,7 +4850,7 @@ function travel(state, destinationId, transportId) {
   const dailyMessages = [];
   for (let i = 0; i < daysUsed; i++) {
     state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
-    state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
+    applyBankInterest(state);
 
     // Process crew pay and loyalty
     const crewMsgs = processCrewDaily(state);
@@ -4750,6 +4942,9 @@ function travel(state, destinationId, transportId) {
   }
   if (weatherDisp && weatherDisp.name !== 'Clear') arrivalFlavor += ' ' + weatherDisp.emoji + ' ' + weatherDisp.name + '.';
 
+  // Travel events and fares touched cash — re-square the money ledger
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
+
   return {
     success: true,
     msg: `Traveled to ${destination.name} via ${transport.name}. (${daysUsed} day${daysUsed > 1 ? 's' : ''}, $${transportCost.toLocaleString()})${arrivalFlavor}`,
@@ -4787,6 +4982,11 @@ function processTravelEvents(state, transport) {
   if (riskModSkill < 0) riskFactor *= (1 + riskModSkill);
   // Buff: temp lookout
   if (hasBuff(state, 'temp_lookout')) riskFactor *= 0.85;
+  // Skill: phantom convoy — completely invisible on the road
+  if (hasSkillEffect(state, 'zeroTravelRisk')) {
+    state.travelEvents = events;
+    return events;
+  }
 
   // Investigation level increases police encounter chance
   if (state.investigation) {
@@ -4800,8 +5000,17 @@ function processTravelEvents(state, transport) {
     return events;
   }
 
+  // Skill: smuggler instinct / smuggler king — customs and police checks
+  const customsMod = getSkillEffect(state, 'customsMod');
+  const customsImmune = hasSkillEffect(state, 'customsImmune');
   for (const eventTemplate of TRAVEL_EVENTS) {
-    if (Math.random() < eventTemplate.chance * riskFactor) {
+    let evChance = eventTemplate.chance * riskFactor;
+    const isCustomsLike = /police|customs|checkpoint|dea/i.test(eventTemplate.id || '');
+    if (isCustomsLike) {
+      if (customsImmune) continue;
+      if (customsMod < 0) evChance *= (1 + customsMod);
+    }
+    if (Math.random() < evChance) {
       const event = processEvent(state, eventTemplate, location);
       if (event) events.push(event);
       if (events.length >= 2) break; // max 2 events per trip
@@ -4832,6 +5041,7 @@ function processEvent(state, template, location) {
     case 'find_cash': {
       const amount = Math.round(500 + Math.random() * 5000);
       state.cash += amount;
+      if (state.achievementStats) state.achievementStats.foundCashTotal = (state.achievementStats.foundCashTotal || 0) + amount;
       return { ...template, msg: template.msg.replace('${amount}', amount.toLocaleString()), resolved: true };
     }
     case 'police_encounter': {
@@ -5031,16 +5241,25 @@ function processEvent(state, template, location) {
 // COMBAT SYSTEM
 // ============================================================
 function resolveCombatRound(state, action, event) {
+  event._rounds = (event._rounds || 0) + 1;
   const weapon = WEAPONS.find(w => w.id === state.equippedWeapon) || WEAPONS[0];
   const results = { playerDamage: 0, enemyDamage: 0, msg: '', resolved: false, goToCourt: false };
 
   if (action === 'fight') {
     // Player attacks - injured crew don't contribute
-    const henchCombat = state.henchmen.reduce((sum, h) => {
+    let henchCombat = state.henchmen.reduce((sum, h) => {
       if (h.injured) return sum;
       const type = HENCHMEN_TYPES.find(t => t.id === h.type);
       return sum + (type ? type.combat : 0);
     }, 0);
+    // Skills: crew trainer (+stats) and inner circle (abilities amplified)
+    {
+      const crewStat = getSkillEffect(state, 'crewStatMod');
+      const crewMult = getSkillEffect(state, 'crewEffectMult');
+      let crewScale = 1 + Math.max(0, crewStat);
+      if (crewMult > 1) crewScale *= crewMult;
+      if (crewScale > 1) henchCombat = Math.round(henchCombat * crewScale);
+    }
 
     const activeCrewCount = state.henchmen.filter(h => !h.injured).length;
     let playerPower = weapon.damage + henchCombat;
@@ -5068,25 +5287,62 @@ function resolveCombatRound(state, action, event) {
     if (activeCrewCount === 0 && hasSkillEffect(state, 'soloDamageMult')) {
       playerPower = Math.round(weapon.damage * getSkillEffect(state, 'soloDamageMult'));
     }
+    // Skill: death dealer — weapons hit at a multiple
+    const wpnMult = getSkillEffect(state, 'weaponDamageMult');
+    if (wpnMult > 1) playerPower += Math.round(weapon.damage * (wpnMult - 1));
+    // Skill: berserker — +damage per 10% HP missing
+    const berserk = getSkillEffect(state, 'berserkerMod');
+    if (berserk > 0) {
+      const hpPct = Math.max(0, Math.min(100, state.health || 0));
+      playerPower = Math.round(playerPower * (1 + berserk * ((100 - hpPct) / 10)));
+    }
+    // Skill: annihilator — AoE hits the whole group at once
+    if (hasSkillEffect(state, 'aoeDamage') && (event.enemyCount || 1) > 1) {
+      playerPower = Math.round(playerPower * Math.min(2, 1 + 0.15 * (event.enemyCount - 1)));
+    }
     let hitChance = weapon.accuracy + (activeCrewCount * 0.05);
     // Scope item: +15% accuracy
     if (hasItem(state, 'scope')) hitChance += 0.15;
     // Skill tree: weapons expert accuracy bonus
     const accMod = getSkillEffect(state, 'accuracyMod');
     if (accMod > 0) hitChance = Math.min(0.95, hitChance + accMod);
+    // Skill: apex predator — attacks never miss
+    if (hasSkillEffect(state, 'perfectAccuracy')) hitChance = 1;
 
-    if (Math.random() < hitChance) {
-      const damage = Math.round(playerPower * (0.7 + Math.random() * 0.6));
-      event.enemyHealth -= damage;
-      results.enemyDamage = damage;
-      results.msg = `You hit them for ${damage} damage! `;
-    } else {
-      results.msg = 'You missed! ';
+    // Player swings — adrenaline rush can grant an extra attack
+    const swings = 1 + (Math.random() < getSkillEffect(state, 'extraAttackChance') ? 1 : 0);
+    let landed = false;
+    for (let sw = 0; sw < swings && event.enemyHealth > 0; sw++) {
+      if (Math.random() < hitChance) {
+        landed = true;
+        // Skill: headhunter/executioner — instant kill chance
+        if (Math.random() < getSkillEffect(state, 'instantKillChance')) {
+          results.enemyDamage += event.enemyHealth;
+          event.enemyHealth = 0;
+          results.msg += '💀 A perfect shot drops them instantly! ';
+          break;
+        }
+        const damage = Math.round(playerPower * (0.7 + Math.random() * 0.6));
+        event.enemyHealth -= damage;
+        results.enemyDamage += damage;
+        results.msg += `You hit them for ${damage} damage! ${sw > 0 ? '(adrenaline follow-up!) ' : ''}`;
+      } else if (sw === 0) {
+        results.msg = 'You missed! ';
+      }
     }
+    if (!landed && swings > 1) results.msg += 'Even the follow-up missed! ';
+
+    // Skill: quick draw — chance you struck first and they can't answer this round
+    const firstStrike = getSkillEffect(state, 'firstStrikeMod');
+    const enemySuppressed = firstStrike > 0 && Math.random() < firstStrike;
+    if (enemySuppressed && event.enemyHealth > 0) results.msg += '⚡ You drew first — they never got a shot off. ';
 
     // Enemy attacks back
-    if (event.enemyHealth > 0) {
-      const enemyHitChance = 0.4 + (event.enemyCount * 0.05);
+    if (event.enemyHealth > 0 && !enemySuppressed) {
+      let enemyHitChance = 0.4 + (event.enemyCount * 0.05);
+      // Skill: suppressive fire — enemies shoot worse
+      const enemyAccMod = getSkillEffect(state, 'enemyAccuracyMod');
+      if (enemyAccMod !== 0) enemyHitChance = Math.max(0.05, enemyHitChance * (1 + enemyAccMod));
       if (Math.random() < enemyHitChance) {
         // Game day scaling: enemies hit harder as game progresses
         var dayScaling = typeof getGameDayScaling === 'function' ? getGameDayScaling(state) : { enemyDamageMod: 1.0 };
@@ -5120,11 +5376,26 @@ function resolveCombatRound(state, action, event) {
           if (injuryMsg) results.msg += injuryMsg + ' ';
         }
 
+        // Skill: iron fortress — chance to reflect the hit back
+        const reflect = getSkillEffect(state, 'reflectChance');
+        if (damage > 0 && reflect > 0 && Math.random() < reflect) {
+          event.enemyHealth -= damage;
+          results.enemyDamage += damage;
+          results.msg += `🏰 You turned their attack back on them (${damage} reflected)! `;
+          damage = 0;
+        }
         state.health -= damage;
+        // Skill: immortal warrior — auto-revive once per fight at 50% HP
+        if (state.health <= 0 && hasSkillEffect(state, 'autoRevive') && !event._revived) {
+          event._revived = true;
+          state.health = Math.round(getEffectiveMaxHp(state) * 0.5);
+          results.msg += '🧬 You black out — and get back up. (Auto-revive) ';
+        }
         // Skill tree: bulletproof (cannot die in combat)
         if (hasSkillEffect(state, 'deathImmunity') && state.health <= 0) {
           state.health = 1;
           results.msg += 'Bulletproof! You survive by sheer will! ';
+          if (state.achievementStats) state.achievementStats.bulletproofSaves = (state.achievementStats.bulletproofSaves || 0) + 1;
         }
         results.playerDamage = damage;
         results.msg += `They hit you for ${damage} damage!`;
@@ -5137,6 +5408,11 @@ function resolveCombatRound(state, action, event) {
     if (event.enemyHealth <= 0) {
       results.resolved = true;
       results.msg += ' You defeated them!';
+      if (state.achievementStats) {
+        if (event._rounds === 1) state.achievementStats.oneShotKills = (state.achievementStats.oneShotKills || 0) + 1;
+        if (weapon.damage <= 25 && !/gun|pistol|rifle|uzi|ak|shotgun/i.test(weapon.id)) state.achievementStats.meleeOnlyWins = (state.achievementStats.meleeOnlyWins || 0) + 1;
+        if (event.combatType === 'territory' && activeCrewCount === 0) state.achievementStats.soloTerritoryTakes = (state.achievementStats.soloTerritoryTakes || 0) + 1;
+      }
       if (typeof adjustRepFromAction === 'function') {
         adjustRepFromAction(state, 'combat_victory');
       } else {
@@ -5150,7 +5426,18 @@ function resolveCombatRound(state, action, event) {
       if (hasItem(state, 'silencer')) {
         results.msg += ' 🔇 Silencer kept things quiet.';
       } else {
-        state.heat = Math.min(100, (state.heat || 0) + 15);
+        // Skill: propaganda — spin the story, less heat from kills
+        let killHeat = 15;
+        const kHeatMod = getSkillEffect(state, 'killHeatMod');
+        if (kHeatMod !== 0) killHeat = Math.max(2, Math.round(killHeat * (1 + kHeatMod)));
+        state.heat = Math.min(100, (state.heat || 0) + killHeat);
+      }
+      // Skill: combat medic — patch yourself up after surviving
+      const pcHeal = getSkillEffect(state, 'postCombatHeal');
+      if (pcHeal > 0 && state.health > 0) {
+        const healed = Math.round(getEffectiveMaxHp(state) * pcHeal);
+        state.health = Math.min(getEffectiveMaxHp(state), state.health + healed);
+        results.msg += ` 💊 Patched yourself up (+${healed} HP).`;
       }
       state.peopleKilled += event.enemyCount;
       // Body disposal system — bodies accumulate from kills
@@ -5170,8 +5457,15 @@ function resolveCombatRound(state, action, event) {
 
       // Loot
       if (event.combatType === 'gang') {
-        const loot = Math.round(500 + Math.random() * 3000);
+        let loot = Math.round(500 + Math.random() * 3000);
+        // Skill: scorched earth — strip extra resources from the fallen crew
+        const scorch = getSkillEffect(state, 'destroyResourceMod');
+        if (scorch > 0) {
+          loot = Math.round(loot * (1 + scorch * 2));
+          results.msg += ' 🔥 You torched their stash house on the way out.';
+        }
         state.cash += loot;
+        state.dirtyMoney = (state.dirtyMoney || 0) + loot;
         results.msg += ` You found $${loot.toLocaleString()} on them.`;
       }
 
@@ -5465,6 +5759,9 @@ function endGame(state) {
 
   // Save high score
   const entry = { score: finalScore, rank: state.rank, date: new Date().toISOString().slice(0, 10), cities: state.citiesVisited.length };
+  if (state.achievementStats && (state.highScores.length === 0 || finalScore > Math.max(...state.highScores.map(h => h.score)))) {
+    state.achievementStats.newHighScore = true;
+  }
   state.highScores.push(entry);
   state.highScores.sort((a, b) => b.score - a.score);
   state.highScores = state.highScores.slice(0, 10);
@@ -5649,9 +5946,18 @@ function updateInvestigation(state, trigger, amount) {
     if (hasPerk(state, 'immortal')) amount = Math.round(amount * 0.80);
     amount = Math.max(1, amount); // minimum 1 if any gain
   }
+  // Skills: media mogul / political fixer / media empire — control the narrative
+  if (amount > 0 && typeof getSkillEffect === 'function') {
+    const invSkill = getSkillEffect(state, 'investigationMod');
+    if (invSkill < 0) amount = Math.max(1, Math.round(amount * Math.max(0.2, 1 + invSkill)));
+  }
 
   const oldLevel = state.investigation.level;
   state.investigation.points = Math.min(100, Math.max(0, state.investigation.points + amount));
+  // Skill: untouchable — investigation can never reach warrant level (85+)
+  if (typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'arrestImmune')) {
+    state.investigation.points = Math.min(84, state.investigation.points);
+  }
   state.investigation.level = getInvestigationLevel(state.investigation.points);
 
   // Check for level-up events
@@ -5709,6 +6015,7 @@ function processInvestigationDaily(state) {
 }
 
 function createDEARaidEvent(state) {
+  if (state.achievementStats) state.achievementStats.propertiesRaided = (state.achievementStats.propertiesRaided || 0) + 1;
   const agentCount = 4 + Math.floor(Math.random() * 5);
   state.heat = Math.min(100, state.heat + 20);
   return {
@@ -5980,6 +6287,14 @@ function getAvailableContacts(state) {
       if (hasPerk(state, 'godfather')) cost = Math.round(cost * 0.80);
       if (hasPerk(state, 'immortal')) cost = Math.round(cost * 0.90);
     }
+    // Skill: shadow government — bribes and court costs halved
+    const courtCostSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'courtCostMod') : 0;
+    if (courtCostSkill < 0) cost = Math.round(cost * Math.max(0.2, 1 + courtCostSkill));
+    // Skill: puppet master — first contact each case works for free
+    if (typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'freeCourtContact') &&
+        state.courtCase.contactsUsed.length === 0) {
+      cost = 0;
+    }
 
     // Calculate success chance
     let chance = contact.baseChance[0] + Math.random() * (contact.baseChance[1] - contact.baseChance[0]);
@@ -6186,7 +6501,9 @@ function resolveCourtCase(state) {
     var tbCourt = getTraitBonuses(state);
     if (tbCourt.courtBonus) traitCourtBonus = tbCourt.courtBonus;
   }
-  const chance = Math.max(0.02, state.courtCase.totalSuccessChance - evidencePenalty + traitCourtBonus);
+  let chance = Math.max(0.02, state.courtCase.totalSuccessChance - evidencePenalty + traitCourtBonus);
+  // Skill: puppet regime — the bench answers to you
+  if (typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'courtAlwaysWin')) chance = 1;
   const notGuilty = roll < chance;
 
   state.investigation.timesArrested++;
@@ -6265,7 +6582,7 @@ function resolveCourtCase(state) {
       }
       // Debt compounds
       state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
-      state.bank = Math.round(state.bank * (1 + GAME_CONFIG.bankInterestRate));
+      applyBankInterest(state);
       // Business income trickles in (50% without you there)
       if (state.frontBusinesses) {
         for (var bi = 0; bi < state.frontBusinesses.length; bi++) {
@@ -6453,6 +6770,9 @@ function processTerritoryIncome(state) {
   const territories = getControlledTerritories(state);
   if (territories.length === 0) return 0;
   let income = territories.length * TERRITORY_BENEFITS.dailyIncome;
+  // Skill: territory boss — bigger take from every block you run
+  const terrIncSkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'territoryIncomeMod') : 0;
+  if (terrIncSkill > 0) income = Math.round(income * (1 + terrIncSkill));
   // Perk: overlord_income +50%, untouchable +20%, immortal +15%
   if (typeof hasPerk === 'function') {
     if (hasPerk(state, 'overlord_income')) income = Math.round(income * 1.50);
@@ -6467,7 +6787,11 @@ function processTerritoryIncome(state) {
 function applyTerritoryPriceMod(state, locationId, price, isBuying) {
   if (!isTerritory(state, locationId)) return price;
   if (isBuying) return Math.round(price * (1 - TERRITORY_BENEFITS.priceDiscount));
-  return Math.round(price * (1 + TERRITORY_BENEFITS.sellBonus));
+  // Skill: monopoly — premium prices on your own turf
+  let sellBonus = TERRITORY_BENEFITS.sellBonus;
+  const monopolySkill = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'territorySellMod') : 0;
+  if (monopolySkill > 0) sellBonus += monopolySkill;
+  return Math.round(price * (1 + sellBonus));
 }
 
 // ============================================================
@@ -6493,6 +6817,9 @@ function processCrewDaily(state) {
       // Perk: crew_loyalty halves decay
       if (typeof hasPerk === 'function' && hasPerk(state, 'crew_loyalty')) loyaltyLoss = Math.round(loyaltyLoss * 0.5);
       h.loyalty -= loyaltyLoss;
+      // Skill: elite crew — loyalty never drops below the floor
+      const loyaltyFloor = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'crewLoyaltyFloor') : 0;
+      if (loyaltyFloor > 0) h.loyalty = Math.max(loyaltyFloor, h.loyalty);
       messages.push(`💸 Couldn't pay ${h.name}. Loyalty dropping.`);
 
       if (h.loyalty <= 0) {
@@ -6714,6 +7041,11 @@ function processCrewDaily(state) {
 }
 
 function injureCrewMember(state, index, damage) {
+  // Skill: war machine — hardened crew shrug off part of every hit
+  if (typeof getSkillEffect === 'function') {
+    const crewHp = getSkillEffect(state, 'crewHpMod');
+    if (crewHp > 0) damage = Math.max(1, Math.round(damage / (1 + crewHp)));
+  }
   if (!state.henchmen[index]) return null;
   const h = state.henchmen[index];
   if (h.health === undefined) { h.health = 100; h.maxHealth = 100; h.injured = false; }
@@ -6780,7 +7112,7 @@ const SKILL_TREES = {
       { id: 'logistics_master', name: 'Logistics Master', emoji: '🗂️', maxRank: 3, tier: 3, requires: ['speed_runner:2', 'caravan_master:2'], desc: 'Each rank: +5,000 inventory, -1 travel day', effect: (r) => ({ extraCarry: 5000 * r, travelDayMod: -r }) },
       { id: 'tunnel_network', name: 'Tunnel Network', emoji: '🕳️', maxRank: 1, tier: 3, requires: ['ghost_route:2', 'logistics_master:2'], desc: 'Unlock secret tunnels: instant cross-border travel once/5 days', effect: (r) => ({ tunnelAccess: true }) },
       { id: 'border_hopper', name: 'Border Hopper', emoji: '🚧', maxRank: 3, tier: 3, requires: ['regional_expert:3'], desc: 'Each rank: -20% region switch cost', effect: (r) => ({ regionCostMod: -0.20 * r }) },
-      { id: 'nomad', name: 'Nomad', emoji: '🏕️', maxRank: 3, tier: 3, requires: ['street_smarts:3', 'pathfinder:3'], desc: 'Each rank: +3% sell bonus per unique city visited', effect: (r) => ({ nomadSellBonus: 0.03 * r }) },
+      { id: 'nomad', name: 'Nomad', emoji: '🏕️', maxRank: 3, tier: 3, requires: ['street_smarts:3', 'pathfinder:3'], desc: 'Each rank: sell bonus scaling with cities visited (up to +6%/rank)', effect: (r) => ({ nomadSellBonus: 0.02 * r }) },
       // Tier 4
       { id: 'shadow_network', name: 'Shadow Network', emoji: '🌑', maxRank: 3, tier: 4, requires: ['ghost_route:3'], desc: 'Each rank: -25% all travel risk', effect: (r) => ({ riskMod: -0.25 * r }) },
       { id: 'trade_baron', name: 'Trade Baron', emoji: '🎩', maxRank: 3, tier: 4, requires: ['logistics_master:2', 'border_hopper:2'], desc: 'Each rank: +10,000 carry, -10% transport', effect: (r) => ({ extraCarry: 10000 * r, transportCostMod: -0.10 * r }) },
@@ -6838,7 +7170,7 @@ const SKILL_TREES = {
       // Tier 1
       { id: 'silver_tongue', name: 'Silver Tongue', emoji: '🗣️', maxRank: 5, tier: 1, requires: [], desc: 'Each rank: +10 speech skill, better dialogue', effect: (r) => ({ speechBonus: 10 * r }) },
       { id: 'haggler', name: 'Master Haggler', emoji: '🤝', maxRank: 5, tier: 1, requires: [], desc: 'Each rank: -3% buy price, +3% sell price', effect: (r) => ({ buyMod: -0.03 * r, sellMod: 0.03 * r }) },
-      { id: 'street_rep', name: 'Street Rep', emoji: '📢', maxRank: 3, tier: 1, requires: [], desc: 'Each rank: +5 rep from all sources', effect: (r) => ({ repBonus: 5 * r }) },
+      { id: 'street_rep', name: 'Street Rep', emoji: '📢', maxRank: 3, tier: 1, requires: [], desc: 'Each rank: +5% rep gains from all sources', effect: (r) => ({ repBonus: 5 * r }) },
       { id: 'charisma', name: 'Charisma', emoji: '✨', maxRank: 3, tier: 1, requires: [], desc: 'Each rank: +10% better NPC encounter outcomes', effect: (r) => ({ npcOutcomeMod: 0.10 * r }) },
       { id: 'network_builder', name: 'Network Builder', emoji: '🔗', maxRank: 5, tier: 1, requires: [], desc: 'Each rank: +5% front business income', effect: (r) => ({ bizIncomeMod: 0.05 * r }) },
       // Tier 2
@@ -6857,7 +7189,7 @@ const SKILL_TREES = {
       { id: 'crime_lord_charm', name: 'Crime Lord Charm', emoji: '🎭', maxRank: 3, tier: 4, requires: ['diplomat:3'], desc: 'Each rank: -20% all NPC hostility', effect: (r) => ({ npcHostilityMod: -0.20 * r }) },
       { id: 'market_maker', name: 'Market Maker', emoji: '💹', maxRank: 3, tier: 4, requires: ['fence:3', 'market_insider:1'], desc: 'Each rank: influence drug prices ±15%', effect: (r) => ({ priceInfluence: 0.15 * r }) },
       { id: 'shadow_broker', name: 'Shadow Broker', emoji: '🕶️', maxRank: 2, tier: 4, requires: ['informant_network:3', 'propaganda:2'], desc: 'Each rank: sell intel for $5,000/day', effect: (r) => ({ intelIncome: 5000 * r }) },
-      { id: 'kingpin_aura', name: 'Kingpin Aura', emoji: '👑', maxRank: 1, tier: 4, requires: ['street_rep:3', 'brand_loyalty:3'], desc: '+50 rep from all sources', effect: (r) => ({ repBonus: 50 }) },
+      { id: 'kingpin_aura', name: 'Kingpin Aura', emoji: '👑', maxRank: 1, tier: 4, requires: ['street_rep:3', 'brand_loyalty:3'], desc: '+50% rep gains from all sources', effect: (r) => ({ repBonus: 50 }) },
       { id: 'political_fixer', name: 'Political Fixer', emoji: '🏛️', maxRank: 3, tier: 4, requires: ['puppet_master:1'], desc: 'Each rank: investigation always -20%', effect: (r) => ({ investigationMod: -0.20 * r }) },
       // Tier 5
       { id: 'untouchable_status', name: 'Untouchable', emoji: '🌟', maxRank: 1, tier: 5, requires: ['political_fixer:3', 'media_mogul:1'], desc: 'Investigation can never reach arrest warrant', effect: (r) => ({ arrestImmune: true }) },
@@ -7434,6 +7766,18 @@ function resolveDialogueChoice(state, encounterId, choiceIndex) {
   for (const o of choice.outcomes) {
     roll -= o.weight;
     if (roll <= 0) { outcome = o; break; }
+  }
+  // Skill: charisma — chance to charm your way out of a bad draw (one reroll)
+  if (typeof getSkillEffect === 'function') {
+    const charmSkill = getSkillEffect(state, 'npcOutcomeMod');
+    const looksBad = outcome.combat || (outcome.cashCost || 0) > 0 || /heat|investigation_up|hostile/.test(String(outcome.effect || ''));
+    if (charmSkill > 0 && looksBad && Math.random() < charmSkill) {
+      let roll2 = Math.random() * totalWeight;
+      for (const o of choice.outcomes) {
+        roll2 -= o.weight;
+        if (roll2 <= 0) { outcome = o; break; }
+      }
+    }
   }
 
   const effects = [];

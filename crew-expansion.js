@@ -265,7 +265,10 @@ function processCrewExpansionDaily(state) {
     // Check for betrayal events
     if (member.betrayalRisk > 60 && Math.random() < (member.betrayalRisk / 100)) {
       const betrayal = resolveBetrayal(state, i);
-      if (betrayal) messages.push(betrayal);
+      if (betrayal) {
+        messages.push(betrayal);
+        if (state.achievementStats) state.achievementStats.betrayals = (state.achievementStats.betrayals || 0) + 1;
+      }
     }
 
     // Warning signs (visible to player when betrayalRisk > 40)
@@ -392,12 +395,14 @@ function confrontCrew(state, crewIndex) {
 
   if (member.betrayalRisk > 50) {
     // They were actually plotting - caught them
+    if (state.achievementStats) state.achievementStats.traitorsCaught = (state.achievementStats.traitorsCaught || 0) + 1;
     member.betrayalRisk = 0;
     member.hiddenLoyalty = Math.max(0, member.hiddenLoyalty - 20);
     member.loyalty = Math.max(0, member.loyalty - 10);
     return { success: true, msg: member.name + ' was confronted. They admitted to plotting. Loyalty dropped but betrayal prevented.', caught: true };
   } else {
     // False accusation - damages trust
+    if (state.achievementStats) state.achievementStats.falseAccusations = (state.achievementStats.falseAccusations || 0) + 1;
     member.hiddenLoyalty = Math.max(0, member.hiddenLoyalty - 15);
     member.betrayalRisk = Math.min(100, member.betrayalRisk + 10);
     return { success: true, msg: member.name + ' was wrongly accused. Trust damaged.', caught: false };

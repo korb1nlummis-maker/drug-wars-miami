@@ -116,7 +116,13 @@ function processTerritoryDefenseDaily(state) {
     const ownedDistricts = Object.keys(td.fortifications);
     if (ownedDistricts.length > 0) {
       const heat = state.heat || 0;
-      const attackChance = 0.02 + (heat * 0.001) + (ownedDistricts.length * 0.005);
+      let attackChance = 0.02 + (heat * 0.001) + (ownedDistricts.length * 0.005);
+      // Skills: fortifier / defense grid deter attacks; total control ends them
+      if (typeof getSkillEffect === 'function') {
+        const defSkill = getSkillEffect(state, 'territoryDefenseMod');
+        if (defSkill < 0) attackChance *= Math.max(0.15, 1 + defSkill);
+      }
+      if (typeof hasSkillEffect === 'function' && hasSkillEffect(state, 'territoryImmune')) attackChance = 0;
       if (Math.random() < attackChance && td.activeSieges && td.activeSieges.length === 0) {
         const targetDistrict = ownedDistricts[Math.floor(Math.random() * ownedDistricts.length)];
         const attackerType = selectAttackerType(state);

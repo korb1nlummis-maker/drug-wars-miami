@@ -39,14 +39,17 @@ function fireDay1Opportunity(state) {
   if (state.newGamePlus && state.newGamePlus.active) { eg.fired.day1 = true; return null; }
   if (!state.prices) return null;
 
-  // Cheapest affordable drug the player can buy at least 5 units of with ~70% of cash
+  // Cheapest affordable drug — prefer a 5+ unit lot, settle for 2+ on broke starts
   const budget = Math.max(100, Math.round((state.cash || 0) * 0.7));
   let pick = null;
-  for (const d of DRUGS) {
-    const p = state.prices[d.id];
-    if (!p || p <= 0) continue;
-    if (d.minLevel && d.minLevel > 1) continue;
-    if (Math.floor(budget / p) >= 5 && (!pick || p < state.prices[pick.id])) pick = d;
+  for (const minQty of [5, 3, 2]) {
+    for (const d of DRUGS) {
+      const p = state.prices[d.id];
+      if (!p || p <= 0) continue;
+      if (d.minLevel && d.minLevel > 1) continue;
+      if (Math.floor(budget / p) >= minQty && (!pick || p < state.prices[pick.id])) pick = d;
+    }
+    if (pick) break;
   }
   if (!pick) { eg.fired.day1 = true; return null; } // broke beyond help; loan shark tutorial covers it
 

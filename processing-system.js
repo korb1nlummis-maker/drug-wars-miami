@@ -241,6 +241,9 @@ function processProcessingDaily(state) {
   state.processing.activeJobs = ongoing;
 
   for (const job of completed) {
+    if (job.recipeId === 'designer_blend' && state.achievementStats) {
+      state.achievementStats.designerBlendsCooked = (state.achievementStats.designerBlendsCooked || 0) + 1;
+    }
     state.processing.completedBatches.push(job);
     state.processing.totalBatchesCooked = (state.processing.totalBatchesCooked || 0) + 1;
     gainChemistryXp(state, 2);
