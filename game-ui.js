@@ -644,6 +644,10 @@ function renderCharacterSelect() {
 // ============================================================
 function render() {
   const app = document.getElementById('app');
+  // Keep the money ledger honest (cash = dirty + clean) before drawing it
+  if (typeof gameState !== 'undefined' && gameState && typeof normalizeMoneyLedger === 'function') {
+    normalizeMoneyLedger(gameState);
+  }
   // Changing screens dismisses any lingering modal (bank, loan shark, etc.)
   if (render._lastScreen !== currentScreen) {
     const mc = document.getElementById('modal-container');

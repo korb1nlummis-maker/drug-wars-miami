@@ -528,10 +528,11 @@ function launderMoney(state, amount) {
     state.investigation.level = getInvestigationLevel(state.investigation.points);
   }
 
-  // Convert dirty → clean money
+  // Convert dirty → clean: the laundered amount leaves the cash ledger for the
+  // bank, so on-hand dirty shrinks and cleanMoney is re-derived (cash - dirty)
   var dirtyConverted = Math.min(actual, state.dirtyMoney || 0);
   state.dirtyMoney = Math.max(0, (state.dirtyMoney || 0) - dirtyConverted);
-  state.cleanMoney = (state.cleanMoney || 0) + actual;
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
 
   // Track totals
   if (state.stats) state.stats.totalLaunderedMoney = (state.stats.totalLaunderedMoney || 0) + actual;
@@ -3955,6 +3956,9 @@ function waitDay(state) {
   // Safety: prevent negative cash from any source
   if (state.cash < 0) state.cash = 0;
 
+  // Re-square the money ledger after everything above touched cash
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
+
   // Safety: clean corrupted inventory entries
   if (state.inventory) {
     for (const id of Object.keys(state.inventory)) {
@@ -4155,6 +4159,9 @@ function buyDrug(state, drugId, amount) {
   if (amount > available) return { success: false, msg: `Only ${available} spaces available.` };
 
   state.cash -= totalCost;
+  // Street purchases burn dirty cash first — the corner doesn't ask questions
+  state.dirtyMoney = Math.max(0, (state.dirtyMoney || 0) - totalCost);
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
   state.inventory[drugId] = (state.inventory[drugId] || 0) + amount;
   state.drugsBought += amount;
   // Track per-drug stats
@@ -4242,6 +4249,21 @@ function buyDrug(state, drugId, amount) {
   const result = { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}${ambushMsg}` };
   if (factionDealMsgs.length > 0) result.factionMsgs = factionDealMsgs;
   return result;
+}
+
+// Money ledger invariant: cash = dirtyMoney + cleanMoney.
+// dirtyMoney is the authoritative sub-ledger (investigation and laundering key
+// off it); cleanMoney is derived. Any code that mutates cash can call this to
+// re-square the books — spends implicitly come out of clean money first, and
+// once cash drops below the dirty pile, the dirty pile shrinks with it.
+function normalizeMoneyLedger(state) {
+  if (!state) return;
+  if (typeof state.cash !== 'number' || isNaN(state.cash)) state.cash = 0;
+  state.cash = Math.round(state.cash);
+  let dirty = (typeof state.dirtyMoney === 'number' && !isNaN(state.dirtyMoney)) ? Math.round(state.dirtyMoney) : 0;
+  dirty = Math.max(0, Math.min(dirty, Math.max(0, state.cash)));
+  state.dirtyMoney = dirty;
+  state.cleanMoney = Math.max(0, state.cash - dirty);
 }
 
 // Street dealers buy from you below the listed market price. This spread is what
@@ -4341,6 +4363,7 @@ function sellDrug(state, drugId, amount) {
   state.cash += totalRevenue;
   // Drug sales produce DIRTY money
   state.dirtyMoney = (state.dirtyMoney || 0) + totalRevenue;
+  if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
   state.inventory[drugId] -= amount;
   if (state.inventory[drugId] === 0) delete state.inventory[drugId];
   state.drugsSold += amount;
