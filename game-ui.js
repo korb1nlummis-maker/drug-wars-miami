@@ -69,6 +69,77 @@ function _drainNotifQueue() {
   setTimeout(advance, hold);
 }
 
+// ============================================================
+// MIAMI SKYLINE BACKDROP — inline SVG scene used by the intro,
+// endings, and title. Variants: 'sunset' | 'dawn' | 'night'
+// ============================================================
+function buildMiamiSkyline(variant) {
+  const v = {
+    sunset: { skyTop: '#12061f', skyMid: '#3d1054', horizon: '#ff2d95', sun1: '#ffe600', sun2: '#ff2d95', water: '#0a0618', glow: 'rgba(255,45,149,0.55)', win1: '#00f0ff', win2: '#ffe600' },
+    dawn:   { skyTop: '#041520', skyMid: '#0a3550', horizon: '#00f0ff', sun1: '#fffbe0', sun2: '#ffe600', water: '#02101a', glow: 'rgba(0,240,255,0.45)',  win1: '#ffe600', win2: '#00f0ff' },
+    night:  { skyTop: '#050508', skyMid: '#1c0a14', horizon: '#8b1130', sun1: '#ff4444', sun2: '#8b1130', water: '#040406', glow: 'rgba(255,68,68,0.35)',  win1: '#ff4444', win2: '#553355' },
+  }[variant] || {};
+  const uid = 'sky_' + (variant || 'sunset');
+  // Two rows of tower silhouettes + palms + sun with synthwave slats + reflection
+  return `
+  <svg class="scene-skyline-svg" viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="${uid}_sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.skyTop}"/><stop offset="62%" stop-color="${v.skyMid}"/><stop offset="100%" stop-color="${v.horizon}"/>
+      </linearGradient>
+      <linearGradient id="${uid}_sun" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.sun1}"/><stop offset="100%" stop-color="${v.sun2}"/>
+      </linearGradient>
+      <linearGradient id="${uid}_refl" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${v.glow}"/><stop offset="100%" stop-color="transparent"/>
+      </linearGradient>
+      <clipPath id="${uid}_sunclip"><rect x="310" y="60" width="180" height="150"/></clipPath>
+    </defs>
+    <rect x="0" y="0" width="800" height="212" fill="url(#${uid}_sky)"/>
+    <g clip-path="url(#${uid}_sunclip)">
+      <circle class="skyline-sun" cx="400" cy="150" r="72" fill="url(#${uid}_sun)"/>
+      <rect x="310" y="128" width="180" height="5"  fill="${v.skyMid}"/>
+      <rect x="310" y="146" width="180" height="7"  fill="${v.skyMid}"/>
+      <rect x="310" y="166" width="180" height="9"  fill="${v.skyMid}"/>
+      <rect x="310" y="188" width="180" height="11" fill="${v.skyMid}"/>
+    </g>
+    <!-- back row towers -->
+    <g fill="#0d0a18" opacity="0.85">
+      <rect x="20" y="120" width="42" height="92"/><rect x="70" y="95" width="30" height="117"/>
+      <rect x="150" y="130" width="55" height="82"/><rect x="240" y="105" width="26" height="107"/>
+      <rect x="520" y="112" width="34" height="100"/><rect x="600" y="90" width="46" height="122"/>
+      <rect x="700" y="125" width="38" height="87"/><rect x="748" y="102" width="26" height="110"/>
+    </g>
+    <!-- front row towers with lit windows -->
+    <g fill="#070512">
+      <rect x="0" y="150" width="34" height="62"/><rect x="105" y="140" width="40" height="72"/>
+      <rect x="210" y="152" width="46" height="60"/><rect x="268" y="132" width="30" height="80"/>
+      <rect x="475" y="145" width="40" height="67"/><rect x="560" y="155" width="34" height="57"/>
+      <rect x="655" y="138" width="36" height="74"/><rect x="770" y="150" width="30" height="62"/>
+    </g>
+    <g class="skyline-windows">
+      <rect x="112" y="148" width="4" height="4" fill="${v.win1}"/><rect x="126" y="160" width="4" height="4" fill="${v.win2}"/>
+      <rect x="219" y="162" width="4" height="4" fill="${v.win2}"/><rect x="236" y="174" width="4" height="4" fill="${v.win1}"/>
+      <rect x="274" y="140" width="4" height="4" fill="${v.win1}"/><rect x="283" y="156" width="4" height="4" fill="${v.win2}"/>
+      <rect x="482" y="153" width="4" height="4" fill="${v.win2}"/><rect x="497" y="167" width="4" height="4" fill="${v.win1}"/>
+      <rect x="662" y="146" width="4" height="4" fill="${v.win1}"/><rect x="676" y="170" width="4" height="4" fill="${v.win2}"/>
+      <rect x="610" y="100" width="4" height="4" fill="${v.win1}"/><rect x="626" y="118" width="4" height="4" fill="${v.win2}"/>
+    </g>
+    <!-- palms -->
+    <g fill="#05030c">
+      <path d="M 60 212 q 4 -38 -6 -52 q 14 10 12 24 q 8 -22 24 -26 q -14 12 -16 26 q 12 -14 28 -12 q -18 8 -26 20 q 10 -4 20 2 q -14 2 -22 10 l -4 8 z"/>
+      <path d="M 736 212 q -4 -34 6 -46 q -12 8 -11 21 q -7 -19 -21 -23 q 12 11 14 23 q -11 -12 -25 -10 q 16 7 23 18 q -9 -3 -18 2 q 13 2 20 9 l 4 6 z"/>
+    </g>
+    <!-- water + reflection -->
+    <rect x="0" y="210" width="800" height="90" fill="${v.water}"/>
+    <rect x="330" y="210" width="140" height="90" fill="url(#${uid}_refl)" opacity="0.8"/>
+    <g stroke="${v.horizon}" stroke-width="1" opacity="0.35">
+      <line x1="345" y1="222" x2="455" y2="222"/><line x1="358" y1="238" x2="442" y2="238"/>
+      <line x1="336" y1="256" x2="464" y2="256"/><line x1="352" y1="276" x2="448" y2="276"/>
+    </g>
+  </svg>`;
+}
+
 // Progressive unlock toast notification
 let _unlockToastQueue = [];
 let _unlockToastShowing = false;
@@ -813,7 +884,8 @@ function renderTitle() {
 
   return `
     <div class="title-screen">
-      <div class="title-neon-border">
+      <div class="scene-skyline" style="height:55%">${buildMiamiSkyline('sunset')}</div>
+      <div class="title-neon-border" style="position:relative;z-index:1">
         <div class="title-palm">🌴</div>
         <h1 class="title-main">DRUG WARS</h1>
         <h2 class="title-sub">M I A M I &nbsp; V I C E &nbsp; E D I T I O N</h2>
@@ -3710,7 +3782,8 @@ function renderGameOver() {
 
   return `
     <div class="title-screen gameover-screen">
-      <div class="title-neon-border">
+      <div class="title-neon-border" style="position:relative;z-index:1">
+        <div class="gameover-hero">${buildMiamiSkyline(won ? 'dawn' : 'night')}</div>
         <h1 class="${won ? 'neon-green' : 'neon-red'}">${won ? '🏆 GAME OVER' : '💀 GAME OVER'}</h1>
         <h2 class="title-sub">${gameState.health <= 0 ? 'YOU DIED' : (gameState.debt > 0 && !won ? 'THE LOAN SHARK SENDS HIS REGARDS...' : (won ? 'YOU MADE IT OUT ALIVE' : 'TIME\'S UP'))}</h2>
         <div class="title-divider"></div>
@@ -5371,13 +5444,17 @@ function renderIntro() {
     return `<div class="intro-dot ${cls}"></div>`;
   }).join('');
 
+  // Mood → skyline variant: red/dark pages read as night, the rest as sunset
+  const skyVariant = (page.mood === 'red' || page.mood === 'dark') ? 'night' : 'sunset';
   return `
     <div class="intro-screen intro-mood-${page.mood || 'dark'}" key="intro-${introPageIndex}">
+      <div class="scene-skyline">${buildMiamiSkyline(skyVariant)}</div>
+      <div class="intro-content">
       ${char ? `<div class="intro-char-name">${char.emoji} ${char.name}</div>
       <div class="intro-char-tagline">${char.tagline || char.subtitle || ''}</div>` : ''}
       <div class="intro-text">${page.text}</div>
       <div class="intro-page-dots">${dots}</div>
-      <div style="display:flex;gap:1rem;margin-top:1rem">
+      <div style="display:flex;gap:1rem;margin-top:1rem;justify-content:center">
         ${introPageIndex > 0 ? `<button class="btn btn-secondary" onclick="introPageIndex--;render()">◀ Back</button>` : ''}
         ${isLast
           ? `<button class="btn btn-primary btn-glow" onclick="startGameAfterIntro()">▶ BEGIN YOUR STORY</button>`
@@ -5385,6 +5462,7 @@ function renderIntro() {
         }
       </div>
       <button class="btn btn-secondary" style="margin-top:1rem;opacity:0.5;font-size:0.8rem" onclick="startGameAfterIntro()">Skip Intro</button>
+      </div>
     </div>`;
 }
 
