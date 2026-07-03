@@ -358,7 +358,15 @@ function marketTick() {
     gameState.prices[id] = next;
     // In-place DOM update — no full render (would reset scroll/focus)
     const priceEl = document.querySelector('[data-tick-price="' + id + '"]');
-    if (priceEl) priceEl.textContent = '$' + next.toLocaleString();
+    if (priceEl) {
+      priceEl.textContent = '$' + next.toLocaleString();
+      // Brief color pulse in the move's direction
+      if (dir !== 0) {
+        priceEl.classList.remove('tick-up', 'tick-down');
+        priceEl.classList.add(dir > 0 ? 'tick-up' : 'tick-down');
+        setTimeout(() => priceEl.classList.remove('tick-up', 'tick-down'), 700);
+      }
+    }
     const trendEl = document.querySelector('[data-tick-trend="' + id + '"]');
     if (trendEl && dir !== 0) {
       trendEl.textContent = dir > 0 ? '▲' : '▼';

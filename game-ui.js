@@ -141,6 +141,45 @@ function buildMiamiSkyline(variant) {
 }
 
 // ============================================================
+// JUICE — screen shake, cash count-up, trade row flashes
+// ============================================================
+function _shakeScreen() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  app.classList.remove('screen-shake');
+  void app.offsetWidth; // restart the animation if already running
+  app.classList.add('screen-shake');
+  setTimeout(() => app.classList.remove('screen-shake'), 500);
+}
+
+function _animateCashCounter(from, to) {
+  const el = document.querySelector('[data-cash-counter]');
+  if (!el || from === to || typeof requestAnimationFrame !== 'function') return;
+  const dur = 600;
+  const t0 = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = '$' + Math.round(from + (to - from) * eased).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  el.classList.add(to > from ? 'cash-up' : 'cash-down');
+  setTimeout(() => el.classList.remove('cash-up', 'cash-down'), 800);
+}
+
+function _flashTradeRow(drugId, mode) {
+  const cell = document.querySelector('[data-tick-price="' + drugId + '"]');
+  const tr = cell && cell.closest('tr');
+  if (!tr) return;
+  const cls = mode === 'buy' ? 'row-flash-buy' : 'row-flash-sell';
+  tr.classList.remove('row-flash-buy', 'row-flash-sell');
+  void tr.offsetWidth;
+  tr.classList.add(cls);
+  setTimeout(() => tr.classList.remove(cls), 1000);
+}
+
+// ============================================================
 // CHARACTER PORTRAITS — neon SVG medallions (no image assets)
 // ============================================================
 const CHAR_PORTRAIT_STYLE = {
@@ -921,6 +960,13 @@ function render() {
       _screenBeforeSwitch !== 'game' &&
       !['title', 'charselect', 'intro', 'howtoplay', 'highscores', 'gameover'].includes(_screenBeforeSwitch)) {
     try { app.insertAdjacentHTML('beforeend', renderTutorialOverlay()); } catch (e) { /* never break render */ }
+  }
+  // Juice: count the cash readout up/down when it changed since last render
+  if (typeof gameState !== 'undefined' && gameState) {
+    if (render._lastCash !== undefined && render._lastCash !== gameState.cash) {
+      _animateCashCounter(render._lastCash, gameState.cash);
+    }
+    render._lastCash = gameState.cash;
   }
   updateMusic();
 }
@@ -1731,7 +1777,7 @@ function renderGame() {
     <div class="status-bar">
       <div class="status-row">
         <span class="stat"><span class="stat-label">DAY</span> <span class="stat-value">${GAME_CONFIG.endlessMode ? gameState.day : gameState.day + '/' + GAME_CONFIG.totalDays}</span>${typeof getTimePeriod === 'function' ? ` <span style="font-size:0.7rem">${getTimePeriod(gameState).emoji}</span>` : ''}</span>
-        <span class="stat" title="Total cash. Dirty money needs laundering through front businesses."><span class="stat-label">CASH</span> <span class="stat-value neon-green">$${gameState.cash.toLocaleString()}</span>${(gameState.dirtyMoney || 0) > 1000 ? `<span style="font-size:0.55rem;color:var(--neon-red);margin-left:2px" title="Dirty money draws investigation. Launder through fronts!">💰${Math.round((gameState.dirtyMoney || 0) / Math.max(1, gameState.cash) * 100)}%🔴</span>` : ''}</span>
+        <span class="stat" title="Total cash. Dirty money needs laundering through front businesses."><span class="stat-label">CASH</span> <span class="stat-value neon-green" data-cash-counter>$${gameState.cash.toLocaleString()}</span>${(gameState.dirtyMoney || 0) > 1000 ? `<span style="font-size:0.55rem;color:var(--neon-red);margin-left:2px" title="Dirty money draws investigation. Launder through fronts!">💰${Math.round((gameState.dirtyMoney || 0) / Math.max(1, gameState.cash) * 100)}%🔴</span>` : ''}</span>
         <span class="stat"><span class="stat-label">BANK</span> <span class="stat-value neon-cyan">$${gameState.bank.toLocaleString()}</span></span>
         <span class="stat"><span class="stat-label">DEBT</span> <span class="stat-value ${gameState.debt > 0 ? 'neon-red' : 'neon-green'}">$${gameState.debt.toLocaleString()}</span></span>
       </div>
@@ -2622,7 +2668,10 @@ function executeTrade() {
         showNotification(fMsg, fMsg.includes('ambush') || fMsg.includes('😡') ? 'error' : 'info');
       }
     }
+    const tradedDrug = selectedDrug;
+    const tradedMode = tradeMode;
     closeTrade();
+    _flashTradeRow(tradedDrug, tradedMode);
   } else {
     alert(result.msg);
   }
@@ -3804,7 +3853,7 @@ function doCombat(action) {
   playSound(action === 'fight' ? 'fight' : 'click');
   const result = resolveCombatRound(gameState, action, combatEvent);
 
-  if (result.playerDamage > 0) playSound('hurt');
+  if (result.playerDamage > 0) { playSound('hurt'); _shakeScreen(); }
 
   const log = document.getElementById('combat-log');
   if (log) {
