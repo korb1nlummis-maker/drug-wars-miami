@@ -3348,8 +3348,8 @@ function selectDestination(destId) {
         ${isTerr ? '<div style="color:var(--neon-purple);font-weight:bold;font-size:0.8rem;">🏴 YOUR TERRITORY</div>' : ''}
       </div>
       ${contactHtml}
-      <div class="transport-grid">
-        ${allTransports.map(t => `
+      ${(() => {
+        const cardFor = t => `
           <div class="transport-card ${t.locked || !t.canAfford || !t.canCarry ? 'disabled' : ''}" onclick="${!t.locked && t.canAfford && t.canCarry ? `doTravel('${destId}', '${t.id}'${t.isWorldTransport ? ', true' : ''})` : ''}" style="${t.locked ? 'opacity:0.4' : ''}">
             <div class="transport-name">${t.emoji || ''} ${t.name}</div>
             <div class="transport-cost">$${t.cost.toLocaleString()}</div>
@@ -3358,9 +3358,24 @@ function selectDestination(destId) {
             <div class="transport-carry">Carry: ${t.inventoryLimit.toLocaleString()} units ${!t.canCarry && !t.locked ? '<span class="neon-red">(TOO MUCH CARGO!)</span>' : ''}</div>
             ${t.locked ? '<div class="neon-red">🔒 Requires Lvl ' + (t.minLevel || t.minRegionTier || '?') + '</div>' : !t.canAfford ? '<div class="neon-red">Can\'t afford</div>' : ''}
             ${t.desc ? `<div style="font-size:0.6rem;color:var(--text-dim);margin-top:0.2rem">${t.desc}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
+          </div>`;
+        const open = allTransports.filter(t => !t.locked);
+        const locked = allTransports.filter(t => t.locked)
+          .sort((a, b) => (a.minLevel || a.minRegionTier || 99) - (b.minLevel || b.minRegionTier || 99));
+        let html = `<div class="transport-grid">${open.map(cardFor).join('')}</div>`;
+        // Locked tiers fold into one line instead of a wall of grey cards
+        if (locked.length) {
+          const next = locked[0];
+          html += `
+            <details style="margin-top:0.4rem;">
+              <summary style="cursor:pointer;font-size:0.75rem;color:var(--text-dim);padding:0.35rem 0.5rem;border:1px dashed var(--border-color);border-radius:6px;list-style:none;">
+                🔒 ${locked.length} more transport${locked.length > 1 ? 's' : ''} locked — next: <b style="color:var(--neon-yellow)">${next.emoji || ''} ${next.name}</b> at Lvl ${next.minLevel || next.minRegionTier || '?'} <span style="float:right">▾ show</span>
+              </summary>
+              <div class="transport-grid" style="margin-top:0.3rem;">${locked.map(cardFor).join('')}</div>
+            </details>`;
+        }
+        return html;
+      })()}
     </div>
   `;
   document.getElementById('transport-panel').innerHTML = html;
