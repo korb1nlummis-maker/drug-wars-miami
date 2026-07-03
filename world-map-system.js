@@ -535,6 +535,16 @@ function renderRegionMapView(regionId) {
 function mapSelectDistrict(distId) {
   mapSelectedDistrict = (mapSelectedDistrict === distId) ? null : distId;
   if (typeof render === 'function') render();
+  // The panel renders below the map — often below the fold on phones.
+  // Bring it into view so a tap always shows visible feedback.
+  if (mapSelectedDistrict && typeof document !== 'undefined') {
+    setTimeout(function () {
+      const panel = document.querySelector('.district-intel-panel');
+      if (panel && typeof panel.scrollIntoView === 'function') {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
+  }
 }
 
 // Intel panel for the tapped district: ecology, prices, stash, actions
@@ -602,7 +612,7 @@ function renderDistrictIntelPanel(regionId, coords) {
   const assets = [controlled ? '🏴 YOUR TURF' : null, fronts ? `🏢 ${fronts} front${fronts > 1 ? 's' : ''}` : null, hasDist ? '📡 distribution' : null].filter(Boolean).join(' · ');
 
   return `
-    <div style="border-top:1px solid rgba(0,240,255,0.15);background:rgba(0,15,30,0.85);padding:0.6rem 0.8rem">
+    <div class="district-intel-panel" style="border-top:1px solid rgba(0,240,255,0.15);background:rgba(0,15,30,0.85);padding:0.6rem 0.8rem">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <div>
           <span style="font-weight:bold;color:var(--neon-cyan);font-size:1rem">${loc.emoji || ''} ${loc.name}</span>
