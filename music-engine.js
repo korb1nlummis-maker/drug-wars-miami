@@ -28,6 +28,7 @@ const MusicEngine = (() => {
 
   // --- Loading state ---
   let loadingTrack = '';  // Name of track currently loading (empty = not loading)
+  let allTracksFailedLogged = false;  // Only warn once when every playlist track fails
 
   // --- Track URL definitions ---
   const TRACK_URLS = {
@@ -449,14 +450,17 @@ const MusicEngine = (() => {
         }, 50);
       }
     } else if (isTrackError(trackName)) {
-      console.warn(`[MusicEngine] Playlist track "${trackName}" failed to load, skipping.`);
+      if (!allTracksFailedLogged) console.warn(`[MusicEngine] Playlist track "${trackName}" failed to load, skipping.`);
       bgPlaylistIndex = (bgPlaylistIndex + 1) % BG_PLAYLIST.length;
       // Avoid infinite loop if all tracks fail
       let attempts = 0;
       const tryNext = () => {
         attempts++;
         if (attempts >= BG_PLAYLIST.length) {
-          console.error('[MusicEngine] All playlist tracks failed to load.');
+          if (!allTracksFailedLogged) {
+            console.error('[MusicEngine] All playlist tracks failed to load.');
+            allTracksFailedLogged = true;
+          }
           isPlaying = false;
           return;
         }
@@ -575,6 +579,10 @@ const MusicEngine = (() => {
   // SOUND EFFECTS (procedural Web Audio API - preserved from original)
   // ============================================================
   function playSfx(type) {
+    try { playSfxInner(type); } catch (e) { /* rapid clicks can race oscillator start/stop */ }
+  }
+
+  function playSfxInner(type) {
     if (!ctx) init();
     if (!ctx) return;
 

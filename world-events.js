@@ -3,6 +3,11 @@
 // Region-specific random events affecting prices, heat, and gameplay
 // ============================================================
 
+// Events that reference a specific drug carry a `reqDrugs` list: they can only
+// fire once every listed drug is actually unlocked for the current state
+// (minDay / minLevel / NG+ gate). Keeps world news consistent with the
+// stretched drug unlock schedule (ketamine 1300, heroin 2600, cocaine 3200,
+// fentanyl 4000 NG+ only).
 const WORLD_EVENTS = {
   caribbean: [
     { id: 'hurricane_season', name: 'Hurricane Warning', emoji: '🌀', chance: 0.04,
@@ -23,7 +28,7 @@ const WORLD_EVENTS = {
   ],
 
   south_america: [
-    { id: 'coca_burn', name: 'Coca Field Burn', emoji: '🔥', chance: 0.05,
+    { id: 'coca_burn', name: 'Coca Field Burn', emoji: '🔥', chance: 0.05, reqDrugs: ['cocaine'],
       effects: { cocaineSupplyDrop: 40, cocainePriceSpike: 2.0 },
       desc: 'Government burns thousands of hectares of coca. Cocaine prices explode.' },
     { id: 'cartel_war_sa', name: 'Cartel Territorial War', emoji: '⚔️', chance: 0.04,
@@ -32,10 +37,10 @@ const WORLD_EVENTS = {
     { id: 'political_coup', name: 'Political Instability', emoji: '🏛️', chance: 0.02,
       effects: { policeReduced: true, corruptionUp: 20 },
       desc: 'Government crisis. Police and military distracted. Corruption rampant.' },
-    { id: 'jungle_lab_bust', name: 'Jungle Lab Discovered', emoji: '🧪', chance: 0.04,
+    { id: 'jungle_lab_bust', name: 'Jungle Lab Discovered', emoji: '🧪', chance: 0.04, reqDrugs: ['methamphetamine'],
       effects: { processingRisk: 0.2, methSupplyDrop: 25 },
       desc: 'Military raids hidden jungle processing labs. Production takes a hit.' },
-    { id: 'new_coca_harvest', name: 'Bumper Coca Harvest', emoji: '🌿', chance: 0.03,
+    { id: 'new_coca_harvest', name: 'Bumper Coca Harvest', emoji: '🌿', chance: 0.03, reqDrugs: ['cocaine'],
       effects: { cocaineSupplyBoost: 35, cocainePriceDrop: 0.6 },
       desc: 'Perfect growing season produces record coca yields. Prices plummet.' },
   ],
@@ -62,7 +67,7 @@ const WORLD_EVENTS = {
     { id: 'border_lockdown', name: 'Border Lockdown', emoji: '🚧', chance: 0.04,
       effects: { travelBlocked: true, importRisk: 0.3, exportBlocked: true },
       desc: 'US-Mexico border sealed after intelligence tip. All crossings halted.' },
-    { id: 'fentanyl_bust', name: 'Massive Fentanyl Seizure', emoji: '💊', chance: 0.04,
+    { id: 'fentanyl_bust', name: 'Massive Fentanyl Seizure', emoji: '💊', chance: 0.04, reqDrugs: ['fentanyl'],
       effects: { fentanylSupplyDrop: 50, priceSurge: 1.8 },
       desc: 'Navy seizes record fentanyl shipment. Street prices go through the roof.' },
     { id: 'narco_corrido', name: 'Narco Culture Surge', emoji: '🎵', chance: 0.02,
@@ -83,7 +88,7 @@ const WORLD_EVENTS = {
     { id: 'legalization_vote', name: 'Cannabis Legalization Vote', emoji: '🗳️', chance: 0.02,
       effects: { weedPriceDrop: 0.5, weedDemandDrop: 30 },
       desc: 'State legalizes recreational cannabis. Street weed prices crater.' },
-    { id: 'opioid_crisis', name: 'Opioid Crisis Surge', emoji: '💉', chance: 0.04,
+    { id: 'opioid_crisis', name: 'Opioid Crisis Surge', emoji: '💉', chance: 0.04, reqDrugs: ['heroin'],
       effects: { heroinDemand: 40, fentanylDemand: 50, prescriptionDemand: 30 },
       desc: 'Opioid epidemic worsens. Demand for painkillers and heroin surges.' },
     { id: 'rap_influence', name: 'Trap Music Boom', emoji: '🎤', chance: 0.02,
@@ -95,7 +100,7 @@ const WORLD_EVENTS = {
     { id: 'interpol_operation', name: 'Interpol Operation', emoji: '🔵', chance: 0.04,
       effects: { heatGain: 20, crossBorderRisk: 0.2 },
       desc: 'Interpol coordinates multi-country operation targeting drug networks.' },
-    { id: 'port_seizure', name: 'Major Port Seizure', emoji: '📦', chance: 0.05,
+    { id: 'port_seizure', name: 'Major Port Seizure', emoji: '📦', chance: 0.05, reqDrugs: ['cocaine'],
       effects: { cocaineSupplyDrop: 35, importRisk: 0.25 },
       desc: 'Customs intercepts massive cocaine shipment at European port.' },
     { id: 'rave_culture', name: 'Festival Season', emoji: '🎧', chance: 0.03,
@@ -116,10 +121,10 @@ const WORLD_EVENTS = {
     { id: 'conflict_zone', name: 'Regional Conflict Escalation', emoji: '💣', chance: 0.03,
       effects: { policeReduced: true, weaponsDemand: 40, dangerUp: 5 },
       desc: 'Armed conflict escalates. Law enforcement diverted to military operations.' },
-    { id: 'heroin_route', name: 'Balkan Route Reopened', emoji: '🛤️', chance: 0.03,
+    { id: 'heroin_route', name: 'Balkan Route Reopened', emoji: '🛤️', chance: 0.03, reqDrugs: ['heroin'],
       effects: { heroinSupplyBoost: 30, heroinPriceDrop: 0.7 },
       desc: 'Classic Balkan heroin route from Afghanistan reopened by smugglers.' },
-    { id: 'synth_lab_boom', name: 'Synthetic Drug Lab Boom', emoji: '🧪', chance: 0.03,
+    { id: 'synth_lab_boom', name: 'Synthetic Drug Lab Boom', emoji: '🧪', chance: 0.03, reqDrugs: ['methamphetamine'],
       effects: { methSupplyBoost: 25, ecstasySupplyBoost: 20 },
       desc: 'Abandoned factories converted to massive synthetic drug labs.' },
   ],
@@ -131,7 +136,7 @@ const WORLD_EVENTS = {
     { id: 'corruption_scandal', name: 'Government Corruption Exposed', emoji: '📰', chance: 0.03,
       effects: { corruptionDown: 10, policeIntensityUp: true },
       desc: 'International media exposes drug-government ties. Temporary crackdown.' },
-    { id: 'new_route_africa', name: 'New Atlantic Route', emoji: '🌊', chance: 0.02,
+    { id: 'new_route_africa', name: 'New Atlantic Route', emoji: '🌊', chance: 0.02, reqDrugs: ['cocaine'],
       effects: { importCostDown: 0.2, cocaineFlowing: true },
       desc: 'South American cartels establish new Atlantic cocaine highway via Africa.' },
     { id: 'pirate_attack', name: 'Gulf of Guinea Pirates', emoji: '🏴‍☠️', chance: 0.04,
@@ -143,13 +148,13 @@ const WORLD_EVENTS = {
     { id: 'junta_raid', name: 'Military Junta Raid', emoji: '🪖', chance: 0.04,
       effects: { heatGain: 15, dangerUp: 3, propertyRisk: true },
       desc: 'Military government raids suspected drug operations. No due process.' },
-    { id: 'opium_harvest', name: 'Opium Harvest Season', emoji: '🌸', chance: 0.03,
+    { id: 'opium_harvest', name: 'Opium Harvest Season', emoji: '🌸', chance: 0.03, reqDrugs: ['opium', 'heroin'],
       effects: { opiumSupplyBoost: 40, heroinPriceDrop: 0.6 },
       desc: 'Golden Triangle opium poppy harvest. Heroin supply floods the market.' },
     { id: 'triad_ceremony', name: 'Triad Initiation Ceremony', emoji: '🀄', chance: 0.02,
       effects: { factionRelationShift: true, recruitmentBoost: true },
       desc: 'Major Triad ceremony signals shifting alliances. New opportunities emerge.' },
-    { id: 'meth_superlab', name: 'Meth Superlab Discovery', emoji: '💎', chance: 0.03,
+    { id: 'meth_superlab', name: 'Meth Superlab Discovery', emoji: '💎', chance: 0.03, reqDrugs: ['methamphetamine'],
       effects: { methSupplyBoost: 50, methPriceDrop: 0.5 },
       desc: 'Industrial-scale meth superlab floods Southeast Asian markets.' },
     { id: 'duterte_style', name: 'Anti-Drug War Escalation', emoji: '⚠️', chance: 0.03,
@@ -157,6 +162,38 @@ const WORLD_EVENTS = {
       desc: 'Government launches brutal anti-drug campaign. Extrajudicial killings rise.' },
   ],
 };
+
+// --- Drug unlock gate for world events ---
+// A drug counts as unlocked when: not NG+-only (unless NG+ is active),
+// state.day >= minDay, and the player's kingpin level >= minLevel.
+function isWorldEventDrugUnlocked(state, drugId) {
+  if (typeof DRUGS === 'undefined' || !state) return true;
+  const drug = DRUGS.find(d => d.id === drugId);
+  if (!drug) return true;
+  if (drug.ngPlus) {
+    if (typeof isDrugAvailableNGPlus === 'function') {
+      if (!isDrugAvailableNGPlus(state, drug)) return false;
+    } else if (!(state.newGamePlus && state.newGamePlus.active)) {
+      return false;
+    }
+  }
+  if ((state.day || 1) < (drug.minDay || 1)) return false;
+  let level = 1;
+  if (typeof getKingpinLevel === 'function') {
+    try {
+      const l = getKingpinLevel(state.xp || 0);
+      if (l && l.level) level = l.level;
+    } catch (e) { level = 1; }
+  }
+  if (level < (drug.minLevel || 1)) return false;
+  return true;
+}
+
+// Returns true if all drugs an event references are unlocked
+function worldEventDrugsAvailable(state, evt) {
+  if (!evt.reqDrugs || evt.reqDrugs.length === 0) return true;
+  return evt.reqDrugs.every(id => isWorldEventDrugUnlocked(state, id));
+}
 
 // Process world events daily
 function processWorldEvents(state) {
@@ -170,6 +207,9 @@ function processWorldEvents(state) {
     if (!events) continue;
 
     for (const evt of events) {
+      // Skip events about drugs the player hasn't unlocked yet
+      // (e.g. no cocaine news before day 3200, no fentanyl news outside NG+)
+      if (!worldEventDrugsAvailable(state, evt)) continue;
       if (Math.random() < evt.chance) {
         // Apply event effects
         const result = applyWorldEventEffects(state, regionId, evt);

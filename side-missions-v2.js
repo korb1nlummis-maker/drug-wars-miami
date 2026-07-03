@@ -24,8 +24,8 @@ function processSideMissionsV2Daily(state) {
   const sm = state.sideMissionsV2;
   const msgs = [];
 
-  // Check for new chains becoming available (1-2 per week chance)
-  if (Math.random() < 0.18 && sm.availableChains.length < 3) {
+  // Check for new chains becoming available (~1 offer per 20 days)
+  if (Math.random() < 0.05 && sm.availableChains.length < 3) {
     const eligible = SIDE_MISSIONS_V2.filter(chain => {
       if (sm.activeChains[chain.id]) return false;
       if (sm.completedChains.includes(chain.id)) return false;
@@ -44,7 +44,8 @@ function processSideMissionsV2Daily(state) {
   sm.availableChains = sm.availableChains.filter(a => {
     const age = (state.day || 0) - a.offeredDay;
     if (age > 14) {
-      msgs.push(`⏰ Mission "${getChainById(a.id).name}" expired.`);
+      const expiredChain = getChainById(a.id);
+      msgs.push(`⏰ Mission "${expiredChain ? expiredChain.name : a.id}" expired.`);
       return false;
     }
     return true;
@@ -75,7 +76,7 @@ function checkChainCondition(state, cond) {
   if (cond.minHeat && (state.heat || 0) < cond.minHeat) return false;
   if (cond.minCrew && (state.henchmen || []).length < cond.minCrew) return false;
   if (cond.minAct) {
-    const act = typeof getCurrentAct === 'function' ? getCurrentAct(state) : 1;
+    const act = typeof getCurrentActNumber === 'function' ? getCurrentActNumber(state) : 1;
     if (act < cond.minAct) return false;
   }
   if (cond.hasBusiness && state.businesses && (!state.businesses.owned || state.businesses.owned.length === 0)) return false;
@@ -155,8 +156,18 @@ function resolveChainChapter(state, chainId, outcomeIndex) {
 
   // Advance or complete
   if (active.currentChapter + 1 >= chain.chapters.length || outcome.endsChain) {
-    completeChainV2(state, chainId, outcome);
-    return { completed: true, result: outcome.result, reward: outcome.reward || null };
+    // Declining a chain at chapter 0 (endsChain with no effects/rewards) is not a completion:
+    // remove from active and log 'declined' without touching completed/failed stats.
+    const isDecline = outcome.endsChain === true &&
+      active.currentChapter === 0 &&
+      !outcome.reward &&
+      (!outcome.effects || Object.keys(outcome.effects).length === 0);
+    if (isDecline) {
+      declineChainV2(state, chainId);
+    } else {
+      completeChainV2(state, chainId, outcome);
+    }
+    return { completed: true, declined: isDecline, result: outcome.result, reward: outcome.reward || null };
   } else {
     active.currentChapter++;
     active.chapterStartDay = state.day || 0;
@@ -170,6 +181,12 @@ function completeChainV2(state, chainId, finalOutcome) {
   if (!sm.completedChains.includes(chainId)) sm.completedChains.push(chainId);
   sm.stats.totalCompleted++;
   sm.chainLog.push({ id: chainId, action: 'completed', day: state.day || 0 });
+}
+
+function declineChainV2(state, chainId) {
+  const sm = state.sideMissionsV2;
+  delete sm.activeChains[chainId];
+  sm.chainLog.push({ id: chainId, action: 'declined', day: state.day || 0 });
 }
 
 function failChainV2(state, chainId, reason) {
@@ -308,7 +325,7 @@ const SIDE_MISSIONS_V2 = [
   // === 4. MARINA HEIST ===
   {
     id: 'marina_heist', name: 'Marina Heist', emoji: '🚢', category: 'heist',
-    condition: { minDay: 30, minCrew: 3, minAct: 2 },
+    condition: { minDay: 360, minCrew: 3, minAct: 2 },
     chapters: [
       { title: 'The Target', description: 'A yacht loaded with cartel money docks at Miami port for one night. $1M+ onboard. One night only.',
         outcomes: [
@@ -343,7 +360,7 @@ const SIDE_MISSIONS_V2 = [
   // === 5. THE FIGHT PROMOTER ===
   {
     id: 'fight_promoter', name: 'The Fight Promoter', emoji: '🥊', category: 'business',
-    condition: { minDay: 15, minCash: 10000 },
+    condition: { minDay: 450, minCash: 10000 },
     chapters: [
       { title: 'The Proposition', description: 'An underground fight promoter needs a financial backer. $10K buy-in for 50% of the operation.',
         outcomes: [
@@ -386,7 +403,7 @@ const SIDE_MISSIONS_V2 = [
   // === 6. WITNESS RELOCATION ===
   {
     id: 'witness_relocation', name: 'Witness Relocation', emoji: '🔒', category: 'intel',
-    condition: { minDay: 30, minAct: 2 },
+    condition: { minDay: 540, minAct: 2 },
     chapters: [
       { title: 'The Protected Witness', description: 'A key witness against a major rival is in federal witness protection. If they testify, the rival goes down.',
         outcomes: [
@@ -414,7 +431,7 @@ const SIDE_MISSIONS_V2 = [
   // === 7. THE DIVER ===
   {
     id: 'the_diver', name: 'The Diver', emoji: '🤿', category: 'treasure',
-    condition: { minDay: 20, minCash: 20000 },
+    condition: { minDay: 630, minCash: 20000 },
     chapters: [
       { title: 'Sunken Treasure', description: 'A scuba diver found a 1980s drug shipment on the ocean floor. He needs $20K to fund the recovery.',
         outcomes: [
@@ -443,7 +460,7 @@ const SIDE_MISSIONS_V2 = [
   // === 8. HOSPITAL HEIST ===
   {
     id: 'hospital_heist', name: 'Hospital Heist', emoji: '💊', category: 'heist',
-    condition: { minDay: 25, minCrew: 2 },
+    condition: { minDay: 720, minCrew: 2 },
     chapters: [
       { title: 'The Target', description: 'A pharmaceutical warehouse holds $200K+ in prescription drugs. Security is automated. Shift change at 3 AM.',
         outcomes: [
@@ -472,7 +489,7 @@ const SIDE_MISSIONS_V2 = [
   // === 9. DIPLOMAT\'S SON ===
   {
     id: 'diplomats_son', name: 'The Diplomat\'s Son', emoji: '🏛️', category: 'politics',
-    condition: { minDay: 20 },
+    condition: { minDay: 810 },
     chapters: [
       { title: 'The Debt', description: 'A foreign diplomat\'s son owes you $15K for product. He\'s hiding behind diplomatic immunity.',
         outcomes: [
@@ -501,7 +518,7 @@ const SIDE_MISSIONS_V2 = [
   // === 10. DOG TRACK ===
   {
     id: 'dog_track', name: 'Dog Track', emoji: '🐕', category: 'business',
-    condition: { minDay: 20, minCash: 20000 },
+    condition: { minDay: 900, minCash: 20000 },
     chapters: [
       { title: 'The Property', description: 'An abandoned dog racing track is for sale. Prime real estate with existing infrastructure.',
         outcomes: [
@@ -537,7 +554,7 @@ const SIDE_MISSIONS_V2 = [
   // === 11. THE TUNNELERS ===
   {
     id: 'tunnelers', name: 'The Tunnelers', emoji: '⛏️', category: 'infrastructure',
-    condition: { minDay: 25, minCash: 15000 },
+    condition: { minDay: 990, minCash: 15000 },
     chapters: [
       { title: 'The Offer', description: 'A crew of ex-miners offers to build tunnels between your properties. Invisible infrastructure.',
         outcomes: [
@@ -566,7 +583,7 @@ const SIDE_MISSIONS_V2 = [
   // === 12. FOOD TRUCK WARS ===
   {
     id: 'food_truck_wars', name: 'Food Truck Wars', emoji: '🌮', category: 'territory',
-    condition: { minDay: 15 },
+    condition: { minDay: 1080 },
     chapters: [
       { title: 'The Competitor', description: 'A rival\'s food truck operation has set up in your territory. They\'re selling more than tacos.',
         outcomes: [
@@ -602,7 +619,7 @@ const SIDE_MISSIONS_V2 = [
   // === 13. THE WHISTLEBLOWER ===
   {
     id: 'whistleblower', name: 'The Whistleblower', emoji: '📂', category: 'politics',
-    condition: { minDay: 25 },
+    condition: { minDay: 1170 },
     chapters: [
       { title: 'The Contact', description: 'A city government employee has evidence of massive corruption — bribes, kickbacks, offshore accounts.',
         outcomes: [
@@ -631,7 +648,7 @@ const SIDE_MISSIONS_V2 = [
   // === 14. YACHT PARTY ===
   {
     id: 'yacht_party', name: 'Yacht Party Circuit', emoji: '🛥️', category: 'business',
-    condition: { minDay: 25, minAct: 2 },
+    condition: { minDay: 1260, minAct: 2 },
     chapters: [
       { title: 'The Invitation', description: 'Miami\'s elite yacht party circuit needs a discreet drug supplier. Ultra-premium clientele.',
         outcomes: [
@@ -659,7 +676,7 @@ const SIDE_MISSIONS_V2 = [
   // === 15. PRISON RIOT ===
   {
     id: 'prison_riot', name: 'Prison Riot', emoji: '🔓', category: 'chaos',
-    condition: { minDay: 30 },
+    condition: { minDay: 1350 },
     chapters: [
       { title: 'Chaos Inside', description: 'A riot breaks out at the county jail. Your associates inside see opportunity.',
         outcomes: [
@@ -688,7 +705,7 @@ const SIDE_MISSIONS_V2 = [
   // === 16. THE ART DEALER ===
   {
     id: 'art_dealer', name: 'The Art Dealer', emoji: '🎨', category: 'business',
-    condition: { minDay: 25, minCash: 20000 },
+    condition: { minDay: 1440, minCash: 20000 },
     chapters: [
       { title: 'Gallery Connection', description: 'An art dealer in Wynwood launders money through art sales. He needs a partner with cash flow.',
         outcomes: [
@@ -717,7 +734,7 @@ const SIDE_MISSIONS_V2 = [
   // === 17. CUBAN REFUGEE BOAT ===
   {
     id: 'cuban_refugee', name: 'Cuban Refugee Boat', emoji: '🚤', category: 'crew',
-    condition: { minDay: 20 },
+    condition: { minDay: 1530 },
     chapters: [
       { title: 'Landfall', description: 'A rickety boat of Cuban refugees lands near your territory. Among them: a chemist and a former soldier.',
         outcomes: [
@@ -746,7 +763,7 @@ const SIDE_MISSIONS_V2 = [
   // === 18. POKER TOURNAMENT ===
   {
     id: 'poker_tournament', name: 'Poker Tournament', emoji: '♠️', category: 'social',
-    condition: { minDay: 25, minCash: 50000 },
+    condition: { minDay: 1620, minCash: 50000 },
     chapters: [
       { title: 'The Buy-In', description: 'Underground high-stakes poker with faction leaders. $50K buy-in. Information worth more than the pot.',
         outcomes: [
@@ -775,7 +792,7 @@ const SIDE_MISSIONS_V2 = [
   // === 19. THE CHEMIST\'S FORMULA ===
   {
     id: 'chemist_formula', name: 'The Chemist\'s Formula', emoji: '⚗️', category: 'production',
-    condition: { minDay: 30, minCash: 100000, minAct: 2 },
+    condition: { minDay: 1710, minCash: 100000, minAct: 2 },
     chapters: [
       { title: 'The Dying Chemist', description: 'A legendary cook is dying of cancer. He has the formula everyone wants. He\'ll sell it to one person.',
         outcomes: [
@@ -811,7 +828,7 @@ const SIDE_MISSIONS_V2 = [
   // === 20. SUPER BOWL ===
   {
     id: 'super_bowl', name: 'Super Bowl Miami', emoji: '🏈', category: 'event',
-    condition: { minDay: 40, minAct: 2, minCrew: 3 },
+    condition: { minDay: 1800, minAct: 2, minCrew: 3 },
     chapters: [
       { title: 'Preparation', description: 'The Super Bowl is coming to Miami. Five days of the biggest demand surge possible. Time to prepare.',
         outcomes: [
@@ -854,7 +871,7 @@ const SIDE_MISSIONS_V2 = [
   // === 21. THE SNITCH'S WIFE ===
   {
     id: 'snitchs_wife', name: 'The Snitch\'s Wife', emoji: '📼', category: 'intel',
-    condition: { minDay: 25 },
+    condition: { minDay: 1890 },
     chapters: [
       { title: 'The Recordings', description: 'A dead informant\'s wife has his recorded conversations. Names of everyone he snitched on.',
         outcomes: [
@@ -883,7 +900,7 @@ const SIDE_MISSIONS_V2 = [
   // === 22. THE PROFESSOR'S LAST LECTURE ===
   {
     id: 'professors_lecture', name: 'The Professor\'s Last Lecture', emoji: '👨‍🔬', category: 'production',
-    condition: { minDay: 30 },
+    condition: { minDay: 1980 },
     chapters: [
       { title: 'The Diagnosis', description: 'A legendary chemistry professor who quietly supplied knowledge to dealers has terminal cancer. Six months.',
         outcomes: [
@@ -912,7 +929,7 @@ const SIDE_MISSIONS_V2 = [
   // === 23. EVERGLADES OPERATION ===
   {
     id: 'everglades_op', name: 'Everglades Operation', emoji: '🐊', category: 'infrastructure',
-    condition: { minDay: 30, minCash: 30000, minAct: 2 },
+    condition: { minDay: 2070, minCash: 30000, minAct: 2 },
     chapters: [
       { title: 'The Location', description: 'Deep in the Everglades, an abandoned hunting lodge sits on 50 acres. Total privacy. Total isolation.',
         outcomes: [
@@ -948,7 +965,7 @@ const SIDE_MISSIONS_V2 = [
   // === 24. SPRING BREAK ===
   {
     id: 'spring_break', name: 'Spring Break', emoji: '🌴', category: 'event',
-    condition: { minDay: 20, minCrew: 2 },
+    condition: { minDay: 2160, minCrew: 2 },
     chapters: [
       { title: 'The Surge', description: 'Spring breakers flood South Beach. Party drug demand surges 40%. Two weeks of chaos and opportunity.',
         outcomes: [
@@ -977,7 +994,7 @@ const SIDE_MISSIONS_V2 = [
   // === 25. THE CHESS MASTER ===
   {
     id: 'chess_master', name: 'The Chess Master', emoji: '♟️', category: 'training',
-    condition: { minDay: 25 },
+    condition: { minDay: 2250 },
     chapters: [
       { title: 'The Con Man', description: 'An old con man wants to teach you the art of the long game. "Chess, not checkers," he says.',
         outcomes: [
@@ -1020,7 +1037,7 @@ const SIDE_MISSIONS_V2 = [
   // === 26. FINAL STASH ===
   {
     id: 'final_stash', name: 'Final Stash', emoji: '💰', category: 'treasure',
-    condition: { minDay: 35, minAct: 2, minCrew: 2 },
+    condition: { minDay: 2340, minAct: 2, minCrew: 2 },
     chapters: [
       { title: 'The Dying Words', description: 'A dying Cartel Remnant member reveals a massive 1980s stash in a condemned building. Rival territory.',
         outcomes: [
@@ -1049,7 +1066,7 @@ const SIDE_MISSIONS_V2 = [
   // === 27. THE FERRY CAPTAIN ===
   {
     id: 'ferry_captain', name: 'The Ferry Captain', emoji: '⛴️', category: 'logistics',
-    condition: { minDay: 20, minCash: 10000 },
+    condition: { minDay: 2430, minCash: 10000 },
     chapters: [
       { title: 'The Route', description: 'A Bahamas ferry captain offers weekly smuggling runs. Hidden compartments already built into the vessel.',
         outcomes: [
@@ -1078,7 +1095,7 @@ const SIDE_MISSIONS_V2 = [
   // === 28. MUSIC VIDEO ===
   {
     id: 'music_video', name: 'Music Video', emoji: '🎬', category: 'culture',
-    condition: { minDay: 15 },
+    condition: { minDay: 2520 },
     chapters: [
       { title: 'Lights, Camera, Action', description: 'A rising rapper wants to film their music video in your territory. They want "authenticity."',
         outcomes: [
@@ -1107,7 +1124,7 @@ const SIDE_MISSIONS_V2 = [
   // === 29. THE LANDLORD ===
   {
     id: 'the_landlord', name: 'The Landlord', emoji: '🔑', category: 'problem',
-    condition: { minDay: 20 },
+    condition: { minDay: 2610 },
     chapters: [
       { title: 'Discovery', description: 'Your landlord discovered your operation during an unannounced inspection. They saw everything.',
         outcomes: [
@@ -1136,7 +1153,7 @@ const SIDE_MISSIONS_V2 = [
   // === 30. BODY FARM ===
   {
     id: 'body_farm', name: 'The Body Farm', emoji: '🐷', category: 'infrastructure',
-    condition: { minDay: 30, minAct: 2 },
+    condition: { minDay: 2700, minAct: 2 },
     chapters: [
       { title: 'The Farmer', description: 'A pig farmer outside Miami can handle... disposal. Industrial scale. No questions, no evidence.',
         outcomes: [
@@ -1165,7 +1182,7 @@ const SIDE_MISSIONS_V2 = [
   // === 31. THE DOCUMENTARY ===
   {
     id: 'documentary', name: 'The Documentary', emoji: '🎥', category: 'media',
-    condition: { minDay: 25 },
+    condition: { minDay: 2790 },
     chapters: [
       { title: 'The Pitch', description: 'A streaming service wants to make a documentary about Miami\'s drug scene. They\'re looking for "authentic voices."',
         outcomes: [
@@ -1194,7 +1211,7 @@ const SIDE_MISSIONS_V2 = [
   // === 32. UNDERGROUND RAILROAD ===
   {
     id: 'underground_railroad', name: 'Underground Railroad', emoji: '🛤️', category: 'community',
-    condition: { minDay: 20 },
+    condition: { minDay: 2880 },
     chapters: [
       { title: 'Discovery', description: 'You discover a network helping domestic violence victims and trafficking survivors escape. They use your territory.',
         outcomes: [
@@ -1230,7 +1247,7 @@ const SIDE_MISSIONS_V2 = [
   // === 33. THE REPO MAN ===
   {
     id: 'repo_man', name: 'The Repo Man', emoji: '🔧', category: 'side_hustle',
-    condition: { minDay: 15 },
+    condition: { minDay: 2970 },
     chapters: [
       { title: 'The Gig', description: 'A repo company offers you side work repossessing vehicles. Legal-ish income plus intel on people in debt.',
         outcomes: [
@@ -1259,7 +1276,7 @@ const SIDE_MISSIONS_V2 = [
   // === 34. MIAMI VICE CALLBACK ===
   {
     id: 'miami_vice', name: 'Miami Vice Callback', emoji: '🕶️', category: 'nostalgia',
-    condition: { minDay: 25 },
+    condition: { minDay: 3060 },
     chapters: [
       { title: 'The Retired Detective', description: 'A retired 1980s narcotics detective is writing a memoir. He wants to "consult" with someone active.',
         outcomes: [
@@ -1288,7 +1305,7 @@ const SIDE_MISSIONS_V2 = [
   // === 35. THE REVEREND ===
   {
     id: 'the_reverend', name: 'The Reverend', emoji: '⛪', category: 'politics',
-    condition: { minDay: 20 },
+    condition: { minDay: 3150 },
     chapters: [
       { title: 'The Megachurch', description: 'A megachurch pastor wants to partner on "community development." His church launders more than you do.',
         outcomes: [
@@ -1317,7 +1334,7 @@ const SIDE_MISSIONS_V2 = [
   // === 36. THE CROOKED COP'S PARTNER ===
   {
     id: 'crooked_cops_partner', name: 'The Partner', emoji: '👮', category: 'law',
-    condition: { minDay: 25 },
+    condition: { minDay: 3240 },
     chapters: [
       { title: 'Suspicious Partner', description: 'Your corrupt cop\'s partner is asking questions. "Where does he go on Tuesday nights?"',
         outcomes: [
@@ -1346,7 +1363,7 @@ const SIDE_MISSIONS_V2 = [
   // === 37. CARNIVAL CHAOS ===
   {
     id: 'carnival_chaos', name: 'Carnival Chaos', emoji: '🎭', category: 'event',
-    condition: { minDay: 20, minCrew: 2 },
+    condition: { minDay: 3330, minCrew: 2 },
     chapters: [
       { title: 'The Setup', description: 'Miami Carnival is coming. Massive crowds, massive demand, massive opportunity.',
         outcomes: [
@@ -1375,7 +1392,7 @@ const SIDE_MISSIONS_V2 = [
   // === 38. THE ARMS SHOW ===
   {
     id: 'arms_show', name: 'The Arms Show', emoji: '💣', category: 'military',
-    condition: { minDay: 30, minAct: 2, minCash: 20000 },
+    condition: { minDay: 3420, minAct: 2, minCash: 20000 },
     chapters: [
       { title: 'The Invitation', description: 'An invitation to an underground arms expo in the Everglades. International dealers, military hardware.',
         outcomes: [
@@ -1404,7 +1421,7 @@ const SIDE_MISSIONS_V2 = [
   // === 39. THE MECHANIC'S DAUGHTER ===
   {
     id: 'mechanics_daughter', name: 'The Mechanic\'s Daughter', emoji: '👧', category: 'rescue',
-    condition: { minDay: 30, minCrew: 3 },
+    condition: { minDay: 3510, minCrew: 3 },
     chapters: [
       { title: 'The Call', description: 'Gears Rodriguez calls in a panic. His daughter has been taken by a rival crew. Ransom: $100K.',
         outcomes: [
@@ -1434,7 +1451,7 @@ const SIDE_MISSIONS_V2 = [
   // === 40. THE LAST HEIST ===
   {
     id: 'last_heist', name: 'The Last Heist', emoji: '🏦', category: 'endgame',
-    condition: { minDay: 50, minAct: 3, minCrew: 5, minCash: 50000 },
+    condition: { minDay: 3600, minAct: 3, minCrew: 5, minCash: 50000 },
     chapters: [
       { title: 'The Opportunity', description: 'The biggest score imaginable: a cartel money counting house. $10M in cash. During transition between guards.',
         outcomes: [

@@ -5,10 +5,10 @@
 
 const CREW_RANKS = [
   { rank: 0, name: 'Street Worker', emoji: '👤', color: '#888888', maxGlobal: 6, promotionCost: 0, payCutPct: 0, combatMult: 1.0 },
-  { rank: 1, name: 'Soldier', emoji: '🔫', color: '#39ff14', maxGlobal: 4, promotionCost: 2000, payCutPct: 5, combatMult: 1.2, requires: { loyalty: 70, daysServed: 30 } },
-  { rank: 2, name: 'Lieutenant', emoji: '⭐', color: '#00f0ff', maxGlobal: 2, promotionCost: 10000, payCutPct: 10, combatMult: 1.5, requires: { loyalty: 85, daysServed: 90 } },
-  { rank: 3, name: 'Underboss', emoji: '🎩', color: '#bf5fff', maxGlobal: 1, promotionCost: 50000, payCutPct: 15, combatMult: 2.0, requires: { loyalty: 95, daysServed: 180 } },
-  { rank: 4, name: 'Right-Hand', emoji: '👑', color: '#ffe600', maxGlobal: 1, promotionCost: 100000, payCutPct: 20, combatMult: 2.5, requires: { loyalty: 100, daysServed: 365 } },
+  { rank: 1, name: 'Soldier', emoji: '🔫', color: '#39ff14', maxGlobal: 4, promotionCost: 5000, payCutPct: 5, combatMult: 1.2, requires: { loyalty: 70, daysServed: 90 } },
+  { rank: 2, name: 'Lieutenant', emoji: '⭐', color: '#00f0ff', maxGlobal: 2, promotionCost: 30000, payCutPct: 10, combatMult: 1.5, requires: { loyalty: 85, daysServed: 270 } },
+  { rank: 3, name: 'Underboss', emoji: '🎩', color: '#bf5fff', maxGlobal: 1, promotionCost: 150000, payCutPct: 15, combatMult: 2.0, requires: { loyalty: 95, daysServed: 700 } },
+  { rank: 4, name: 'Right-Hand', emoji: '👑', color: '#ffe600', maxGlobal: 1, promotionCost: 400000, payCutPct: 20, combatMult: 2.5, requires: { loyalty: 100, daysServed: 1500 } },
 ];
 
 const CREW_TRAITS = [
@@ -141,6 +141,16 @@ function promoteCrew(state, crewIndex) {
   member.hiddenLoyalty = Math.min(100, (member.hiddenLoyalty || member.loyalty) + 15);
   member.betrayalRisk = Math.max(0, (member.betrayalRisk || 0) - 10);
 
+  // Soldier+ crew develop a hidden agenda (assigned lazily for old saves too)
+  if (typeof _assignAgendaIfNeeded === 'function') _assignAgendaIfNeeded(state, member);
+  // Ambitious agenda: a promotion is exactly what they wanted
+  if (member.agenda && member.agenda.id === 'ambitious') {
+    member.agenda.unmetDays = 0;
+    member.agenda.snapped = false;
+    member.agenda.eligibleSinceDay = null;
+    member.agenda.eligibleRank = nextRank;
+  }
+
   // Other crew may get jealous (ambitious trait)
   for (const other of state.henchmen) {
     if (other === member) continue;
@@ -150,7 +160,20 @@ function promoteCrew(state, crewIndex) {
     }
   }
 
-  return { success: true, msg: member.name + ' promoted to ' + nextRankData.name + '!' };
+  // Lieutenant+ promotions demand a ceremony — the crew is watching how you mark it
+  if (nextRank >= 2) {
+    if (!member.uniqueId) member.uniqueId = 'crew_' + Math.random().toString(36).substr(2, 8);
+    state.pendingCeremony = {
+      crewId: member.uniqueId,
+      crewIndex: crewIndex,
+      rankName: nextRankData.name,
+      memberName: member.name,
+      createdDay: state.day || 0,
+    };
+    return { success: true, newRank: nextRank, msg: member.name + ' promoted to ' + nextRankData.name + '! The crew expects you to mark the occasion — choose a ceremony.' };
+  }
+
+  return { success: true, newRank: nextRank, msg: member.name + ' promoted to ' + nextRankData.name + '!' };
 }
 
 // Get trait object by ID

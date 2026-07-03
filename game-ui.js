@@ -83,14 +83,47 @@ function _processUnlockToastQueue() {
   }, 3000);
 }
 
-// Check for new unlocks and show notifications + message log entries
+// Check for new unlocks: log them and queue a readable explainer card.
+// Cards are held back while the tutorial runs so they never talk over it.
 function checkAndAnnounceUnlocks() {
   if (!gameState || typeof checkNewUnlocks !== 'function') return;
   const newUnlocks = checkNewUnlocks(gameState);
+  if (!newUnlocks.length) return;
+  if (!gameState.pendingUnlockCards) gameState.pendingUnlockCards = [];
   for (const info of newUnlocks) {
     gameState.messageLog.push(`🔓 NEW SYSTEM UNLOCKED: ${info.emoji} ${info.name}! ${info.desc}`);
-    showUnlockToast(info);
+    gameState.pendingUnlockCards.push(info);
   }
+}
+
+// Show the next queued unlock card as a real modal the player must read
+// and dismiss — not a 3-second toast.
+function _maybeShowUnlockCard() {
+  if (!gameState || !gameState.pendingUnlockCards || gameState.pendingUnlockCards.length === 0) return;
+  if (typeof isTutorialActive === 'function' && isTutorialActive()) return; // wait until class is over
+  const mc = document.getElementById('modal-container');
+  if (!mc || mc.innerHTML.trim() !== '') return; // never stack over another modal
+  const info = gameState.pendingUnlockCards[0];
+  const remaining = gameState.pendingUnlockCards.length - 1;
+  mc.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal" style="max-width:420px;text-align:center;border-color:var(--neon-green)">
+        <div style="font-size:0.7rem;letter-spacing:2px;color:var(--neon-green);margin-bottom:0.3rem">🔓 NEW SYSTEM UNLOCKED</div>
+        <h3 class="neon-cyan" style="margin-bottom:0.5rem">${info.emoji} ${info.name}</h3>
+        <p style="margin-bottom:0.6rem">${info.desc}</p>
+        ${info.where ? `<p class="text-dim" style="font-size:0.85rem;margin-bottom:0.8rem">📍 Where: ${info.where}</p>` : ''}
+        <button class="btn btn-primary" onclick="dismissUnlockCard()">GOT IT${remaining > 0 ? ` (${remaining} more)` : ''}</button>
+      </div>
+    </div>
+  `;
+}
+
+function dismissUnlockCard() {
+  if (gameState && gameState.pendingUnlockCards) gameState.pendingUnlockCards.shift();
+  const mc = document.getElementById('modal-container');
+  if (mc) mc.innerHTML = '';
+  playSound('click');
+  _maybeShowUnlockCard();
 }
 
 // Helper: render a locked sidebar button
@@ -99,9 +132,45 @@ function renderLockedSidebarBtn(emoji, label, featureKey) {
   return `<button class="btn btn-sidebar btn-secondary btn-locked-interactive" data-lock-tooltip="${tooltip}" onclick="showNotification('${tooltip}', 'info'); return false;">🔒 ${label}</button>`;
 }
 
+// Adaptive soundtrack: pick the track that fits where you are and what's
+// happening. Runs on every render, so screens, regions, and heat all
+// steer the music (MusicEngine crossfades between tracks).
+function getMusicContext() {
+  if (typeof gameState === 'undefined' || !gameState) return 'title';
+  switch (currentScreen) {
+    case 'title': case 'charselect': case 'highscores': case 'howtoplay': case 'intro':
+      return 'title';
+    case 'combat': case 'heist':
+      return 'combat';
+    case 'event':
+      return 'event';
+    case 'court': case 'prison':
+      return 'court';
+    case 'travel':
+      return 'travel';
+    case 'gameover':
+      return 'gameover';
+    case 'nightlife': case 'romance':
+      return 'title'; // dreamy synth fits the club and the dates
+    case 'crew': case 'properties': case 'fronts': case 'businesses_v2': case 'distribution':
+    case 'processing': case 'security': case 'defense': case 'offshore': case 'smuggling':
+    case 'suppliers': case 'stats': case 'skilltree': case 'operations': case 'shipping': case 'imports':
+      return 'management';
+  }
+  // Main game screen: tension first, then regional flavor
+  if ((gameState.heat || 0) >= 80 || (gameState.pendingRaid)) return 'event';
+  const loc = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(l => l.id === gameState.currentLocation) : null;
+  const region = String((loc && loc.region) || 'miami').toLowerCase();
+  if (['americas', 'caribbean', 'south_america', 'central_america', 'mexico', 'us_cities'].includes(region)) return 'game_americas';
+  if (['europe', 'western_europe', 'eastern_europe'].includes(region)) return 'game_europe';
+  if (['asia', 'southeast_asia'].includes(region)) return 'game_asia';
+  if (['africa', 'west_africa'].includes(region)) return 'game_africa';
+  return 'background'; // Miami: rotate the full synthwave playlist
+}
+
 function updateMusic() {
   if (MusicEngine.isMuted()) return;
-  MusicEngine.playTrack('background');
+  MusicEngine.playTrack(getMusicContext());
 }
 
 // ============================================================
@@ -575,6 +644,16 @@ function renderCharacterSelect() {
 // ============================================================
 function render() {
   const app = document.getElementById('app');
+  // Changing screens dismisses any lingering modal (bank, loan shark, etc.)
+  if (render._lastScreen !== currentScreen) {
+    const mc = document.getElementById('modal-container');
+    if (mc && mc.innerHTML) mc.innerHTML = '';
+    render._lastScreen = currentScreen;
+  }
+  // Surface any queued unlock explainer once the tutorial is out of the way
+  if (currentScreen === 'game' && typeof _maybeShowUnlockCard === 'function') {
+    setTimeout(_maybeShowUnlockCard, 0);
+  }
   switch (currentScreen) {
     case 'title': app.innerHTML = renderTitle(); break;
     case 'charselect': app.innerHTML = renderCharacterSelect(); break;
@@ -624,6 +703,15 @@ function render() {
     case 'businesses_v2': app.innerHTML = renderBusinessesV2(); break;
     case 'phone': app.innerHTML = renderPhone(); break;
     case 'npcstory': app.innerHTML = renderNPCStory(); break;
+    case 'regionalbosses': app.innerHTML = typeof renderRegionalBosses === 'function' ? renderRegionalBosses() : renderGame(); break;
+    case 'suppliers': app.innerHTML = typeof renderSuppliers === 'function' ? renderSuppliers() : renderGame(); break;
+    case 'news': app.innerHTML = typeof renderNewsFeed === 'function' ? renderNewsFeed() : renderGame(); break;
+    case 'districts': app.innerHTML = typeof renderDistrictEcology === 'function' ? renderDistrictEcology() : renderGame(); break;
+    case 'smuggling': app.innerHTML = typeof renderSmugglingFleet === 'function' ? renderSmugglingFleet() : renderGame(); break;
+    case 'offshore': app.innerHTML = typeof renderOffshore === 'function' ? renderOffshore() : renderGame(); break;
+    case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
+    case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
+    case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
   }
   updateMusic();
 }
@@ -746,125 +834,86 @@ function renderHighScores() {
 // HOW TO PLAY
 // ============================================================
 function renderHowToPlay() {
+  const S = (emoji, title, body) => `
+    <details class="htp-section" style="border:1px solid var(--border-color);border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;">
+      <summary style="cursor:pointer;font-weight:bold;color:var(--neon-cyan);font-size:0.95rem;padding:0.3rem 0;">${emoji} ${title}</summary>
+      <div style="padding:0.4rem 0 0.2rem;color:var(--text-main);line-height:1.65;font-size:0.85rem;">${body}</div>
+    </details>`;
+  const TIP = t => `<p style="color:var(--neon-green);font-size:0.8rem;margin:0.2rem 0">💡 ${t}</p>`;
   return `
     <div class="screen-container" style="max-width:700px;margin:0 auto;">
-      <h2 class="section-title neon-cyan" style="text-align:center;">📖 HOW TO PLAY</h2>
-      <div style="color:var(--text-main);line-height:1.7;font-size:0.85rem;">
+      <h2 class="section-title neon-cyan" style="text-align:center;">📖 THE HANDBOOK</h2>
+      <p class="text-dim" style="text-align:center;font-size:0.85rem;margin-bottom:1rem">Everything in the game, in the order you'll meet it. Tap a section to open it.</p>
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎯 OBJECTIVE</h3>
-          <p>You are a small-time dealer starting in Miami. Buy drugs cheap, sell them at a profit in other cities, and build a global empire. Pay off your loan shark debt and amass as much wealth as possible before your days run out — or go Endless and play forever.</p>
-        </div>
+      ${S('🎯', 'The Long Game', `
+        <p>The campaign runs <b>5,000 days across 5 acts</b> — The Come Up (days 1–500), Building the Empire (500–1500), The Empire (1500–2500), The Reckoning (2500–3500), and The Endgame (3500–5000). Systems, drugs, story missions, and world regions unlock as the days pass. Nobody rushes this — the game is designed to be lived in.</p>
+        ${TIP('When a 🔓 unlock card appears, read it — it tells you exactly where the new system lives.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">⚡ ACTIONS</h3>
-          <p><b style="color:var(--neon-cyan)">Travel</b> — Move between 21 cities worldwide. Each trip takes 1-3 days depending on distance. Random events can occur during travel (ambushes, deals, police encounters).</p>
-          <p><b style="color:var(--neon-cyan)">Wait</b> — Pass one day. Prices fluctuate, events trigger, and your operations continue. Sometimes waiting is the smartest move.</p>
-        </div>
+      ${S('💰', 'Trading & the Living Market', `
+        <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
+        <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
+        ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🏪 SERVICES</h3>
-          <p><b style="color:var(--neon-cyan)">Bank</b> — Deposit cash to keep it safe from muggings. Earns small daily interest.</p>
-          <p><b style="color:var(--neon-cyan)">Loan Shark</b> — Borrow money or repay your debt. Interest compounds daily — pay early!</p>
-          <p><b style="color:var(--neon-cyan)">Hospital</b> — Heal injuries from combat. Costs money but keeps you alive.</p>
-          <p><b style="color:var(--neon-cyan)">Black Market</b> — Buy weapons for combat and items for special uses (body armor, fake IDs, burner phones, etc.).</p>
-          <p><b style="color:var(--neon-cyan)">Stash</b> — Store drugs at properties. Stash capacity depends on your properties and safe house.</p>
-        </div>
+      ${S('🤝', 'Suppliers', `
+        <p>The Suppliers tab has 12 named connects across 4 tiers (street → wholesale → The Connect → cartel, unlocking by day and rank). They sell bulk <b>below street price</b>. Keep buying from the same supplier to build trust: better prices, bigger lots, credit lines. Haggle once per stock cycle — win with persuasion, or sour the deal.</p>
+        ${TIP('Credit is real: default on a fronted lot and the supplier burns you, the debt lands on your books, and heat follows.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎯 MISSIONS</h3>
-          <p><b style="color:var(--neon-pink)">Main Missions</b> — Story campaign missions tied to your rise through the underworld. One active at a time. Complete milestones to advance through 5 Acts.</p>
-          <p><b style="color:var(--neon-pink)">Side Missions</b> — Random jobs for extra cash, reputation, and items. Up to 3 active at once. Includes deliveries, negotiations, investigations, and moral dilemmas.</p>
-        </div>
+      ${S('🏘️', 'Neighborhoods: Invest or Bleed', `
+        <p>Every district tracks <b>condition, police presence, and civilian loyalty</b>. On turf you control, choose: INVEST (community centers, clinics, storefronts — loyalty protects you, locals tip you off, heat decays faster) or BLEED (flood corners, strip businesses, protection rackets — fast money, but informants breed below 25 loyalty).</p>
+        ${TIP('The news wire tracks every district\'s trajectory. "RENAISSANCE?" or "SPIRALS" — that\'s your reputation in print.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">👑 EMPIRE</h3>
-          <p><b style="color:var(--neon-purple)">Properties</b> — Buy apartments, warehouses, and labs across cities. Provide stash space, security, and income.</p>
-          <p><b style="color:var(--neon-purple)">Crew</b> — Hire henchmen (enforcers, smugglers, chemists, accountants). They boost combat, carry capacity, production, and laundering.</p>
-          <p><b style="color:var(--neon-purple)">Fronts</b> — Legitimate businesses that launder dirty money into clean cash.</p>
-          <p><b style="color:var(--neon-purple)">Distribution</b> — Set up automatic drug sales networks in territories you control.</p>
-          <p><b style="color:var(--neon-purple)">Lab</b> — Process raw drugs into higher-purity products worth more money.</p>
-          <p><b style="color:var(--neon-purple)">Import/Export</b> — Set up international supply routes for bulk drug shipments.</p>
-          <p><b style="color:var(--neon-purple)">Factions</b> — Manage relationships with cartels, mafias, triads, and more. Alliances bring trade bonuses; wars mean combat.</p>
-          <p><b style="color:var(--neon-purple)">Security</b> — Monitor your heat level and manage law enforcement threats.</p>
-          <p><b style="color:var(--neon-purple)">Lifestyle</b> — Your living standard affects stress, reputation, and daily costs.</p>
-          <p><b style="color:var(--neon-purple)">Politics</b> — Bribe officials, gain political connections, reduce legal pressure.</p>
-          <p><b style="color:var(--neon-purple)">Futures</b> — Trade drug futures contracts. Bet on price movements for big profits (or losses).</p>
-          <p><b style="color:var(--neon-purple)">Safe House</b> — Your personal hideout. Upgrade it for heat reduction, stash space, and security. Watch your money stacks fill the room!</p>
-        </div>
+      ${S('🎯', 'Campaign, Contracts & Side Ops', `
+        <p><b>Campaign</b>: your character\'s story — 25 main missions spread across the 5 acts, with choices that shape your traits and ending. <b>📜 Street Contracts</b>: procedural jobs, 1–3 new ones daily, expire in 3 days. <b>📜 Side Ops</b>: 40 multi-chapter chains with choice-driven outcomes that trickle in over years.</p>
+        ${TIP('Track a campaign mission to auto-complete it when its objectives are met; missions with approaches let you choose HOW you finish.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🧬 CHARACTER</h3>
-          <p><b style="color:var(--neon-green)">Skills</b> — Spend XP to unlock abilities across 8 categories: Combat, Driving, Persuasion, Chemistry, Business, Stealth, Leadership, and Streetwise. Each has 10 levels (6-10 unlock in NG+).</p>
-          <p><b style="color:var(--neon-green)">Stats</b> — View your progress: days played, money earned, cities visited, enemies defeated.</p>
-          <p><b style="color:var(--neon-green)">Achievements</b> — Track milestones and earn bragging rights.</p>
-        </div>
+      ${S('👥', 'Crew: Loyalty, Agendas & Rank', `
+        <p>Hire crew, assign jobs (guards, runners, lab workers, lookouts...), and promote them up the ladder: Soldier → Lieutenant → Underboss → Right Hand. Promotions take <b>real service time</b> and cost real money. Ranked crew develop hidden <b>agendas</b> — learn their tells, feed their wants, or watch rivals court them away. Defection offers demand an answer: pay them, let them walk (with what they know), or make an example.</p>
+        ${TIP('Lieutenant promotions trigger a ceremony choice — the lavish party buys loyalty across the whole crew.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">⚔️ COMBAT</h3>
-          <p>Your <b>weapon damage + crew combat power</b> determines your strength. Accuracy affects hit chance. You can fight, flee, or sometimes bribe your way out. Better weapons and more crew = better odds.</p>
-        </div>
+      ${S('🏴', 'Territory, Heat & War', `
+        <p>Take over districts (needs 2+ healthy crew, level/day gates) for income, sell bonuses, and district control. Defend turf with fortifications and structures. Heat brings police encounters; the Investigation meter brings the DEA. Shootouts make headlines and change district ecology.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🔥 HEAT & LAW</h3>
-          <p>Every crime raises your <b>heat</b>. High heat means police raids, arrests, and court appearances. Reduce heat by: waiting, using safe houses, bribing officials, or laying low. If caught, you may lose cash, drugs, or do jail time.</p>
-        </div>
+      ${S('⚖️', 'The Law: Charges, Court & Prison', `
+        <p>Get caught and the charges are built from <b>real evidence</b>: quantity thresholds (possession → intent → trafficking), the gun you carry, dirty cash, unburied bodies, your bribe history, and whether you ran or fought. Cases range from a street bust to a <b>capital murder trial</b>. Lawyers, witness problems, plea deals, and fall guys are all levers.</p>
+        ${TIP('Offshore money survives conviction. Cash and bank balances don\'t.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">📱 PHONE SYSTEM</h3>
-          <p>Your <b style="color:var(--neon-cyan)">burner phone</b> receives 2-5 messages daily: supplier alerts, crew check-ins, buyer requests, NPC story updates, news, threats, and spam. Each burner lasts 30 days — when you switch phones, unread messages are lost and contacts must re-share info. Check the 📱 icon in the sidebar for unread messages.</p>
-        </div>
+      ${S('🏦', 'Money: Dirty, Clean & Offshore', `
+        <p>Drug money is <b>dirty</b> — launder it through front businesses (slow, daily caps) or shell-company layering (bulk, 25% cost, 5 days). Clean money in the bank earns interest but is visible. <b>Offshore accounts</b> (Panama day 300 → Vanuatu day 2800) hide wealth from forfeiture — but volume draws IRS scrutiny, and audits demand answers.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🏢 BUSINESSES V2</h3>
-          <p>Beyond fronts, you can now own <b style="color:var(--neon-green)">15 new business types</b>: Music Labels, Food Truck Fleets, Marinas, Crypto Mining Farms, Private Security firms, Towing Companies, Bail Bonds offices, Pawn Shops, Gas Stations, Pharmacies, Strip Clubs, Storage Units, Car Dealerships, Construction Companies, and Laundromat Chains. Each generates daily income, provides laundering capacity, and has unique criminal synergies (e.g., pharmacy supplies drugs, construction builds hideouts, bail bonds provides intel).</p>
-        </div>
+      ${S('🚤', 'Smuggling Fleet', `
+        <p>Own the transports that move weight: cigarette boats, shrimp trawlers, coyote trucks, planes, semi-subs, a Learjet. Each run risks interdiction — risk rises with the transport\'s heat signature, route heat, and poor condition. Rotate transports and routes; rest and repair them.</p>
+        ${TIP('The Coast Guard cycles hot and clear lanes weekly. A "hot" lane is +10% risk — wait it out or reroute.')}
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎲 RANDOM ENCOUNTERS</h3>
-          <p>Every day there's a chance of encountering <b style="color:var(--neon-yellow)">150+ unique random events</b> across 6 categories: Street, Business, Crew, Law Enforcement, Faction, and Wild Card. Each presents 2-4 choices with different outcomes — help a mugging victim, take a bribe from a corrupt cop, discover buried treasure, or deal with an escaped zoo animal. Your choices affect cash, heat, reputation, stress, and more. Some encounters can even grant you a pet companion or lookout!</p>
-        </div>
+      ${S('🔫', 'Weapons & the Gunsmith', `
+        <p>Weapon tiers unlock with rank (shotguns Lv3, rifles Lv5, snipers Lv7, heavy Lv9+). The Black Market\'s Gunsmith installs upgrades — suppressors, scopes, AP rounds — plus body armor and tactical gear. Carrying illegal hardware is a court charge if you\'re caught.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">👤 NAMED NPCs</h3>
-          <p>Meet <b style="color:var(--neon-purple)">30 named characters</b> with multi-chapter story arcs: Dr. Rosa Mendez (underground doctor), Father Ignacio (conflicted priest), Diamond Destiny Harris (nightclub queen), Officer Tommy Chen (ambitious cop), and many more. Build relationships through dialogue choices to unlock powerful benefits — discounted healing, case dismissals, weapons deals, and even romance options.</p>
-        </div>
+      ${S('⚗️', 'Processing & Distribution', `
+        <p>Buy an industrial property to unlock the lab: re-bag, refine, cut, and cook for higher margins. Chemistry grows with practice (lab-worker crew help). Distribution networks sell your stock passively per district — supply them and manage dealer loyalty.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">📋 MISSION CHAINS</h3>
-          <p><b style="color:var(--neon-pink)">40 multi-chapter side mission chains</b> unlock as you progress: become a crime photographer, run a cooking school front, plan a marina heist, promote underground fights, enter a poker tournament, orchestrate a Super Bowl operation, and more. Each chain has 3-5 chapters with branching outcomes. Up to 3 chains available at once — offers expire in 14 days!</p>
-        </div>
+      ${S('💕', 'People: Romance, NPCs & Bosses', `
+        <p>Six romance interests with real story arcs — family dinners, secrets, ultimatums — and partner perks at full commitment (neglect them 30+ days and there are consequences). Named NPCs carry their own stories. <b>👑 Regional Bosses</b>: 47 crime lords worldwide to negotiate with, bribe, fight, assassinate, or replace with puppets who pay you daily.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🔄 PROCEDURAL MISSIONS</h3>
-          <p>The game generates <b style="color:var(--neon-cyan)">1-3 unique procedural missions daily</b> from 12 templates (delivery, collection, elimination, defense, sabotage, espionage, recruitment, escort, supply run, cleanup, negotiation, rescue) combined with 20 possible complications (police checkpoints, rival ambushes, vehicle breakdowns, etc.). Rewards scale with your level and the current act.</p>
-        </div>
+      ${S('🌍', 'The World', `
+        <p>Miami is home, but the map opens over time: the Caribbean, South and Central America, Mexico, US cities, Europe, Africa, Asia. Each region has its own prices, dangers, bosses — and its own music. Unlock regions via net worth and contacts.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">💡 TIPS FOR BEGINNERS</h3>
-          <p>• Start small in Miami — learn the local prices before traveling far.</p>
-          <p>• Pay off your loan shark ASAP — the interest compounds daily.</p>
-          <p>• Watch the news ticker — price events create huge profit opportunities.</p>
-          <p>• Invest in properties early — stash space and labs multiply your income.</p>
-          <p>• Keep heat below 50 — above that, raids become frequent and deadly.</p>
-          <p>• Diversify your drugs — don't put all your money in one product.</p>
-          <p>• Check your phone daily — messages contain deals, threats, and story triggers.</p>
-          <p>• Build relationships with NPCs — their benefits stack and compound over time.</p>
-          <p>• Buy businesses early in each act — passive income funds everything else.</p>
-          <p>• Save often — this is a dangerous business.</p>
-        </div>
+      ${S('📊', 'Rank, Skills & Endings', `
+        <p>XP earns Kingpin levels (20 ranks, Street Punk → Immortal) with a perk each; levels grant skill points for the 100-skill tree. Your empire\'s final shape — territories, wealth, loyalty, bodies, clean money — decides which of the many endings you earn, graded S to C. New Game+ unlocks harder tiers, new characters, and deeper skills.</p>
+      `)}
 
-        <div class="htp-section">
-          <h3 class="htp-heading">🎮 CAMPAIGN STRUCTURE</h3>
-          <p><b>Act 1</b> — Small-time hustler in Miami. Learn the ropes, build your crew.</p>
-          <p><b>Act 2</b> — Expand across cities, establish supply routes, clash with rivals.</p>
-          <p><b>Act 3</b> — Go international, take on cartels, build your empire.</p>
-          <p><b>Act 4</b> — Defend your territory, face the law, deal with betrayal.</p>
-          <p><b>Act 5</b> — The final showdown. Multiple endings based on your choices.</p>
-          <p><b>New Game+</b> — Beat the campaign to unlock NG+ with new content, harder challenges, and exclusive items.</p>
-        </div>
-
-      </div>
       <div style="text-align:center;margin-top:1.5rem;">
         <button class="btn btn-primary btn-glow" onclick="currentScreen='title'; render();">← BACK TO MENU</button>
       </div>
@@ -971,8 +1020,10 @@ function doDisposeBodies(methodId, count) {
 // CAMPAIGN SCREEN
 // ============================================================
 function renderCampaignScreen() {
+  if (!gameState) { currentScreen = 'title'; return renderTitle(); }
   const campaign = gameState.campaign || {};
-  const currentAct = typeof getCurrentAct === 'function' ? getCurrentAct(gameState) : null;
+  const currentAct = typeof getCurrentMissionAct === 'function' ? getCurrentMissionAct(gameState) : null;
+  const currentActId = typeof missionActId === 'function' ? missionActId(gameState) : (campaign.missionAct || 'act1');
   const progress = typeof getCampaignProgress === 'function' ? getCampaignProgress(gameState) : 0;
   const availableMissions = typeof getAvailableMainMissions === 'function' ? getAvailableMainMissions(gameState) : [];
   const nextMission = availableMissions.length > 0 ? availableMissions[0] : null;
@@ -981,10 +1032,10 @@ function renderCampaignScreen() {
   const charData = gameState.characterData || {};
 
   // Act cards
-  const actCards = typeof CAMPAIGN_ACTS !== 'undefined' ? CAMPAIGN_ACTS.map(act => {
-    const isCurrent = campaign.currentAct === act.id;
-    const isComplete = act.mainMissions && act.mainMissions.every(m => (campaign.completedMissions || []).includes(m.id));
-    const isLocked = !isCurrent && !isComplete && CAMPAIGN_ACTS.indexOf(act) > CAMPAIGN_ACTS.findIndex(a => a.id === campaign.currentAct);
+  const actCards = typeof MISSION_ACTS !== 'undefined' ? MISSION_ACTS.map(act => {
+    const isCurrent = currentActId === act.id;
+    const isComplete = act.mainMissions && act.mainMissions.length > 0 && act.mainMissions.every(m => (campaign.completedMissions || []).includes(m.id));
+    const isLocked = !isCurrent && !isComplete && MISSION_ACTS.indexOf(act) > MISSION_ACTS.findIndex(a => a.id === currentActId);
     const completedInAct = act.mainMissions ? act.mainMissions.filter(m => (campaign.completedMissions || []).includes(m.id)).length : 0;
     const totalInAct = act.mainMissions ? act.mainMissions.length : 0;
 
@@ -1048,7 +1099,7 @@ function renderCampaignScreen() {
           <p class="text-dim" style="font-size:0.85rem;margin-bottom:0.3rem">${variant}</p>
           ${m.isActClimax ? '<div style="font-size:0.75rem;color:#ff8844;margin-bottom:0.3rem;font-weight:bold">ACT CLIMAX - Major story mission</div>' : ''}
           ${m.choiceConsequences ? '<div style="font-size:0.75rem;color:#cc88ff;margin-bottom:0.3rem">Your choices in this mission will affect the story</div>' : ''}
-          ${m.approaches ? `<div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Approaches: ${m.approaches.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}</div>` : ''}
+          ${m.approaches ? `<div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Approaches: ${m.approaches.map(a => a.name ? a.name : (String(a).charAt(0).toUpperCase() + String(a).slice(1))).join(', ')}</div>` : ''}
           ${objectivesHtml ? `<div style="margin-top:0.5rem;font-size:0.85rem;background:rgba(0,0,0,0.2);border-radius:6px;padding:0.4rem 0.6rem">
             <div style="font-size:0.7rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem">Objectives (${completedCount}/${totalCount})</div>
             ${objectivesHtml}
@@ -1057,10 +1108,28 @@ function renderCampaignScreen() {
             Reward: ${m.reward ? `$${(m.reward.cash||0).toLocaleString()} | +${m.reward.rep||0} Rep | +${m.reward.xp||0} XP` : 'See description'}
           </div>
           ${m.unlocks && m.unlocks.length > 0 ? `<div style="font-size:0.7rem;color:#888;margin-top:0.3rem">Unlocks: ${m.unlocks.filter(u => !u.startsWith('act')).join(', ') || 'Next act'}</div>` : ''}
-          ${!isActive ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
+          ${!isActive && !allDone ? `<button class="btn btn-sm btn-primary" style="margin-top:0.5rem" onclick="gameState.campaign.activeMission='${m.id}'; render();">Track Mission</button>` : ''}
+          ${allDone ? (m.approaches && typeof getAvailableApproaches === 'function'
+            ? `<div style="margin-top:0.5rem"><div style="font-size:0.75rem;color:#88ccff;margin-bottom:0.3rem">Choose your approach:</div>${getAvailableApproaches(gameState, m).map(a => `<button class="btn btn-sm btn-buy" style="margin:0.15rem 0.3rem 0.15rem 0" onclick="doCompleteCampaignMission('${m.id}','${a.id}')">${a.name}</button>`).join('')}</div>`
+            : `<button class="btn btn-sm btn-buy" style="margin-top:0.5rem" onclick="doCompleteCampaignMission('${m.id}')">✅ Complete Mission</button>`) : ''}
         </div>
       `;
     }).join('');
+  }
+
+  // Upcoming missions (day-gated) from current act
+  let upcomingHtml = '';
+  const upcoming = typeof getUpcomingMainMissions === 'function' ? getUpcomingMainMissions(gameState) : [];
+  if (upcoming.length > 0) {
+    upcomingHtml = upcoming.slice(0, 4).map(m => `
+      <div class="card" style="opacity:0.55;border-color:var(--text-dim)">
+        <div class="card-header">
+          <span>${m.emoji || '📋'} ${m.name}</span>
+          <span class="text-dim" style="font-size:0.8rem">🔒 Unlocks day ${m._unlockDay} (${Math.max(0, m._unlockDay - gameState.day)} days)</span>
+        </div>
+        <p class="text-dim" style="font-size:0.8rem">${m.desc || ''}</p>
+      </div>
+    `).join('');
   }
 
   // Side missions from current act
@@ -1090,11 +1159,12 @@ function renderCampaignScreen() {
       </div>
       <div style="margin-bottom:1rem">
         <div class="stat-bar" style="height:8px"><div class="stat-fill" style="width:${progress}%;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green))"></div></div>
-        <p class="text-dim" style="text-align:center;font-size:0.85rem">Campaign Progress: ${progress}% | Missions: ${(campaign.completedMissions||[]).length}/${typeof CAMPAIGN_ACTS !== 'undefined' ? CAMPAIGN_ACTS.reduce((s,a) => s + (a.mainMissions?a.mainMissions.length:0), 0) : '?'}</p>
+        <p class="text-dim" style="text-align:center;font-size:0.85rem">Campaign Progress: ${progress}% | Missions: ${(campaign.completedMissions||[]).length}/${typeof MISSION_ACTS !== 'undefined' ? MISSION_ACTS.reduce((s,a) => s + (a.mainMissions?a.mainMissions.length:0), 0) : '?'}</p>
       </div>
       <h3 class="neon-yellow" style="margin:1rem 0 0.5rem">📖 Story Acts</h3>
       <div class="card-grid">${actCards}</div>
       ${missionsHtml ? `<h3 class="neon-green" style="margin:1rem 0 0.5rem">📋 Available Main Missions</h3>${missionsHtml}` : '<p class="text-dim">No main missions available right now. Progress your empire!</p>'}
+      ${upcomingHtml ? `<h3 class="text-dim" style="margin:1rem 0 0.5rem">⏳ Coming Up</h3>${upcomingHtml}` : ''}
       ${sideMissionsHtml ? `<h3 class="text-dim" style="margin:1rem 0 0.5rem">📎 Side Missions</h3>${sideMissionsHtml}` : ''}
       <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-top:1rem">← Back</button>
     </div>
@@ -1588,7 +1658,7 @@ function renderGame() {
         return cond.label !== 'STABLE' ? `<span style="font-size:0.55rem;margin-left:0.3rem;color:${cond.color}">${cond.label}</span>` : '';
       })() : '';
     const priceDisplay = price === null ? '<span class="unavailable">—</span>' :
-      `$${price.toLocaleString()}${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
+      `<span data-tick-price="${drug.id}">$${price.toLocaleString()}</span><span data-tick-trend="${drug.id}" style="font-size:0.65rem;margin-left:2px"></span>${isOwnTerritory ? ' <span class="neon-purple" style="font-size:0.7rem">🏴</span>' : ''}${supplyIndicator}`;
     const hasEvent = gameState.priceEvents.find(e => e.drugId === drug.id);
     const rowClass = hasEvent ? (hasEvent.effect === 'spike' ? 'row-spike' : 'row-crash') : '';
     let spark = '';
@@ -1647,12 +1717,17 @@ function renderGame() {
     return `<button class="main-tab-btn tab-locked" data-lock-tooltip="${tip}" onclick="showNotification('${tip}', 'info'); return false;">🔒 ${label}</button>`;
   };
 
+  const newsTickerStrip = typeof renderNewsFeed === 'function' && gameState.newsFeed && gameState.newsFeed.length
+    ? `<div data-news-ticker onclick="currentScreen='news'; render();" style="cursor:pointer;font-size:0.75rem;color:var(--text-mid);padding:0.25rem 0.5rem;margin-bottom:0.3rem;border:1px solid var(--border-color);border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="Open the news wire">📰 ${gameState.newsFeed[0].headline}</div>`
+    : '';
   const mainTabBar = `
+    ${newsTickerStrip}
     <div class="main-tab-bar" style="display:flex;gap:0;margin-bottom:0.5rem;border-bottom:2px solid var(--border-color);flex-wrap:wrap;">
       <button class="main-tab-btn${mainTab === 'portfolio' ? ' active' : ''}" onclick="mainTab='portfolio'; render();">💼 Portfolio</button>
       <button class="main-tab-btn${mainTab === 'buysell' ? ' active' : ''}" onclick="mainTab='buysell'; render();">💰 Buy / Sell</button>
       <button class="main-tab-btn${mainTab === 'prices' ? ' active' : ''}" onclick="mainTab='prices'; render();">💊 Street Prices</button>
       <button class="main-tab-btn${mainTab === 'intel' ? ' active' : ''}" onclick="mainTab='intel'; render();">🗺️ Price Intel</button>
+      ${typeof renderSuppliers === 'function' ? `<button class="main-tab-btn" onclick="currentScreen='suppliers'; render();">🤝 Suppliers</button>` : ''}
       <button class="main-tab-btn${mainTab === 'empire' ? ' active' : ''}" onclick="mainTab='empire'; render();">👑 Empire</button>
       ${_tabUf.futures ? `<button class="main-tab-btn${mainTab === 'futures_tab' ? ' active' : ''}" onclick="currentScreen='futures'; render();">📊 Futures</button>` : _tabLocked('📊', 'Futures', 'futures')}
       ${_tabUf.imports ? `<button class="main-tab-btn${mainTab === 'imports_tab' ? ' active' : ''}" onclick="currentScreen='imports'; render();">🌍 Import</button>` : _tabLocked('🌍', 'Import', 'imports')}
@@ -2072,10 +2147,16 @@ function renderGame() {
       <div class="sidebar-section">
         <div class="sidebar-label">📋 CAMPAIGN</div>
         <button class="btn btn-sidebar btn-secondary" style="border-color:#ffaa00;color:#ffaa00" onclick="currentScreen='campaign'; render();">🎯 Campaign${gameState.campaign ? ` (Act ${typeof gameState.campaign.currentAct === 'number' ? gameState.campaign.currentAct : String(gameState.campaign.currentAct).replace('act','')})` : ''}</button>
+        ${typeof renderRegionalBosses === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6b35;color:#ff6b35" onclick="currentScreen='regionalbosses'; render();">👑 Regional Bosses</button>` : ''}
+        ${typeof renderNewsFeed === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00f0ff;color:#00f0ff" onclick="currentScreen='news'; render();">📺 News${typeof getUnreadNewsCount === 'function' && getUnreadNewsCount(gameState) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${getUnreadNewsCount(gameState)})</span>` : ''}</button>` : ''}
+        ${typeof renderDistrictEcology === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#39ff14;color:#39ff14" onclick="currentScreen='districts'; render();">🏘️ Neighborhoods</button>` : ''}
+        ${typeof renderSmugglingFleet === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ffe600;color:#ffe600" onclick="currentScreen='smuggling'; render();">🚤 Smuggling Fleet</button>` : ''}
+        ${typeof renderOffshore === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='offshore'; render();">🏝️ Offshore</button>` : ''}
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
         ${_isUnlocked('skills') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}</button>` : _lockedBtn('🌳', 'Skills', 'skills')}
+        ${typeof renderIntimidation === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='intimidation'; render();">😤 Intimidation</button>` : ''}
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stats'; render();">📊 Stats</button>
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='achievements'; render();">🏆 Achievements</button>
       </div>
@@ -2591,6 +2672,44 @@ function doStash(action, drugId, amount) {
 // BLACK MARKET
 // ============================================================
 var bmTierFilter = 'all';
+var bmUpgradeWeapon = null; // gunsmith: currently selected owned weapon
+
+// --- Weapon tier progression gating (rank-locked arsenal) ---
+// Minimum kingpin level required to purchase weapons in each tier.
+var WEAPON_TIER_REQUIREMENTS = {
+  melee: 1, throwable: 1, pistol: 1,
+  shotgun: 3, smg: 3,
+  rifle: 5,
+  sniper: 7,
+  heavy: 9,
+  exotic: 10,
+  legendary: 11,
+};
+
+function getWeaponLevelReq(w) {
+  if (!w) return 1;
+  return WEAPON_TIER_REQUIREMENTS[w.tier || 'pistol'] || 1;
+}
+
+function getPlayerKingpinLevel() {
+  if (typeof getKingpinLevel === 'function' && gameState) {
+    var lvl = getKingpinLevel(gameState.xp || 0);
+    return (lvl && lvl.level) || 1;
+  }
+  return 99; // leveling system not loaded — don't gate
+}
+
+function getRankTitle(level) {
+  if (typeof KINGPIN_LEVELS !== 'undefined') {
+    var k = KINGPIN_LEVELS.find(function(l) { return l.level === level; });
+    if (k) return (k.emoji ? k.emoji + ' ' : '') + k.title;
+  }
+  return 'Level ' + level;
+}
+
+function isWeaponUnlocked(w) {
+  return getPlayerKingpinLevel() >= getWeaponLevelReq(w);
+}
 
 function setBMTierFilter(tier) {
   bmTierFilter = tier;
@@ -2609,9 +2728,25 @@ function renderBlackMarket() {
     `<button class="btn btn-sm ${bmTierFilter === t ? 'btn-primary' : 'btn-secondary'}" style="margin:0 3px 5px 0;font-size:0.7rem;" onclick="setBMTierFilter('${t}')">${t === 'all' ? 'ALL' : t.toUpperCase()}</button>`
   ).join('');
 
+  const playerLevel = getPlayerKingpinLevel();
   const weaponRows = WEAPONS.filter(w => w.price > 0).filter(w => bmTierFilter === 'all' || (w.tier || 'standard') === bmTierFilter).map(w => {
     const owned = gameState.weapons.includes(w.id);
     const equipped = gameState.equippedWeapon === w.id;
+    const reqLevel = getWeaponLevelReq(w);
+    const locked = !owned && playerLevel < reqLevel;
+    if (locked) {
+      // Visible-but-locked: show what's waiting at higher ranks
+      return `
+      <tr style="opacity:0.45;">
+        <td>🔒 ${w.name}</td>
+        <td>DMG: ${w.damage}</td>
+        <td>ACC: ${Math.round(w.accuracy * 100)}%</td>
+        <td>$${w.price.toLocaleString()}</td>
+        <td>${w.space} slots</td>
+        <td><span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">Unlocks at ${getRankTitle(reqLevel)} rank (Lv ${reqLevel})</span></td>
+      </tr>
+    `;
+    }
     return `
       <tr class="${owned ? 'row-owned' : ''}">
         <td>${w.name}</td>
@@ -2661,14 +2796,98 @@ function renderBlackMarket() {
     `;
   }).join('');
 
+  // === GUNSMITH: weapon upgrades for owned weapons (weapon-upgrades.js) ===
+  let gunsmithSection = '';
+  if (typeof WEAPON_UPGRADES !== 'undefined' && typeof getCompatibleUpgrades === 'function') {
+    const ownedGuns = (gameState.weapons || []).map(id => WEAPONS.find(w => w.id === id)).filter(w => w && w.price > 0 && !w.consumable);
+    if (ownedGuns.length === 0) {
+      gunsmithSection = '<h3>🔧 Gunsmith</h3><p style="color:var(--text-dim);font-size:0.75rem;">Buy a weapon first — then bring it here for custom work.</p>';
+    } else {
+      if (!bmUpgradeWeapon || !ownedGuns.some(w => w.id === bmUpgradeWeapon)) {
+        bmUpgradeWeapon = ownedGuns.some(w => w.id === gameState.equippedWeapon) ? gameState.equippedWeapon : ownedGuns[0].id;
+      }
+      const selTabs = ownedGuns.map(w =>
+        `<button class="btn btn-sm ${bmUpgradeWeapon === w.id ? 'btn-primary' : 'btn-secondary'}" style="margin:0 3px 5px 0;font-size:0.7rem;" onclick="setBMUpgradeWeapon('${w.id}')">${w.emoji || '🔫'} ${w.name}</button>`
+      ).join('');
+      const selWeapon = ownedGuns.find(w => w.id === bmUpgradeWeapon);
+      const installed = (gameState.weaponState && gameState.weaponState.upgrades && gameState.weaponState.upgrades[bmUpgradeWeapon]) || [];
+      const modStats = typeof getModifiedWeaponStats === 'function' ? getModifiedWeaponStats(bmUpgradeWeapon, gameState.weaponState && gameState.weaponState.upgrades) : null;
+      const statLine = modStats ? `<div style="font-size:0.75rem;margin-bottom:6px;">Modified stats: <span class="neon-cyan">DMG ${modStats.damage}</span> | <span class="neon-cyan">ACC ${Math.round((modStats.accuracy <= 1 ? modStats.accuracy * 100 : modStats.accuracy))}%</span>${modStats.intimidation ? ' | <span class="neon-yellow">INTIM +' + modStats.intimidation + '</span>' : ''} <span style="color:var(--text-dim)">(${installed.length} mod${installed.length === 1 ? '' : 's'} installed)</span></div>` : '';
+      const upgradeRows = getCompatibleUpgrades(selWeapon.tier).map(u => {
+        const isInstalled = installed.includes(u.id);
+        const rankLocked = u.minLevel && playerLevel < u.minLevel;
+        const catTaken = !isInstalled && installed.some(uid => { const iu = WEAPON_UPGRADES.find(x => x.id === uid); return iu && iu.category === u.category; });
+        let actionCell;
+        if (isInstalled) actionCell = '<span class="neon-green">✓ INSTALLED</span>';
+        else if (rankLocked) actionCell = `<span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">🔒 ${getRankTitle(u.minLevel)} rank (Lv ${u.minLevel})</span>`;
+        else if (catTaken) actionCell = `<span style="color:var(--text-dim);font-size:0.65rem;">${u.category} slot used</span>`;
+        else actionCell = `<button class="btn btn-sm btn-buy" onclick="doInstallUpgrade('${selWeapon.id}','${u.id}')">INSTALL</button>`;
+        return `<tr style="${rankLocked ? 'opacity:0.45;' : ''}">
+          <td>${u.emoji} ${u.name}</td>
+          <td style="font-size:0.7rem;color:var(--text-dim);max-width:220px;">${u.desc}</td>
+          <td>$${u.cost.toLocaleString()}</td>
+          <td>${actionCell}</td>
+        </tr>`;
+      }).join('');
+      gunsmithSection = `<h3>🔧 Gunsmith — Weapon Upgrades</h3>
+        <div style="margin-bottom:6px;">${selTabs}</div>
+        ${statLine}
+        <table class="data-table"><thead><tr><th>Upgrade</th><th>Effect</th><th>Cost</th><th></th></tr></thead><tbody>${upgradeRows}</tbody></table>`;
+    }
+  }
+
+  // === BODY ARMOR (weapon-upgrades.js) ===
+  let armorSection = '';
+  if (typeof BODY_ARMOR_TIERS !== 'undefined') {
+    const currentArmor = gameState.weaponState && gameState.weaponState.armor;
+    const armorRows = BODY_ARMOR_TIERS.map(a => {
+      const isWorn = currentArmor === a.id;
+      const rankLocked = a.minLevel && playerLevel < a.minLevel;
+      let cell;
+      if (isWorn) cell = '<span class="neon-green">WEARING</span>';
+      else if (rankLocked) cell = `<span style="color:var(--neon-yellow);font-size:0.65rem;white-space:nowrap;">🔒 ${getRankTitle(a.minLevel)} rank (Lv ${a.minLevel})</span>`;
+      else cell = `<button class="btn btn-sm btn-buy" onclick="doBuyArmor('${a.id}')">BUY</button>`;
+      return `<tr style="${rankLocked ? 'opacity:0.45;' : ''}">
+        <td>🦺 ${a.name}</td>
+        <td style="font-size:0.7rem;color:var(--text-dim);max-width:200px;">${a.desc}</td>
+        <td>+${a.protection} armor</td>
+        <td>${a.concealable ? '<span class="neon-green">Concealable</span>' : '<span style="color:var(--text-dim)">Visible</span>'}</td>
+        <td>$${a.cost.toLocaleString()}</td>
+        <td>${cell}</td>
+      </tr>`;
+    }).join('');
+    armorSection = `<h3>🦺 Body Armor</h3>
+      <table class="data-table"><thead><tr><th>Armor</th><th>Details</th><th>Protection</th><th>Profile</th><th>Price</th><th></th></tr></thead><tbody>${armorRows}</tbody></table>`;
+  }
+
+  // === TACTICAL EQUIPMENT (weapon-upgrades.js) ===
+  let tacticalSection = '';
+  if (typeof EQUIPMENT !== 'undefined' && Array.isArray(EQUIPMENT)) {
+    const ownedEquip = (gameState.weaponState && gameState.weaponState.equipment) || [];
+    const equipRows = EQUIPMENT.map(e => `
+      <tr>
+        <td>${e.name}</td>
+        <td style="font-size:0.7rem;color:var(--text-dim);max-width:220px;">${e.desc}</td>
+        <td>$${e.cost.toLocaleString()}</td>
+        <td>${ownedEquip.includes(e.id) ? '<span class="neon-green">✓ OWNED</span>' : `<button class="btn btn-sm btn-buy" onclick="doBuyEquipment('${e.id}')">BUY</button>`}</td>
+      </tr>
+    `).join('');
+    tacticalSection = `<h3>📡 Tactical Equipment</h3>
+      <table class="data-table"><thead><tr><th>Gear</th><th>Effect</th><th>Price</th><th></th></tr></thead><tbody>${equipRows}</tbody></table>`;
+  }
+
   return `
     <div class="screen-container">
       ${renderToolbar()}
       ${backButton()}
       <h2 class="section-title neon-yellow">🏴 BLACK MARKET</h2>
       <h3>🔫 Weapons</h3>
+      <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:4px;">Your rank: <span class="neon-cyan">${getRankTitle(playerLevel)} (Lv ${playerLevel})</span> — bigger hardware unlocks as your reputation grows.</div>
       <div style="margin-bottom:8px;">${tierTabs}</div>
       <table class="data-table"><thead><tr><th>Name</th><th>Damage</th><th>Accuracy</th><th>Price</th><th>Space</th><th></th></tr></thead><tbody>${weaponRows}</tbody></table>
+      ${gunsmithSection}
+      ${armorSection}
+      ${tacticalSection}
       <h3>🎒 Items & Equipment</h3>
       <table class="data-table"><thead><tr><th>Item</th><th>Effect</th><th>Price</th><th>Owned</th><th></th></tr></thead><tbody>${itemRows}</tbody></table>
       <h3>👥 Hire Crew (Max ${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</h3>
@@ -2681,6 +2900,14 @@ function renderBlackMarket() {
 }
 
 function doBuyWeapon(id) {
+  // Defensive rank gate — mirrors the locked rendering in renderBlackMarket
+  const weaponDef = typeof WEAPONS !== 'undefined' ? WEAPONS.find(w => w.id === id) : null;
+  if (weaponDef && !isWeaponUnlocked(weaponDef)) {
+    const reqLevel = getWeaponLevelReq(weaponDef);
+    playSound('error');
+    showNotification(`🔒 ${weaponDef.name} is locked. Reach ${getRankTitle(reqLevel)} rank (Lv ${reqLevel}) first.`, 'error');
+    return;
+  }
   const result = buyWeapon(gameState, id);
   if (result.success) {
     playSound('buy');
@@ -2695,6 +2922,54 @@ function doBuyWeapon(id) {
 function equipWeapon(id) {
   gameState.equippedWeapon = id;
   playSound('click');
+  render();
+}
+
+function setBMUpgradeWeapon(id) {
+  bmUpgradeWeapon = id;
+  playSound('click');
+  render();
+}
+
+function doInstallUpgrade(weaponId, upgradeId) {
+  if (typeof installWeaponUpgrade !== 'function') return;
+  const result = installWeaponUpgrade(gameState, weaponId, upgradeId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
+  render();
+}
+
+function doBuyArmor(armorId) {
+  if (typeof buyArmor !== 'function') return;
+  const result = buyArmor(gameState, armorId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
+  render();
+}
+
+function doBuyEquipment(equipId) {
+  if (typeof buyEquipment !== 'function') return;
+  const result = buyEquipment(gameState, equipId);
+  if (result.success) {
+    playSound('buy');
+    gameState.messageLog.push(result.msg);
+    showNotification(result.msg, 'success');
+  } else {
+    playSound('error');
+    showNotification(result.msg, 'error');
+  }
   render();
 }
 
@@ -2912,7 +3187,11 @@ function renderTravel() {
     western_europe: '🏰 Western Europe', eastern_europe: '🏭 Eastern Europe', west_africa: '🌍 West Africa',
     southeast_asia: '🐉 Southeast Asia' };
 
-  for (const [region, locs] of Object.entries(filteredRegions)) {
+  // List the player's current region first, then Miami, then everywhere else
+  const curRegionKey = currentLoc.region || 'miami';
+  const regionRank = r => (r === curRegionKey ? 0 : r === 'miami' ? 1 : 2);
+  const orderedRegions = Object.entries(filteredRegions).sort((a, b) => regionRank(a[0]) - regionRank(b[0]));
+  for (const [region, locs] of orderedRegions) {
     const sameRegion = region === (currentLoc.region || 'miami');
     const crossRegion = !sameRegion;
     locHtml += `<h3 class="region-header ${sameRegion ? 'neon-green' : 'neon-cyan'}">${regionDisplayNames[region] || region} ${sameRegion ? '(Same Region)' : '✈️ Cross-Region'}</h3>`;
@@ -2922,6 +3201,12 @@ function renderTravel() {
       locHtml += `
         <div class="travel-card ${visited ? 'visited' : ''}" onclick="selectDestination('${loc.id}')">
           <div class="travel-card-name">${loc.emoji || ''} ${loc.name}</div>
+          ${gameState.districts && gameState.districts[loc.id] ? (() => {
+            const c = gameState.districts[loc.id].condition;
+            const label = c >= 70 ? '🌴 Thriving' : c >= 50 ? '🏙️ Stable' : c >= 30 ? '🏚️ Struggling' : '💀 Blighted';
+            const color = c >= 70 ? 'var(--neon-green)' : c >= 50 ? 'var(--text-mid)' : c >= 30 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+            return `<div style="font-size:0.65rem;color:${color}">${label}</div>`;
+          })() : ''}
           <div class="travel-card-desc">${loc.desc}</div>
           <div class="travel-card-danger">Danger: ${'★'.repeat(Math.min(loc.dangerLevel, 10))}${'☆'.repeat(Math.max(0, 10 - loc.dangerLevel))}</div>
           ${loc.drugSpecialty ? `<div class="travel-card-specialty">Known for: ${DRUGS.find(d => d.id === loc.drugSpecialty)?.name || loc.drugSpecialty}</div>` : ''}
@@ -3657,7 +3942,7 @@ function renderCrewPanel() {
     const rank = h.rank || 0;
     const rankData = typeof CREW_RANKS !== 'undefined' ? CREW_RANKS[rank] : null;
     const rankName = rankData ? rankData.name : 'Crew';
-    const canPromote = typeof canPromoteCrew === 'function' ? canPromoteCrew(gameState, i) : null;
+    const canPromote = typeof canPromoteCrew === 'function' ? canPromoteCrew(gameState, h) : null;
     const daysServed = h.daysServed || 0;
     const traits = h.traits || [];
     const betrayalRisk = h.betrayalRisk || 0;
@@ -5364,11 +5649,11 @@ function renderMissions() {
         function milestoneGuidance(milestone, isDone) {
           // Try to find matching campaign mission objectives for richer info
           var campaignMission = null;
-          if (typeof CAMPAIGN_ACTS !== 'undefined') {
-            for (var ai = 0; ai < CAMPAIGN_ACTS.length; ai++) {
-              if (CAMPAIGN_ACTS[ai].mainMissions) {
-                for (var mi = 0; mi < CAMPAIGN_ACTS[ai].mainMissions.length; mi++) {
-                  var cm = CAMPAIGN_ACTS[ai].mainMissions[mi];
+          if (typeof MISSION_ACTS !== 'undefined') {
+            for (var ai = 0; ai < MISSION_ACTS.length; ai++) {
+              if (MISSION_ACTS[ai].mainMissions) {
+                for (var mi = 0; mi < MISSION_ACTS[ai].mainMissions.length; mi++) {
+                  var cm = MISSION_ACTS[ai].mainMissions[mi];
                   if (cm.objectives) {
                     for (var oi = 0; oi < cm.objectives.length; oi++) {
                       if (cm.objectives[oi].id === milestone.id) { campaignMission = cm; break; }
@@ -5509,6 +5794,17 @@ function doCompleteMission(index) {
   gameState.messageLog.push(result.msg);
   if (result.success) playSound('click');
   else playSound('error');
+  render();
+}
+
+function doCompleteCampaignMission(missionId, approachId) {
+  if (typeof completeCampaignMission !== 'function') return;
+  const mission = typeof findMissionById === 'function' ? findMissionById(missionId) : null;
+  completeCampaignMission(gameState, missionId, approachId);
+  const name = mission ? mission.name : missionId;
+  gameState.messageLog.push(`🎯 MISSION COMPLETE: ${name}!` + (mission && mission.reward ? ` +$${(mission.reward.cash||0).toLocaleString()}, +${mission.reward.rep||0} Rep, +${mission.reward.xp||0} XP` : ''));
+  showNotification(`Mission complete: ${name}`, 'success');
+  playSound('cash');
   render();
 }
 
@@ -5897,7 +6193,7 @@ function renderSecurity() {
       <div class="prop-header">${v.emoji} ${v.name} ${isActive ? '✅' : ''}</div>
       <div class="prop-details">
         Speed: ${v.speed} | Handling: ${v.handling}${v.armor ? ` | Armor: ${v.armor}` : ''}${v.waterOnly ? ' | 🌊 Water only' : ''}<br>
-        ${owned ? (isActive ? '<span class="neon-green">Active</span>' : `<button class="btn btn-sm btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="doSetVehicle('${v.id}')">Set Active</button>`) : `<button class="btn btn-sm btn-buy" onclick="doBuyVehicle('${v.id}')">Buy $${v.cost.toLocaleString()}</button>`}
+        ${owned ? (isActive ? '<span class="neon-green">Active</span>' : `<button class="btn btn-sm btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="doSetVehicle('${v.id}')">Set Active</button>`) : `<button class="btn btn-sm btn-buy" onclick="doBuyChaseVehicle('${v.id}')">Buy $${v.cost.toLocaleString()}</button>`}
       </div>
     </div>`;
   }).join('');
@@ -5994,10 +6290,18 @@ function doBuyCounterMeasure(measureId) {
 }
 
 function doSetVehicle(vehicleId) {
-  const result = setActiveVehicle(gameState, vehicleId);
+  const result = setActiveChaseVehicle(gameState, vehicleId);
   if (result.msg) gameState.messageLog.push(result.msg);
   if (result.message) gameState.messageLog.push(result.message);
   if (result.success) playSound('click');
+  render();
+}
+
+function doBuyChaseVehicle(vehicleId) {
+  const result = buyChaseVehicle(gameState, vehicleId);
+  if (result.msg) gameState.messageLog.push(result.msg);
+  if (result.success) playSound('cash');
+  else playSound('error');
   render();
 }
 
@@ -6440,6 +6744,8 @@ function migrateGameState(state) {
     else if (state.day > 800) state.campaign.currentAct = 3;
     else if (state.day > 200) state.campaign.currentAct = 2;
   }
+  // Campaign mission fields (story missions live alongside act milestones)
+  if (typeof ensureCampaignMissionFields === 'function') ensureCampaignMissionFields(state);
 
   // Crew expansion fields
   for (const h of state.henchmen) {
@@ -6523,17 +6829,18 @@ function migrateGameState(state) {
     };
   }
 
-  // Campaign state
+  // Campaign state (acts + story mission fields)
   if (!state.campaign) {
-    state.campaign = typeof initCampaignState === 'function' ? initCampaignState(state.character) :
-      { currentAct: 'act1', actProgress: {}, completedMissions: [], activeMission: null,
-        activeSideMissions: [], availableSideMissions: [], missionObjectives: {},
-        endingPath: null, totalMissionsCompleted: 0, totalSideMissionsCompleted: 0,
-        campaignStartDay: 0, campaignComplete: false, choiceHistory: [] };
-    // Estimate act based on day count for existing saves
-    if (state.day > 300) state.campaign.currentAct = 'act4';
-    else if (state.day > 150) state.campaign.currentAct = 'act3';
-    else if (state.day > 60) state.campaign.currentAct = 'act2';
+    state.campaign = typeof initCampaign === 'function' ? initCampaign() :
+      { currentAct: 1, milestonesCompleted: {}, actTransitions: [], flags: {} };
+  }
+  if (typeof ensureCampaignMissionFields === 'function') {
+    ensureCampaignMissionFields(state);
+  } else if (!state.campaign.completedMissions) {
+    Object.assign(state.campaign, { missionAct: 'act1', actProgress: {}, completedMissions: [], activeMission: null,
+      activeSideMissions: [], availableSideMissions: [], missionObjectives: {},
+      endingPath: null, totalMissionsCompleted: 0, totalSideMissionsCompleted: 0,
+      campaignStartDay: 0, campaignComplete: false, choiceHistory: [] });
   }
 
   // Weapon state (upgrades, armor, equipment)
@@ -7379,7 +7686,7 @@ function renderHeist() {
       var avail = availableHeists.find(function(a) { return a.heistTypeId === ht.id; });
       return '<tr>' +
         '<td>' + ht.emoji + ' ' + ht.name + '</td>' +
-        '<td><span class="' + (ht.difficulty <= 2 ? 'neon-green' : ht.difficulty <= 4 ? 'neon-yellow' : 'neon-red') + '">★'.repeat(ht.difficulty) + '</span></td>' +
+        '<td><span class="' + (ht.difficulty <= 2 ? 'neon-green' : ht.difficulty <= 4 ? 'neon-yellow' : 'neon-red') + '">' + '★'.repeat(ht.difficulty) + '</span></td>' +
         '<td>$' + ht.rewardMin.toLocaleString() + '-$' + ht.rewardMax.toLocaleString() + '</td>' +
         '<td>' + ht.crewMin + '-' + ht.crewMax + '</td>' +
         '<td>🌡️' + ht.heatGenerated + '</td>' +
@@ -7571,7 +7878,70 @@ function doAdvanceRelationship(npcId, action) {
       var advResult = advanceRelationship(romState, npcId);
       showNotification(advResult.message, advResult.success ? 'success' : 'error');
     }
+  } else if (action === 'secret') {
+    if (typeof shareSecret === 'function') {
+      romState._currentDay = gameState.day || 0;
+      var secretResult = shareSecret(romState, npcId);
+      if (secretResult.success && secretResult.leaked && typeof gameState.heat === 'number') {
+        // shareSecret applies heat to the romance state object; mirror onto real game state
+        gameState.heat = Math.min(100, gameState.heat + 5);
+      }
+      showNotification(secretResult.message, secretResult.success ? (secretResult.leaked ? 'error' : 'success') : 'error');
+      if (secretResult.success) gameState.messageLog.push(secretResult.message);
+    }
+  } else if (action === 'protect') {
+    if (typeof protectPartner === 'function') {
+      var protResult = protectPartner(romState, npcId);
+      if (protResult.success) {
+        if (typeof gameState.health === 'number') gameState.health = Math.max(20, gameState.health - 10);
+        playSound('combat');
+        gameState.messageLog.push(protResult.message);
+      }
+      showNotification(protResult.message, protResult.success ? 'success' : 'error');
+    }
   }
+  render();
+}
+
+// Resolve a story-beat choice (per-NPC relationship events with consequences)
+function doRomanceEventChoice(npcId, choiceId) {
+  if (typeof resolveRomanceEventChoice !== 'function') return;
+  var romState = gameState.romance;
+  if (!romState) return;
+
+  var result = resolveRomanceEventChoice(romState, npcId, choiceId, gameState.cash || 0);
+  if (!result.success) {
+    playSound('error');
+    showNotification(result.message, 'error');
+    render();
+    return;
+  }
+
+  // Apply consequences to the real game state (defensively)
+  if (result.cashDelta) gameState.cash = Math.max(0, (gameState.cash || 0) + result.cashDelta);
+  if (result.heatDelta && typeof gameState.heat === 'number') {
+    gameState.heat = Math.max(0, Math.min(100, gameState.heat + result.heatDelta));
+  }
+  if (result.healthDelta && typeof gameState.health === 'number') {
+    gameState.health = Math.max(10, Math.min(gameState.maxHealth || 100, gameState.health + result.healthDelta));
+  }
+
+  playSound(result.brokeUp ? 'error' : (result.cashDelta > 0 ? 'cash' : 'click'));
+  showNotification(result.message + (result.stageUp ? ' 💕 Stage Up: ' + result.newStage + '!' : ''), result.brokeUp ? 'error' : 'success');
+  if (gameState.messageLog) gameState.messageLog.push(result.message);
+  render();
+}
+
+// Dismiss informational romance events (pregnancy, births, warnings...)
+function doDismissRomanceEvent(npcId) {
+  if (typeof dismissRomanceEvent !== 'function') {
+    // Fallback: clear manually
+    var rs = gameState.romance;
+    if (rs && rs.relationships && rs.relationships[npcId]) rs.relationships[npcId].pendingEvent = null;
+  } else if (gameState.romance) {
+    dismissRomanceEvent(gameState.romance, npcId);
+  }
+  playSound('click');
   render();
 }
 
@@ -7583,6 +7953,13 @@ function renderRomance() {
   var romState = gameState.romance || { relationships: {}, daysSinceContact: {}, gifts: {} };
   var stageOrder = typeof RELATIONSHIP_STAGES !== 'undefined' ? RELATIONSHIP_STAGES : ['stranger', 'acquaintance', 'dating', 'serious', 'partner'];
   var thresholds = typeof STAGE_THRESHOLDS !== 'undefined' ? STAGE_THRESHOLDS : { acquaintance: 10, dating: 30, serious: 60, partner: 100 };
+
+  // Arm any story beats whose point thresholds have been crossed (fires immediately, not just on day tick)
+  if (typeof checkStoryBeatTrigger === 'function' && romState.relationships) {
+    Object.keys(romState.relationships).forEach(function(id) {
+      checkStoryBeatTrigger(romState, id);
+    });
+  }
 
   var npcCards = ROMANCE_NPCS.map(function(npc) {
     var rel = romState.relationships ? romState.relationships[npc.id] : null;
@@ -7611,6 +7988,69 @@ function renderRomance() {
       if (parts.length > 0) benefitsStr = '<div style="font-size:0.65rem;color:var(--neon-green);margin-top:3px;">Benefits: ' + parts.join(' | ') + '</div>';
     }
 
+    // Partner perk display: earned at partner stage, teased before it
+    var perkStr = '';
+    var perk = typeof getPartnerPerk === 'function' ? getPartnerPerk(npc.id) : null;
+    if (perk) {
+      if (stage === 'partner') {
+        perkStr = '<div style="font-size:0.65rem;color:#ff44ff;margin-top:3px;border:1px solid #ff44ff;border-radius:3px;padding:3px 5px;">' +
+          perk.emoji + ' <strong>Partner Perk — ' + perk.name + ':</strong> ' + perk.desc + '</div>';
+      } else if (rel) {
+        perkStr = '<div style="font-size:0.6rem;color:var(--text-dim);margin-top:3px;">🔒 Partner perk: <em>' + perk.name + '</em> — ' + perk.desc + '</div>';
+      }
+    }
+
+    // Next story beat hint
+    var beatHint = '';
+    if (rel && typeof getNextStoryBeat === 'function') {
+      var nextBeat = getNextStoryBeat(romState, npc.id);
+      if (nextBeat && !rel.pendingEvent) {
+        if (points >= nextBeat.minPoints) {
+          beatHint = '<div style="font-size:0.65rem;color:var(--neon-yellow);margin-top:2px;">📖 Something is coming with ' + npc.name.split(' ')[0] + '...</div>';
+        } else {
+          beatHint = '<div style="font-size:0.65rem;color:var(--text-dim);margin-top:2px;">📖 Next chapter: <em>"' + nextBeat.title + '"</em> at ' + nextBeat.minPoints + ' pts</div>';
+        }
+      }
+    }
+
+    // Neglect warning (daysSinceContact accumulates now)
+    var neglectStr = '';
+    var daysSince = (romState.daysSinceContact && romState.daysSinceContact[npc.id]) || 0;
+    if (rel && stageIdx >= 3 && daysSince >= 15) {
+      var neglectColor = daysSince >= 30 ? 'var(--neon-red, #ff4444)' : 'var(--neon-yellow)';
+      neglectStr = '<div style="font-size:0.65rem;color:' + neglectColor + ';margin-top:2px;">' +
+        (daysSince >= 30 ? '💔 ' + daysSince + ' days of silence — she\'s slipping away. Call her NOW.' : '⏳ ' + daysSince + ' days since contact. Don\'t neglect her.') + '</div>';
+    }
+
+    // Pending event card (story beats with choices, or informational life events)
+    var eventCard = '';
+    if (rel && rel.pendingEvent) {
+      var ev = rel.pendingEvent;
+      if (ev.choices && ev.choices.length) {
+        var choiceBtns = ev.choices.map(function(c) {
+          return '<div style="margin:4px 0;">' +
+            '<button class="btn btn-sm btn-secondary" style="border-color:#ff6699;color:#ff6699;text-align:left;" onclick="doRomanceEventChoice(\'' + npc.id + '\',\'' + c.id + '\')">' + c.label + '</button>' +
+            (c.hint ? ' <span style="font-size:0.6rem;color:var(--text-dim);">' + c.hint + '</span>' : '') +
+          '</div>';
+        }).join('');
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid #ff6699;border-radius:6px;background:rgba(255,102,153,0.07);">' +
+          '<div style="color:#ff6699;font-weight:bold;">📖 ' + (ev.title || 'A Moment of Truth') + '</div>' +
+          '<div style="font-size:0.75rem;margin:4px 0;">' + (ev.description || '') + '</div>' +
+          choiceBtns +
+        '</div>';
+      } else if (ev.id !== 'kidnapped' && ev.id !== 'threatened') {
+        // Informational life event (pregnancy, birth, divorce, worry...) — protect events keep their button below
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid var(--neon-yellow);border-radius:6px;">' +
+          '<div style="font-size:0.75rem;">💌 ' + (ev.description || 'Something happened.') + '</div>' +
+          '<button class="btn btn-sm btn-secondary" style="margin-top:4px;" onclick="doDismissRomanceEvent(\'' + npc.id + '\')">OK</button>' +
+        '</div>';
+      } else {
+        eventCard = '<div style="margin-top:8px;padding:8px;border:1px solid var(--neon-red,#ff4444);border-radius:6px;">' +
+          '<div style="font-size:0.75rem;color:var(--neon-red,#ff4444);">🚨 ' + (ev.description || 'She\'s in danger!') + '</div>' +
+        '</div>';
+      }
+    }
+
     return '<div style="padding:10px;border:1px solid ' + stageColor + ';border-radius:6px;margin-bottom:8px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
         '<div>' +
@@ -7619,6 +8059,9 @@ function renderRomance() {
           '<div style="font-size:0.7rem;">Personality: <span class="neon-cyan">' + npc.personality.primary + '</span> / <span class="neon-yellow">' + npc.personality.secondary + '</span></div>' +
           '<div style="font-size:0.7rem;">Meets at: <span style="color:' + stageColor + '">' + npc.meetLocation + '</span></div>' +
           benefitsStr +
+          perkStr +
+          beatHint +
+          neglectStr +
         '</div>' +
         '<div style="text-align:right;min-width:140px;">' +
           '<div style="color:' + stageColor + ';font-weight:bold;text-transform:uppercase;">' + stage + '</div>' +
@@ -7643,6 +8086,7 @@ function renderRomance() {
             '</div>') +
         '</div>' +
       '</div>' +
+      eventCard +
     '</div>';
   }).join('');
 
@@ -7698,6 +8142,7 @@ function doBuildFortification(districtId, level) {
   } else {
     showNotification(result.message, 'error');
   }
+  delete defState.cash;
   render();
 }
 
@@ -7721,6 +8166,7 @@ function doBuildStructure(districtId, structureId) {
   } else {
     showNotification(result.message, 'error');
   }
+  delete defState.cash;
   render();
 }
 
@@ -7737,7 +8183,8 @@ function renderDefense() {
   var territoryCards = '';
   if (controlledTerritories.length > 0) {
     territoryCards = controlledTerritories.map(function(t) {
-      var districtId = t.id || t.districtId || t.name;
+      // getControlledTerritories returns plain string ids
+      var districtId = typeof t === 'string' ? t : (t.id || t.districtId || t.name);
       var fortLevel = (defState.fortifications || {})[districtId] || 0;
       var fortDef = FORTIFICATION_LEVELS[fortLevel];
       var structures = (defState.structures || {})[districtId] || [];
@@ -7761,7 +8208,7 @@ function renderDefense() {
       return '<div style="padding:10px;border:1px solid ' + (underSiege ? 'var(--neon-red)' : 'var(--neon-green)') + ';border-radius:6px;margin-bottom:8px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<div>' +
-            '<strong>' + (t.name || districtId) + '</strong>' +
+            '<strong>' + (typeof t === 'string' ? String(districtId).replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }) : (t.name || districtId)) + '</strong>' +
             (underSiege ? ' <span class="neon-red">⚔️ UNDER SIEGE</span>' : '') +
             '<div style="font-size:0.75rem;">Fortification: <span class="neon-yellow">' + fortDef.name + ' (Lv.' + fortLevel + ')</span> | Defense: <span class="neon-cyan">' + defenseStrength + '</span></div>' +
             '<div style="font-size:0.7rem;">Structures: ' + structList + '</div>' +

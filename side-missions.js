@@ -3,6 +3,52 @@
 // ============================================================
 
 // ============================================================
+// DRUG UNLOCK HELPERS
+// Side missions must only reference drugs the player has actually
+// unlocked (state.day >= minDay, kingpin level >= minLevel, and
+// NG+-only drugs excluded outside New Game+). Weed is the universal
+// fallback — it is always unlocked from day 1.
+// ============================================================
+function getSideMissionUnlockedDrugs(state) {
+  const all = (typeof DRUGS !== 'undefined' && Array.isArray(DRUGS)) ? DRUGS : [];
+  if (!state || all.length === 0) return all;
+  const day = state.day || 1;
+  let level = 1;
+  if (typeof getKingpinLevel === 'function') {
+    try {
+      const l = getKingpinLevel(state.xp || 0);
+      if (l && l.level) level = l.level;
+    } catch (e) { level = 1; }
+  }
+  const unlocked = all.filter(d => {
+    if (d.ngPlus) {
+      if (typeof isDrugAvailableNGPlus === 'function') {
+        if (!isDrugAvailableNGPlus(state, d)) return false;
+      } else if (!(state.newGamePlus && state.newGamePlus.active)) {
+        return false;
+      }
+    }
+    if (day < (d.minDay || 1)) return false;
+    if (level < (d.minLevel || 1)) return false;
+    return true;
+  });
+  if (unlocked.length > 0) return unlocked;
+  // Defensive fallback: weed is always unlocked
+  return all.filter(d => d.id === 'weed');
+}
+
+// Premium-drug picker: unlocked premium drugs if any exist, otherwise
+// the single most expensive unlocked drug (never a locked drug).
+function getSideMissionPremiumDrugs(state) {
+  const unlocked = getSideMissionUnlockedDrugs(state);
+  if (unlocked.length === 0) return [];
+  const premium = unlocked.filter(d => d.category === 'premium');
+  if (premium.length > 0) return premium;
+  const sorted = unlocked.slice().sort((a, b) => (b.maxPrice || 0) - (a.maxPrice || 0));
+  return [sorted[0]];
+}
+
+// ============================================================
 // SIDE MISSION TEMPLATES
 // ============================================================
 const SIDE_MISSIONS = [
@@ -11,7 +57,7 @@ const SIDE_MISSIONS = [
     tier: 1, actMin: 1, actMax: 5,
     desc: 'A buyer needs a specific drug delivered urgently.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 5 + Math.floor(Math.random() * 15);
       const reward = amount * (drug ? drug.maxPrice : 100) * (0.8 + Math.random() * 0.6);
@@ -34,11 +80,11 @@ const SIDE_MISSIONS = [
     tier: 2, actMin: 2, actMax: 5,
     desc: 'A major buyer wants a large quantity.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 30 + Math.floor(Math.random() * 70);
       const reward = amount * (drug ? drug.maxPrice : 100) * (1.0 + Math.random() * 0.5);
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', amount, reward: Math.round(reward), daysLimit: 7 + Math.floor(Math.random() * 7) };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', amount, reward: Math.round(reward), daysLimit: 7 + Math.floor(Math.random() * 7) };
     },
     check: (state, data) => (state.inventory[data.drugId] || 0) >= data.amount,
     complete: (state, data) => {
@@ -190,12 +236,12 @@ const SIDE_MISSIONS = [
     tier: 3, actMin: 2, actMax: 5,
     desc: 'Rob a rival\'s warehouse for drugs and cash.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const cashReward = 10000 + Math.floor(Math.random() * 40000);
       const drugAmount = 10 + Math.floor(Math.random() * 40);
       const difficulty = 40 + Math.floor(Math.random() * 40);
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', drugAmount, cashReward, difficulty };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', drugAmount, cashReward, difficulty };
     },
     check: (state) => (state.henchmen || []).length >= 2,
     complete: (state, data) => {
@@ -330,11 +376,12 @@ const SIDE_MISSIONS = [
     tier: 2, actMin: 2, actMax: 5,
     desc: 'A buyer wants product processed to a specific purity level.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
-      const drug = drugs.filter(d => ['cocaine', 'heroin', 'meth'].includes(d.id))[0] || drugs[0];
+      // Premium unlocked drugs if available, else the most expensive unlocked drug
+      const drugs = getSideMissionPremiumDrugs(state);
+      const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 10 + Math.floor(Math.random() * 20);
       const reward = amount * (drug ? drug.maxPrice : 200) * 1.5;
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', amount, reward: Math.round(reward), daysLimit: 7 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', amount, reward: Math.round(reward), daysLimit: 7 };
     },
     check: (state, data) => (state.inventory[data.drugId] || 0) >= data.amount && state.processingLab,
     complete: (state, data) => {
@@ -350,12 +397,12 @@ const SIDE_MISSIONS = [
     tier: 3, actMin: 2, actMax: 5,
     desc: 'Establish a new import route for a specific drug to a target city.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const locs = typeof LOCATIONS !== 'undefined' ? LOCATIONS : [];
       const dest = locs[Math.floor(Math.random() * locs.length)];
       const reward = 15000 + Math.floor(Math.random() * 25000);
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', destId: dest ? dest.id : 'new_york', destName: dest ? dest.name : 'New York', reward, amount: 20 + Math.floor(Math.random() * 30), daysLimit: 10 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', destId: dest ? dest.id : 'new_york', destName: dest ? dest.name : 'New York', reward, amount: 20 + Math.floor(Math.random() * 30), daysLimit: 10 };
     },
     check: (state, data) => (state.inventory[data.drugId] || 0) >= data.amount,
     complete: (state, data) => {
@@ -371,7 +418,7 @@ const SIDE_MISSIONS = [
     tier: 3, actMin: 2, actMax: 5,
     desc: 'Flood a market with product to crash a rival\'s prices.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 50 + Math.floor(Math.random() * 50);
       const reward = amount * (drug ? drug.minPrice : 20) * 3;
@@ -451,8 +498,9 @@ const SIDE_MISSIONS = [
     tier: 3, actMin: 2, actMax: 5,
     desc: 'Negotiate bulk pricing with a cartel supplier. Multi-choice conversation.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS.filter(d => ['cocaine', 'heroin'].includes(d.id)) : [];
-      const drug = drugs[0] || { id: 'cocaine', name: 'Cocaine', maxPrice: 500 };
+      // Premium unlocked drugs if available, else the most expensive unlocked drug
+      const drugs = getSideMissionPremiumDrugs(state);
+      const drug = drugs[Math.floor(Math.random() * drugs.length)] || { id: 'weed', name: 'Weed', maxPrice: 1000 };
       const baseAmount = 50 + Math.floor(Math.random() * 100);
       const basePrice = Math.round((drug.maxPrice || 500) * 0.3);
       return { drugId: drug.id, drugName: drug.name, amount: baseAmount, basePrice, daysLimit: 7, dialogueState: 'start' };
@@ -908,11 +956,11 @@ const SIDE_MISSIONS = [
     tier: 3, actMin: 2, actMax: 5,
     desc: 'Manipulate drug prices in a specific market.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const cost = 10000 + Math.floor(Math.random() * 20000);
       const reward = cost * 2 + Math.floor(Math.random() * 20000);
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', cost, reward, daysLimit: 7 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', cost, reward, daysLimit: 7 };
     },
     check: (state, data) => state.cash >= data.cost,
     complete: (state, data) => {
@@ -928,11 +976,11 @@ const SIDE_MISSIONS = [
     tier: 4, actMin: 3, actMax: 5,
     desc: 'Buy out all supply in a region to control prices.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const cost = 50000 + Math.floor(Math.random() * 50000);
       const reward = cost * 1.8 + Math.floor(Math.random() * 30000);
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', cost, reward, daysLimit: 10 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', cost, reward, daysLimit: 10 };
     },
     check: (state, data) => state.cash >= data.cost,
     complete: (state, data) => {
@@ -1025,11 +1073,11 @@ const SIDE_MISSIONS = [
     tier: 2, actMin: 1, actMax: 5,
     desc: 'Complete a high-stakes delivery within 1 day for premium pay.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 10 + Math.floor(Math.random() * 20);
       const reward = amount * (drug ? drug.maxPrice : 200) * 2;
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', amount, reward: Math.round(reward), daysLimit: 1 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', amount, reward: Math.round(reward), daysLimit: 1 };
     },
     check: (state, data) => (state.inventory[data.drugId] || 0) >= data.amount,
     complete: (state, data) => {
@@ -1045,11 +1093,11 @@ const SIDE_MISSIONS = [
     tier: 2, actMin: 1, actMax: 5,
     desc: 'A hurricane disrupts supply chains. Prices spike temporarily.',
     generate: (state) => {
-      const drugs = typeof DRUGS !== 'undefined' ? DRUGS : [];
+      const drugs = getSideMissionUnlockedDrugs(state);
       const drug = drugs[Math.floor(Math.random() * drugs.length)];
       const amount = 20 + Math.floor(Math.random() * 30);
       const reward = amount * (drug ? drug.maxPrice : 200) * 2.5;
-      return { drugId: drug ? drug.id : 'cocaine', drugName: drug ? drug.name : 'Cocaine', amount, reward: Math.round(reward), daysLimit: 2 };
+      return { drugId: drug ? drug.id : 'weed', drugName: drug ? drug.name : 'Weed', amount, reward: Math.round(reward), daysLimit: 2 };
     },
     check: (state, data) => (state.inventory[data.drugId] || 0) >= data.amount,
     complete: (state, data) => {

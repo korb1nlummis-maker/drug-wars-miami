@@ -1985,7 +1985,25 @@ body::before {
   .notification-toast, .toast { width: 95vw !important; left: 2.5vw !important; font-size: 0.9rem; }
   .world-map-container svg { width: 100%; height: auto; }
   .price-chart { height: 120px; }
-  .tutorial-card, .tutorial-overlay { width: 95vw; max-height: 80vh; overflow-y: auto; font-size: 0.95rem; }
+  /* Tutorial docks as a bottom sheet above the nav bar so the game stays
+     visible and tappable while you read */
+  .tutorial-overlay {
+    top: auto !important; right: auto !important;
+    bottom: 64px; left: 0; width: 100%;
+    display: flex; justify-content: center; padding: 0 6px;
+  }
+  .tutorial-card {
+    width: 100%; max-width: 520px; max-height: 38vh; overflow-y: auto;
+    font-size: 0.9rem; border-radius: 12px;
+  }
+  .tutorial-card .tutorial-title { font-size: 1.05rem; margin-bottom: 0.4rem; }
+  .tutorial-card .btn { min-height: 46px; }
+  .tutorial-banner {
+    top: auto; bottom: 64px;
+    border: 2px solid var(--neon-cyan, #00f0ff);
+    border-radius: 12px;
+    animation: none;
+  }
 }
 
 @media (max-width: 360px) {
@@ -2071,7 +2089,16 @@ body::before {
 <script src="side-missions-v2.js"></script>
 <script src="procedural-missions.js"></script>
 <script src="phone-system.js"></script>
+<script src="supplier-system.js"></script>
+<script src="news-market-system.js"></script>
+<script src="district-ecology.js"></script>
+<script src="transport-depth.js"></script>
+<script src="offshore-banking.js"></script>
 <script src="game-ui.js"></script>
+<script src="regional-bosses-ui.js"></script>
+<script src="procedural-missions-ui.js"></script>
+<script src="side-missions-v2-ui.js"></script>
+<script src="intimidation-ui.js"></script>
 <script src="tutorial-system.js"></script>
 <script>
   // Initialize on load

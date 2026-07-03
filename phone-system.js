@@ -262,7 +262,7 @@ function buildCategoryWeights(state, heat) {
   if (rep > 50) weights.buyer_request += 10;
 
   // Political messages only after act 2
-  const act = (typeof getCurrentAct === 'function') ? getCurrentAct(state) : (state.act || 1);
+  const act = (typeof getCurrentActNumber === 'function') ? getCurrentActNumber(state) : (state.act || 1);
   if (act < 2) weights.political = 0;
 
   return weights;
@@ -573,12 +573,23 @@ function getRandomDistrict(state) {
 }
 
 function getRandomDrugName(state) {
+  // Prefer drugs the player actually carries
   if (state.inventory && typeof state.inventory === 'object') {
     const drugs = Object.keys(state.inventory).filter(k => state.inventory[k] > 0);
-    if (drugs.length > 0) return drugs[Math.floor(Math.random() * drugs.length)];
+    if (drugs.length > 0) {
+      const id = drugs[Math.floor(Math.random() * drugs.length)];
+      const def = typeof DRUGS !== 'undefined' ? DRUGS.find(d => d.id === id) : null;
+      return def ? def.name : id;
+    }
   }
-  const defaults = ['cocaine', 'weed', 'meth', 'ecstasy', 'heroin'];
-  return defaults[Math.floor(Math.random() * defaults.length)];
+  // Otherwise only drugs actually unlocked at the current day/level —
+  // no buyer should demand cocaine years before it exists in the market
+  if (typeof DRUGS !== 'undefined') {
+    const level = typeof getKingpinLevel === 'function' ? (getKingpinLevel(state.xp || 0).level || 1) : 1;
+    const unlocked = DRUGS.filter(d => !d.ngPlus && (state.day || 1) >= (d.minDay || 1) && level >= (d.minLevel || 1));
+    if (unlocked.length > 0) return unlocked[Math.floor(Math.random() * unlocked.length)].name;
+  }
+  return 'Weed';
 }
 
 // ============================================================
@@ -722,7 +733,16 @@ function applyMessageEffect(state, msg, effect) {
       // Create a delivery mission: sell X drugs within Y days for bonus cash
       const mData = msg._missionData;
       if (mData) {
-        const bonus = 500 + Math.floor(Math.random() * 2000);
+        // Premium scales with the market value of the requested delivery
+        let unitPrice = 0;
+        if (typeof DRUGS !== 'undefined') {
+          const def = DRUGS.find(d => d.name === mData.drug || d.id === mData.drug);
+          if (def) {
+            unitPrice = (state.prices && state.prices[def.id]) || Math.round((def.minPrice + def.maxPrice) / 2);
+          }
+        }
+        const marketValue = unitPrice * (mData.amount || 10);
+        const bonus = Math.max(500 + Math.floor(Math.random() * 2000), Math.round(marketValue * (0.2 + Math.random() * 0.2)));
         // Give a cash advance
         const advance = Math.round(bonus * 0.3);
         state.cash = (state.cash || 0) + advance;

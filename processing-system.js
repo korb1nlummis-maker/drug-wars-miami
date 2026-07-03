@@ -3,6 +3,13 @@
 // ============================================================
 
 const PROCESSING_RECIPES = [
+  // Entry-level recipe: teaches chemistry from zero, no skill required
+  { id: 'rebag_weed', name: 'Re-bag Weed', emoji: '🌿',
+    input: { weed: 5 }, output: { weed: 6 }, // careful trimming and bagging stretches supply
+    qualityBoost: 1.1,
+    skillReq: 0, timeHours: 2, labTier: 1,
+    supplies: { chemicals: 1 }, heatGen: 1,
+    desc: 'Trim, weigh, and re-bag bulk weed. Basic work, but everyone starts somewhere.' },
   // Raw → Processed upgrades: input drug → output drug at higher value
   { id: 'refine_cocaine', name: 'Refine Cocaine', emoji: '⚗️',
     input: { cocaine: 10 }, output: { cocaine: 8 }, // 8 units of higher quality
@@ -141,8 +148,10 @@ function canProcess(state, recipeId) {
 function getLabTier(state, locationId) {
   if (!state.properties) return 0;
   let maxTier = 0;
-  for (const [propId, prop] of Object.entries(state.properties)) {
-    if (prop.locationId === locationId && prop.type === 'industrial') {
+  // Properties are stored per-location: state.properties[locId] = [{type, tier, ...}]
+  const propsHere = Array.isArray(state.properties[locationId]) ? state.properties[locationId] : [];
+  for (const prop of propsHere) {
+    if (prop.type === 'industrial') {
       maxTier = Math.max(maxTier, prop.tier || 1);
     }
   }
@@ -234,7 +243,7 @@ function processProcessingDaily(state) {
   for (const job of completed) {
     state.processing.completedBatches.push(job);
     state.processing.totalBatchesCooked = (state.processing.totalBatchesCooked || 0) + 1;
-    gainChemistryXp(state, 5);
+    gainChemistryXp(state, 2);
     msgs.push(`⚗️ ${job.recipeName} complete! Quality: ${job.quality}. Collect from inventory.`);
   }
 
@@ -277,7 +286,7 @@ function collectBatch(state, batchIndex) {
   }
 
   state.processing.completedBatches.splice(batchIndex, 1);
-  gainChemistryXp(state, 2);
+  gainChemistryXp(state, 1);
 
   // Rep boost for high quality
   if (qualityLevel.multiplier >= 1.4 && typeof adjustRep === 'function') {

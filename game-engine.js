@@ -87,25 +87,25 @@ const DRUGS = [
   { id: 'ludes', name: 'Ludes', minPrice: 10, maxPrice: 70, volatility: 0.4, category: 'bulk', emoji: '💤', minLevel: 1, minDay: 1 },
   { id: 'peyote', name: 'Peyote', minPrice: 30, maxPrice: 250, volatility: 0.45, category: 'bulk', emoji: '🌵', minLevel: 1, minDay: 1 },
   { id: 'adderall', name: 'Adderall/Rx Pills', minPrice: 400, maxPrice: 1800, volatility: 0.30, category: 'low', emoji: '📋', minLevel: 1, minDay: 1 },
-  // === EARLY GAME DRUGS (unlock day 20-60) ===
-  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1, minDay: 20 },
-  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2, minDay: 30 },
-  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2, minDay: 40 },
-  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2, minDay: 50 },
-  // === MID GAME DRUGS (unlock day 80-200) ===
-  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3, minDay: 80 },
-  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3, minDay: 100 },
-  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4, minDay: 120 },
-  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4, minDay: 150 },
-  // === EMPIRE DRUGS (unlock day 200-500) ===
-  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5, minDay: 200 },
-  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5, minDay: 250 },
-  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5, minDay: 300 },
-  // === KINGPIN DRUGS (unlock day 400-1000) ===
-  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6, minDay: 400 },
-  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8, minDay: 600 },
+  // === EARLY GAME DRUGS (unlock day 60-400) ===
+  { id: 'xanax', name: 'Xanax/Benzos', minPrice: 300, maxPrice: 1500, volatility: 0.35, category: 'low', emoji: '😴', minLevel: 1, minDay: 60 },
+  { id: 'hashish', name: 'Hashish', minPrice: 500, maxPrice: 2000, volatility: 0.3, category: 'low', emoji: '🍫', minLevel: 2, minDay: 150 },
+  { id: 'crack', name: 'Crack', minPrice: 200, maxPrice: 800, volatility: 0.45, category: 'low', emoji: '🪨', minLevel: 2, minDay: 250 },
+  { id: 'lean', name: 'Lean/Codeine', minPrice: 800, maxPrice: 3000, volatility: 0.30, category: 'mid', emoji: '🥤', minLevel: 2, minDay: 400 },
+  // === MID GAME DRUGS (unlock day 600-1300) ===
+  { id: 'acid', name: 'Acid', minPrice: 1000, maxPrice: 4500, volatility: 0.5, category: 'mid', emoji: '🌈', minLevel: 3, minDay: 600 },
+  { id: 'ghb', name: 'GHB', minPrice: 1000, maxPrice: 4000, volatility: 0.40, category: 'mid', emoji: '💧', minLevel: 3, minDay: 800 },
+  { id: 'ecstasy', name: 'Ecstasy', minPrice: 1500, maxPrice: 5500, volatility: 0.45, category: 'mid', emoji: '💊', minLevel: 4, minDay: 1000 },
+  { id: 'ketamine', name: 'Ketamine', minPrice: 2000, maxPrice: 7000, volatility: 0.35, category: 'mid', emoji: '🐴', minLevel: 4, minDay: 1300 },
+  // === EMPIRE DRUGS (unlock day 1600-2200) ===
+  { id: 'methamphetamine', name: 'Meth', minPrice: 800, maxPrice: 3500, volatility: 0.4, category: 'mid', emoji: '🔥', minLevel: 5, minDay: 1600 },
+  { id: 'opium', name: 'Opium', minPrice: 3000, maxPrice: 9000, volatility: 0.3, category: 'mid', emoji: '🌺', minLevel: 5, minDay: 1900 },
+  { id: 'dmt', name: 'DMT', minPrice: 1500, maxPrice: 6000, volatility: 0.50, category: 'mid', emoji: '👁️', minLevel: 5, minDay: 2200 },
+  // === KINGPIN DRUGS (unlock day 2600-3200) ===
+  { id: 'heroin', name: 'Heroin', minPrice: 5000, maxPrice: 15000, volatility: 0.35, category: 'premium', emoji: '💉', minLevel: 6, minDay: 2600 },
+  { id: 'cocaine', name: 'Cocaine', minPrice: 15000, maxPrice: 32000, volatility: 0.4, category: 'premium', emoji: '❄️', minLevel: 8, minDay: 3200 },
   // === ENDGAME DRUGS (NG+ or very late game) ===
-  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, minDay: 1000, ngPlus: true },
+  { id: 'fentanyl', name: 'Fentanyl', minPrice: 20000, maxPrice: 50000, volatility: 0.50, category: 'premium', emoji: '☠️', minLevel: 10, minDay: 4000, ngPlus: true },
 ];
 
 // ============================================================
@@ -435,9 +435,31 @@ const CHARGE_PENALTIES = {
   possession: { prisonMod: 1.0, forfeitMod: 1.0, label: 'Possession' },
   possession_premium: { prisonMod: 2.0, forfeitMod: 1.5, label: 'Possession (Class A)' }, // cocaine, heroin, etc.
   possession_large: { prisonMod: 3.0, forfeitMod: 2.0, label: 'Possession w/ Intent to Distribute' }, // >20 units
+  trafficking: { prisonMod: 4.5, forfeitMod: 2.5, label: 'Drug Trafficking' }, // bulk quantities
+  conspiracy: { prisonMod: 2.2, forfeitMod: 1.6, label: 'Conspiracy to Distribute' },
   rico: { prisonMod: 4.0, forfeitMod: 2.5, label: 'RICO Act Violations' },
   manslaughter: { prisonMod: 3.0, forfeitMod: 1.5, label: 'Manslaughter' }, // per count
+  murder: { prisonMod: 5.0, forfeitMod: 2.0, label: 'First-Degree Murder' }, // per recovered body
   cop_killing: { prisonMod: 6.0, forfeitMod: 3.0, label: 'Murder of Law Enforcement' },
+  // Weapons
+  weapon_concealed: { prisonMod: 1.2, forfeitMod: 1.0, label: 'Unlicensed Concealed Carry' },
+  weapon_automatic: { prisonMod: 2.2, forfeitMod: 1.2, label: 'Illegal Automatic Weapon' },
+  armed_felony: { prisonMod: 2.0, forfeitMod: 1.3, label: 'Firearm in Furtherance of Drug Trafficking' },
+  // Financial
+  money_laundering: { prisonMod: 2.5, forfeitMod: 2.2, label: 'Money Laundering' },
+  tax_evasion: { prisonMod: 2.0, forfeitMod: 2.5, label: 'Tax Evasion' },
+  bribery: { prisonMod: 1.8, forfeitMod: 1.5, label: 'Bribery of a Public Official' },
+  // Obstruction
+  resisting: { prisonMod: 1.2, forfeitMod: 1.0, label: 'Resisting Arrest' },
+  assault_officer: { prisonMod: 1.8, forfeitMod: 1.0, label: 'Assaulting a Federal Officer' },
+};
+
+// Quantity thresholds per drug category (units): [possession w/ intent, trafficking]
+const DRUG_CHARGE_THRESHOLDS = {
+  bulk: { intent: 40, trafficking: 150 },
+  low: { intent: 25, trafficking: 80 },
+  mid: { intent: 15, trafficking: 50 },
+  premium: { intent: 5, trafficking: 20 },
 };
 
 const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
@@ -446,14 +468,14 @@ const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
 // MONEY LAUNDERING / FRONT COMPANIES
 // ============================================================
 const FRONT_BUSINESSES = [
-  { id: 'taco_stand', name: 'Taco Stand', emoji: '🌮', cost: 5000, dailyIncome: 150, launderRate: 0.05, launderMax: 2000, heatReduction: 0, desc: 'Small but discreet' },
-  { id: 'laundromat', name: 'Laundromat', emoji: '👕', cost: 15000, dailyIncome: 400, launderRate: 0.08, launderMax: 5000, heatReduction: 2, desc: 'The classic front' },
-  { id: 'car_wash', name: 'Car Wash', emoji: '🚗', cost: 25000, dailyIncome: 600, launderRate: 0.10, launderMax: 8000, heatReduction: 3, desc: 'Cash business, no questions' },
-  { id: 'nightclub', name: 'Nightclub', emoji: '🎵', cost: 75000, dailyIncome: 1500, launderRate: 0.15, launderMax: 20000, heatReduction: 5, desc: 'High volume cash flow' },
-  { id: 'restaurant', name: 'Restaurant Chain', emoji: '🍕', cost: 120000, dailyIncome: 2500, launderRate: 0.12, launderMax: 15000, heatReduction: 5, desc: 'Multiple locations' },
-  { id: 'construction', name: 'Construction Co.', emoji: '🏗️', cost: 200000, dailyIncome: 3000, launderRate: 0.20, launderMax: 30000, heatReduction: 8, desc: 'Big invoices, no trail' },
-  { id: 'shell_corp', name: 'Shell Corporation', emoji: '🏢', cost: 500000, dailyIncome: 1000, launderRate: 0.30, launderMax: 100000, heatReduction: 10, desc: 'Offshore accounts, max laundering' },
-  { id: 'real_estate', name: 'Real Estate LLC', emoji: '🏠', cost: 350000, dailyIncome: 4000, launderRate: 0.18, launderMax: 50000, heatReduction: 7, desc: 'Property flips hide cash' },
+  { id: 'taco_stand', name: 'Taco Stand', emoji: '🌮', cost: 5000, dailyIncome: 50, launderRate: 0.05, launderMax: 2000, heatReduction: 0, desc: 'Small but discreet' },
+  { id: 'laundromat', name: 'Laundromat', emoji: '👕', cost: 20000, dailyIncome: 130, launderRate: 0.08, launderMax: 5000, heatReduction: 2, desc: 'The classic front' },
+  { id: 'car_wash', name: 'Car Wash', emoji: '🚗', cost: 40000, dailyIncome: 200, launderRate: 0.10, launderMax: 8000, heatReduction: 3, desc: 'Cash business, no questions' },
+  { id: 'nightclub', name: 'Nightclub', emoji: '🎵', cost: 150000, dailyIncome: 500, launderRate: 0.15, launderMax: 20000, heatReduction: 5, desc: 'High volume cash flow' },
+  { id: 'restaurant', name: 'Restaurant Chain', emoji: '🍕', cost: 300000, dailyIncome: 800, launderRate: 0.12, launderMax: 15000, heatReduction: 5, desc: 'Multiple locations' },
+  { id: 'construction', name: 'Construction Co.', emoji: '🏗️', cost: 600000, dailyIncome: 1000, launderRate: 0.20, launderMax: 30000, heatReduction: 8, desc: 'Big invoices, no trail' },
+  { id: 'shell_corp', name: 'Shell Corporation', emoji: '🏢', cost: 1500000, dailyIncome: 400, launderRate: 0.30, launderMax: 100000, heatReduction: 10, desc: 'Offshore accounts, max laundering' },
+  { id: 'real_estate', name: 'Real Estate LLC', emoji: '🏠', cost: 1000000, dailyIncome: 1300, launderRate: 0.18, launderMax: 50000, heatReduction: 7, desc: 'Property flips hide cash' },
 ];
 
 function buyFrontBusiness(state, businessId) {
@@ -559,8 +581,8 @@ const DISTRIBUTION_ROLES = [
 
 const DISTRIBUTION_TIERS = [
   { tier: 1, name: 'Street Operation', emoji: '🚬', upgradeCost: 0, maxDealers: 2, maxStockPerDrug: 50, demandMult: 1.0, bustChance: 0.08, rivalAttackChance: 0.05 },
-  { tier: 2, name: 'Organized Network', emoji: '🕸️', upgradeCost: 25000, maxDealers: 4, maxStockPerDrug: 150, demandMult: 1.25, bustChance: 0.05, rivalAttackChance: 0.08 },
-  { tier: 3, name: 'Empire', emoji: '👑', upgradeCost: 100000, maxDealers: 6, maxStockPerDrug: 300, demandMult: 1.5, bustChance: 0.03, rivalAttackChance: 0.12 },
+  { tier: 2, name: 'Organized Network', emoji: '🕸️', upgradeCost: 100000, maxDealers: 4, maxStockPerDrug: 150, demandMult: 1.25, bustChance: 0.05, rivalAttackChance: 0.08 },
+  { tier: 3, name: 'Empire', emoji: '👑', upgradeCost: 500000, maxDealers: 6, maxStockPerDrug: 300, demandMult: 1.5, bustChance: 0.03, rivalAttackChance: 0.12 },
 ];
 
 const DISTRIBUTOR_NAMES = [
@@ -701,7 +723,7 @@ function processDistributionDaily(state) {
         if (!drug) continue;
         const canSell = Math.min(dist.stock[drugId], unitsSell - dealerUnitsSold);
         // Revenue: midpoint price × location modifier × retail markup
-        let pricePerUnit = ((drug.minPrice + drug.maxPrice) / 2) * location.priceModifier * 1.3;
+        let pricePerUnit = ((drug.minPrice + drug.maxPrice) / 2) * location.priceModifier * 1.15;
         // Club connect bonus for party drugs
         if (role.partyDrugs && role.partyDrugs.includes(drugId)) pricePerUnit *= 1.5;
         // Territory sell bonus
@@ -871,7 +893,7 @@ const TERRITORY_GANGS = {
 const TERRITORY_BENEFITS = {
   priceDiscount: 0.15,      // 15% better buy prices
   sellBonus: 0.10,           // 10% better sell prices
-  dailyIncome: 500,          // $500/day per territory passive income
+  dailyIncome: 150,          // $150/day per territory passive income
   heatReduction: 0.20,       // 20% less heat gain
   dangerReduction: 1,        // -1 danger level
 };
@@ -1886,7 +1908,10 @@ function createGameState() {
     marketMemory: initMarketMemory(),
     properties: {},
     stashes: {},
-    campaign: initCampaign(),
+    campaign: Object.assign(
+      typeof initCampaignState === 'function' ? initCampaignState() : {},
+      initCampaign()
+    ),
     endlessMode: false,
     newGamePlus: false,   // Will be set to { active: true, tier: N, ... } when NG+ is active
     ngPlusLevel: 0,       // Legacy compat
@@ -1998,6 +2023,16 @@ function generatePrices(state) {
     // Apply supply/demand modifier from economy engine
     if (typeof getSupplyDemandPriceMod === 'function') {
       price *= getSupplyDemandPriceMod(state, drug.id, state.currentLocation);
+    }
+
+    // News/market impacts from player actions (shootouts, takeovers, raids)
+    if (typeof getMarketImpactMult === 'function') {
+      price *= getMarketImpactMult(state, state.currentLocation, drug.id);
+    }
+
+    // Neighborhood condition: blighted districts run desperate (higher) prices
+    if (typeof getDistrictConditionPriceMod === 'function') {
+      price *= getDistrictConditionPriceMod(state, state.currentLocation, drug.id);
     }
 
     // Faction trade discount
@@ -3172,6 +3207,10 @@ function waitDay(state) {
       if (state.investigation) state.investigation.points = Math.min(100, state.investigation.points + 25);
       if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { ultimate_betrayal: 1 } }, 'backstory', 'excon_a4_darnell');
     }
+    if (charId === 'ex_con' && day >= 3480 && !bt.excon_a4_close) {
+      bt.excon_a4_close = true;
+      msgs.push('📖 Five years inside taught you to survive betrayal. Nothing prepared you for this: Darnell wearing a wire, Big Mike facing trial, your son learning the trade. The walls are closing in again — and this time they\'re not made of concrete.');
+    }
 
     // HUSTLER: Act 4 - The long con collapses
     if (charId === 'hustler' && day >= 2550 && !bt.hustler_a4_ponzi_collapse) {
@@ -3193,6 +3232,10 @@ function waitDay(state) {
     if (charId === 'hustler' && day >= 3400 && !bt.hustler_a4_final_hustle) {
       bt.hustler_a4_final_hustle = true;
       msgs.push('💭 One last hustle. The biggest one. Fake your own death, take the offshore millions, disappear. You\'ve been planning it for months. The documents are ready. But leaving means leaving EVERYTHING.');
+    }
+    if (charId === 'hustler' && day >= 3480 && !bt.hustler_a4_close) {
+      bt.hustler_a4_close = true;
+      msgs.push('📖 The Ponzi collapsed. The senator flipped. The ex-wife wants half. Every con has a moment when the mark finally sees the game — and for the first time, you wonder if the mark was you.');
     }
 
     // CONNECTED KID: Act 4 - The heir's trial
@@ -3640,7 +3683,16 @@ function waitDay(state) {
   if (typeof checkMissionProgress === 'function' && state.campaign) {
     const completedMission = checkMissionProgress(state);
     if (completedMission) {
-      msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! Check missions for rewards.`);
+      if (completedMission.approaches && completedMission.approaches.length > 0) {
+        // Player picks an approach on the Campaign screen to collect
+        msgs.push(`🎯 MISSION READY: ${completedMission.name}! Choose your approach on the Campaign screen.`);
+      } else if (typeof completeCampaignMission === 'function') {
+        completeCampaignMission(state, completedMission.id);
+        const r = completedMission.reward || {};
+        msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! +$${(r.cash||0).toLocaleString()}, +${r.rep||0} Rep, +${r.xp||0} XP`);
+      } else {
+        msgs.push(`🎯 MISSION COMPLETE: ${completedMission.name}! Check missions for rewards.`);
+      }
     }
   }
 
@@ -3676,9 +3728,40 @@ function waitDay(state) {
     if (weatherMsgs && weatherMsgs.length) msgs.push(...weatherMsgs);
   }
   if (typeof processBossesDaily === 'function') {
-    const bossMsgs = processBossesDaily(state);
-    if (bossMsgs && bossMsgs.length) msgs.push(...bossMsgs);
+    const bossEvents = processBossesDaily(state);
+    if (bossEvents && bossEvents.length) {
+      // Events are objects with a .message field, not plain strings
+      msgs.push(...bossEvents.map(e => typeof e === 'string' ? e : (e && e.message) || '').filter(Boolean));
+    }
+    // Boss empire income: puppets pay full, bribed bosses pay half
+    if (typeof getActiveBonuses === 'function' && state.bosses) {
+      const bossBonuses = getActiveBonuses(state.bosses);
+      if (bossBonuses.dailyIncome > 0) {
+        state.cash += bossBonuses.dailyIncome;
+        msgs.push(`👑 Boss network income: +$${bossBonuses.dailyIncome.toLocaleString()}`);
+      }
+    }
   }
+  if (typeof processSuppliersDaily === 'function') {
+    const supplierMsgs = processSuppliersDaily(state);
+    if (supplierMsgs && supplierMsgs.length) msgs.push(...supplierMsgs);
+  }
+  if (typeof processNewsDaily === 'function') {
+    processNewsDaily(state); // feeds the news wire; no message spam
+  }
+  if (typeof processDistrictEcologyDaily === 'function') {
+    const districtMsgs = processDistrictEcologyDaily(state);
+    if (districtMsgs && districtMsgs.length) msgs.push(...districtMsgs);
+  }
+  if (typeof processSmugglingDaily === 'function') {
+    const smugglingMsgs = processSmugglingDaily(state);
+    if (smugglingMsgs && smugglingMsgs.length) msgs.push(...smugglingMsgs);
+  }
+  if (typeof processOffshoreDaily === 'function') {
+    const offshoreMsgs = processOffshoreDaily(state);
+    if (offshoreMsgs && offshoreMsgs.length) msgs.push(...offshoreMsgs);
+  }
+  // (crew agendas ride inside processCrewExpansionDaily, wired above)
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
     if (mafiaOpsMsgs && mafiaOpsMsgs.length) msgs.push(...mafiaOpsMsgs);
@@ -4143,6 +4226,10 @@ function buyDrug(state, drugId, amount) {
   if (_locT >= 20) buyBonuses.push('Rep -8%');
   else if (_locT >= 5) buyBonuses.push('Rep -3%');
   const buyBonusStr = buyBonuses.length > 0 ? ' (' + buyBonuses.join(', ') + ')' : '';
+  // Large buys create visible shortages the street notices
+  if (amount >= 50 && typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'big_buy', { locId: state.currentLocation, drugId: drugId, qty: amount });
+  }
   const result = { success: true, msg: `Bought ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalCost.toLocaleString()}${buyBonusStr}${tapMsg}${ambushMsg}` };
   if (factionDealMsgs.length > 0) result.factionMsgs = factionDealMsgs;
   return result;
@@ -4285,6 +4372,10 @@ function sellDrug(state, drugId, amount) {
   if (_locTS >= 20) sellBonuses.push('Rep +8%');
   else if (_locTS >= 5) sellBonuses.push('Rep +3%');
   const sellBonusStr = sellBonuses.length > 0 ? ' (' + sellBonuses.join(', ') + ')' : '';
+  // Flooding the street with product makes the news
+  if (amount >= 50 && typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'big_sale', { locId: state.currentLocation, drugId: drugId, qty: amount });
+  }
   const result = { success: true, msg: `Sold ${amount} ${DRUGS.find(d => d.id === drugId).name} for $${totalRevenue.toLocaleString()}${sellBonusStr}${tapMsg}${ambushSellMsg}` };
   if (factionSellMsgs.length > 0) result.factionMsgs = factionSellMsgs;
   return result;
@@ -4981,6 +5072,10 @@ function resolveCombatRound(state, action, event) {
       } else {
         state.reputation += 5;
       }
+      // Shootouts make the news and rattle local prices
+      if (typeof reportPlayerEvent === 'function') {
+        reportPlayerEvent(state, 'shootout_won', { locId: state.currentLocation, opponent: event.combatType });
+      }
       // Silencer: no heat from combat kills
       if (hasItem(state, 'silencer')) {
         results.msg += ' 🔇 Silencer kept things quiet.';
@@ -5042,7 +5137,7 @@ function resolveCombatRound(state, action, event) {
           return results;
         }
         state.health = 1; // Barely alive, arrested
-        initCourtCase(state);
+        initCourtCase(state, { fought: true }); // shot it out with the law — extra charge
         results.goToCourt = true;
         results.msg += ' You\'re badly wounded and under arrest!';
         results.resolved = true;
@@ -5117,7 +5212,7 @@ function resolveCombatRound(state, action, event) {
         state.health = 0;
         if ((event.combatType === 'police' || event.combatType === 'dea_raid') && state.investigation) {
           state.health = 1;
-          initCourtCase(state);
+          initCourtCase(state, { resisted: true }); // ran from the cops and got caught — extra charge
           results.goToCourt = true;
           results.msg += ' You\'re caught!';
           results.resolved = true;
@@ -5562,25 +5657,40 @@ function createDEARaidEvent(state) {
 // ============================================================
 // COURT SYSTEM
 // ============================================================
-function initCourtCase(state) {
+function initCourtCase(state, context) {
+  context = context || {}; // { resisted: true } = arrest after failed escape, { fought: true } = arrest after losing a fight with police
+  // An arrest is news — corners go quiet, prices react
+  if (typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'busted', { locId: state.currentLocation });
+  }
   // Build charges with severity tags for penalty calculation
   const charges = [];
   const chargeSeverity = []; // tracks penalty types
   const drugIds = Object.keys(state.inventory);
   let totalUnits = 0;
   let hasPremium = false;
+  let hasTrafficking = false;
+  let hasDistributionFelony = false; // intent-to-distribute or worse
 
+  // --- Drug charges: quantity thresholds per drug category ---
   for (const id of drugIds) {
     const drug = DRUGS.find(d => d.id === id);
     if (drug) {
       const qty = state.inventory[id];
       totalUnits += qty;
-      const isPremium = PREMIUM_DRUGS.includes(id);
+      const isPremium = PREMIUM_DRUGS.includes(id) || drug.category === 'premium';
       if (isPremium) hasPremium = true;
+      const thresholds = DRUG_CHARGE_THRESHOLDS[drug.category] || DRUG_CHARGE_THRESHOLDS.low;
 
-      if (qty > 20) {
+      if (qty >= thresholds.trafficking) {
+        charges.push(`TRAFFICKING: ${drug.name} (${qty} units — federal weight)`);
+        chargeSeverity.push('trafficking');
+        hasTrafficking = true;
+        hasDistributionFelony = true;
+      } else if (qty >= thresholds.intent) {
         charges.push(`Possession w/ Intent to Distribute: ${drug.name} (${qty} units)`);
         chargeSeverity.push('possession_large');
+        hasDistributionFelony = true;
       } else if (isPremium) {
         charges.push(`Class A Possession: ${drug.name} (${qty} units)`);
         chargeSeverity.push('possession_premium');
@@ -5590,40 +5700,149 @@ function initCourtCase(state) {
       }
     }
   }
-  if (charges.length === 0) charges.push('Racketeering and conspiracy');
-  if (state.investigation.level >= 4) {
-    charges.push('RICO Act violations');
-    chargeSeverity.push('rico');
+
+  // --- Weapons charges: based on what you're actually carrying ---
+  const AUTOMATIC_TIERS = ['smg', 'rifle', 'heavy', 'legendary'];
+  let autoWeapon = null;
+  let firearm = null;
+  if (Array.isArray(state.weapons)) {
+    for (const wId of state.weapons) {
+      const w = typeof WEAPONS !== 'undefined' ? WEAPONS.find(function(wd) { return wd.id === wId; }) : null;
+      if (!w || w.tier === 'melee') continue;
+      firearm = firearm || w;
+      if (!autoWeapon && AUTOMATIC_TIERS.includes(w.tier)) autoWeapon = w;
+    }
   }
+  if (autoWeapon) {
+    charges.push(`Possession of an Illegal Automatic Weapon (${autoWeapon.name})`);
+    chargeSeverity.push('weapon_automatic');
+  } else if (firearm) {
+    charges.push(`Unlicensed Concealed Carry (${firearm.name})`);
+    chargeSeverity.push('weapon_concealed');
+  }
+  // Armed-while-trafficking enhancer (federal 924(c)-style charge)
+  if (firearm && hasDistributionFelony) {
+    charges.push('Use of a Firearm in Furtherance of Drug Trafficking');
+    chargeSeverity.push('armed_felony');
+  }
+
+  // --- Financial charges ---
+  const dirtyCash = state.dirtyMoney || 0;
+  const totalLaundered = (state.stats && state.stats.totalLaunderedMoney) || 0;
+  const frontCount = (state.frontBusinesses || []).length;
+  if (dirtyCash >= 100000 || (totalLaundered >= 500000 && state.investigation.level >= 3)) {
+    if (dirtyCash >= 100000) {
+      charges.push(`Money Laundering ($${dirtyCash.toLocaleString()} in unexplained cash seized)`);
+    } else {
+      charges.push('Money Laundering (financial forensics traced your wash cycle)');
+    }
+    chargeSeverity.push('money_laundering');
+  }
+  if ((state.bank || 0) >= 500000 && frontCount <= 1) {
+    charges.push(`Tax Evasion ($${state.bank.toLocaleString()} banked with no declared income)`);
+    chargeSeverity.push('tax_evasion');
+  }
+  const totalBribes = ((state.stats && state.stats.totalBribesPaid) || 0) + ((state.politics && state.politics.totalBribesPaid) || 0);
+  if (totalBribes >= 25000 && state.investigation.level >= 3) {
+    charges.push('Bribery of Public Officials (payment trail uncovered)');
+    chargeSeverity.push('bribery');
+  }
+
+  if (charges.length === 0) charges.push('Racketeering and conspiracy');
+
+  // --- Enterprise charges: RICO needs an actual enterprise (territory / crew / fronts) ---
+  const territoriesHeld = state.territory ? Object.keys(state.territory).filter(function(k) { return state.territory[k].controlled; }).length : 0;
+  const runsEnterprise = territoriesHeld >= 2 || (state.henchmen && state.henchmen.length >= 4) || frontCount >= 2;
+  if (state.investigation.level >= 4 && runsEnterprise) {
+    charges.push('RICO Act violations (continuing criminal enterprise)');
+    chargeSeverity.push('rico');
+  } else if (state.investigation.level >= 4) {
+    charges.push('Conspiracy to Distribute Controlled Substances');
+    chargeSeverity.push('conspiracy');
+  }
+
+  // --- Violence charges ---
   if (state.copsKilled > 0) {
     charges.push(`${state.copsKilled} count(s) of murder of law enforcement`);
     chargeSeverity.push('cop_killing');
-  } else if (state.peopleKilled > 0) {
+  }
+  // Unburied bodies: police search your properties on arrest — bodies become evidence
+  let bodiesFoundNow = 0;
+  let unchargedBodies = 0;
+  if (state.bodies_state) {
+    const bs = state.bodies_state;
+    if (bs.bodies > 0) {
+      bodiesFoundNow = bs.bodies;
+      bs.discoveredBodies = (bs.discoveredBodies || 0) + bs.bodies;
+      bs.bodies = 0;
+    }
+    unchargedBodies = Math.max(0, (bs.discoveredBodies || 0) - (bs.chargedBodies || 0));
+    if (unchargedBodies > 0) {
+      charges.push(`${unchargedBodies} count(s) of first-degree murder (bodies recovered${bodiesFoundNow > 0 ? ' during search' : ''})`);
+      for (let i = 0; i < Math.min(unchargedBodies, 3); i++) chargeSeverity.push('murder');
+      bs.chargedBodies = bs.discoveredBodies;
+    }
+  }
+  if (state.copsKilled <= 0 && unchargedBodies <= 0 && state.peopleKilled > 0) {
     charges.push(`${state.peopleKilled} count(s) of manslaughter`);
     for (let i = 0; i < Math.min(state.peopleKilled, 3); i++) chargeSeverity.push('manslaughter');
   }
 
-  // Calculate worst severity multiplier from all charges
+  // --- Obstruction charges from how the arrest went down ---
+  if (context.resisted) {
+    charges.push('Resisting Arrest & Evading Law Enforcement');
+    chargeSeverity.push('resisting');
+  }
+  if (context.fought) {
+    charges.push('Assaulting Federal Officers');
+    chargeSeverity.push('assault_officer');
+  }
+
+  // Calculate severity multipliers: worst charge sets the base, additional
+  // charges stack a fraction on top (unknown/legacy tags are skipped safely)
   let worstPrisonMod = 1.0;
   let worstForfeitMod = 1.0;
+  let prisonStack = 0;
+  let forfeitStack = 0;
   for (const sev of chargeSeverity) {
     const penalty = CHARGE_PENALTIES[sev];
     if (penalty) {
       worstPrisonMod = Math.max(worstPrisonMod, penalty.prisonMod);
       worstForfeitMod = Math.max(worstForfeitMod, penalty.forfeitMod);
+      prisonStack += Math.max(0, penalty.prisonMod - 1);
+      forfeitStack += Math.max(0, penalty.forfeitMod - 1);
     }
   }
+  // Stack: +20% of every other charge's severity beyond the worst one
+  worstPrisonMod = Math.min(9.0, Math.round((worstPrisonMod + (prisonStack - (worstPrisonMod - 1)) * 0.2) * 100) / 100);
+  worstForfeitMod = Math.min(3.0, Math.round((worstForfeitMod + (forfeitStack - (worstForfeitMod - 1)) * 0.15) * 100) / 100);
+
+  // --- Case type: derived from the dominant charge, shown at top of charge sheet ---
+  let caseType;
+  if (chargeSeverity.includes('cop_killing') || chargeSeverity.includes('murder')) caseType = 'CAPITAL MURDER TRIAL';
+  else if (chargeSeverity.includes('rico')) caseType = 'RICO PROSECUTION';
+  else if (hasTrafficking) caseType = 'FEDERAL TRAFFICKING INDICTMENT';
+  else if (chargeSeverity.includes('money_laundering') || chargeSeverity.includes('tax_evasion')) caseType = 'IRS CRIMINAL CASE';
+  else if (chargeSeverity.includes('possession_large') || chargeSeverity.includes('conspiracy')) caseType = 'FEDERAL INDICTMENT';
+  else caseType = 'STREET BUST — STATE COURT';
+  charges.unshift(`📁 ${caseType} — Day ${state.day}, ${charges.length} count charge sheet`);
 
   // Check for available fall guys
   const fallGuyIndex = state.henchmen.findIndex(h => h.type === 'fall_guy' && !h.injured);
 
   // Build evidence strength based on investigation level and player history
+  // (prosecution strength scales with investigation level + quantity of evidence)
   var evidenceStrength = 0;
   evidenceStrength += state.investigation.level * 15; // 0-75 from investigation
   evidenceStrength += Math.min(20, totalUnits * 0.5); // caught with drugs
   if (state.copsKilled > 0) evidenceStrength += 20;
   if (state.heatSystem && state.heatSystem.wiretaps && state.heatSystem.wiretaps.length > 0) evidenceStrength += 15; // wiretap evidence
   if (state.bodies_state && state.bodies_state.discoveredBodies > 0) evidenceStrength += state.bodies_state.discoveredBodies * 5;
+  if (bodiesFoundNow > 0) evidenceStrength += Math.min(15, bodiesFoundNow * 5); // fresh bodies found in the search
+  if (chargeSeverity.includes('money_laundering')) evidenceStrength += 10; // seized ledgers / cash
+  if (chargeSeverity.includes('tax_evasion')) evidenceStrength += 8; // bank records subpoenaed
+  if (autoWeapon) evidenceStrength += 5; // the hardware speaks for itself
+  evidenceStrength += Math.min(12, Math.max(0, chargeSeverity.length - 1) * 2); // stacked counts strengthen the case
   evidenceStrength = Math.min(100, evidenceStrength);
 
   // Generate witnesses based on evidence
@@ -5633,6 +5852,9 @@ function initCourtCase(state) {
   if (state.copsKilled > 0) witnesses.push({ name: 'Officer body cam footage', type: 'forensic', strength: 25 });
   if (state.bodies_state && state.bodies_state.discoveredBodies > 0) witnesses.push({ name: 'Forensic evidence from crime scenes', type: 'forensic', strength: 15 });
   if (hasPremium) witnesses.push({ name: 'Lab analysis of seized substances', type: 'forensic', strength: 10 });
+  if (chargeSeverity.includes('murder')) witnesses.push({ name: 'Coroner\'s report on recovered bodies', type: 'forensic', strength: 20 });
+  if (chargeSeverity.includes('money_laundering') || chargeSeverity.includes('tax_evasion')) witnesses.push({ name: 'IRS forensic accountant', type: 'forensic', strength: 15 });
+  if (chargeSeverity.includes('weapon_automatic')) witnesses.push({ name: 'ATF ballistics report', type: 'forensic', strength: 10 });
   // Random civilian witness (30% chance)
   if (Math.random() < 0.3) witnesses.push({ name: 'Anonymous civilian eyewitness', type: 'civilian', strength: 10 });
   // Disloyal crew member might testify (check for low loyalty)
@@ -5645,6 +5867,7 @@ function initCourtCase(state) {
   state.courtCase = {
     charges,
     chargeSeverity,
+    caseType,
     worstPrisonMod,
     worstForfeitMod,
     totalUnitsConfiscated: totalUnits,
@@ -6147,6 +6370,10 @@ function claimTerritory(state, locationId) {
     state.reputation = Math.min(100, state.reputation + 15);
   }
   state.heat = Math.min(100, state.heat + 25);
+  // A takeover is front-page news and shakes up the local market
+  if (typeof reportPlayerEvent === 'function') {
+    reportPlayerEvent(state, 'territory_taken', { locId: locationId, gang: gang ? gang.name : 'the old crew' });
+  }
   return {
     msg: `You've taken control of ${LOCATIONS.find(l => l.id === locationId).name}! The ${gang ? gang.name : 'locals'} answer to you now.`,
   };
@@ -6371,6 +6598,10 @@ function processCrewDaily(state) {
     for (var ji = 0; ji < state.processing.activeJobs.length; ji++) {
       state.processing.activeJobs[ji].completionDay = Math.max(state.day, state.processing.activeJobs[ji].completionDay - labWorkers);
     }
+  }
+  // Lab workers also teach the boss chemistry (up to level 3 from watching alone)
+  if (labWorkers > 0 && state.processing && (state.processing.chemistryXp || 0) < 30) {
+    state.processing.chemistryXp = Math.min(30, (state.processing.chemistryXp || 0) + labWorkers);
   }
 
   // Enforcers: collect debts, intimidation bonus, passive income from protection
@@ -7478,36 +7709,36 @@ function getAssignedCrew(state, businessId) {
 // Feature unlock metadata: maps feature keys to display info and requirements
 const FEATURE_UNLOCK_INFO = {
   // TIER 1: Early game (day 1-100) - basics
-  stash:      { name: 'Stash Houses',       emoji: '📦', desc: 'Store drugs safely across cities.',            reqLevel: 2, reqDay: 15 },
-  crew:       { name: 'Crew Management',     emoji: '👥', desc: 'Hire muscle to protect your empire.',         reqLevel: 2, reqDay: 30 },
-  properties: { name: 'Properties',          emoji: '🏠', desc: 'Invest in real estate.',                      reqLevel: 2, reqDay: 25 },
-  safehouse:  { name: 'Safe House',          emoji: '🏠', desc: 'Establish a secure base of operations.',      reqLevel: 2, reqDay: 20 },
-  lifestyle:  { name: 'Lifestyle',           emoji: '🏠', desc: 'Manage stress and live large.',               reqLevel: 2, reqDay: 25 },
+  stash:      { name: 'Stash Houses',       emoji: '📦', desc: 'Store drugs safely across cities.',            reqLevel: 3, reqDay: 10, where: 'Sidebar → Stash' },
+  crew:       { name: 'Crew Management',     emoji: '👥', desc: 'Hire muscle to protect your empire.',         reqLevel: 3, reqDay: 25, where: 'Sidebar → Crew' },
+  properties: { name: 'Properties',          emoji: '🏠', desc: 'Invest in real estate.',                      reqLevel: 3, reqDay: 30, where: 'Sidebar → Properties' },
+  safehouse:  { name: 'Safe House',          emoji: '🏠', desc: 'Establish a secure base of operations.',      reqLevel: 3, reqDay: 18, where: 'Sidebar → Safehouse' },
+  lifestyle:  { name: 'Lifestyle',           emoji: '🏠', desc: 'Manage stress and live large.',               reqLevel: 3, reqDay: 35, where: 'Sidebar → Lifestyle' },
   // TIER 2: Establishing (day 50-250) - building infrastructure
-  fronts:     { name: 'Front Businesses',    emoji: '🏢', desc: 'Launder money through legitimate fronts.',    reqLevel: 3, reqDay: 60 },
-  territory:  { name: 'Territory Control',   emoji: '🏴', desc: 'Claim turf and earn passive income.',         reqLevel: 3, reqDay: 50 },
-  vehicles:   { name: 'Vehicles',            emoji: '🚗', desc: 'Build your vehicle collection.',              reqLevel: 3, reqDay: 45 },
-  rivals:     { name: 'Rival Dealers',       emoji: '🏴', desc: 'Compete with rival drug empires.',            reqLevel: 3, reqDay: 75 },
-  defense:    { name: 'Territory Defense',   emoji: '🏰', desc: 'Defend your turf from attacks.',              reqLevel: 3, reqDay: 80 },
-  bodies:     { name: 'Body Disposal',       emoji: '☠️', desc: 'Clean up after messy business.',              reqLevel: 3, reqDay: 60 },
-  businesses: { name: 'Businesses',          emoji: '🏢', desc: 'Own and operate legitimate businesses.',      reqLevel: 3, reqDay: 70 },
-  security:   { name: 'Security',            emoji: '🛡️', desc: 'Protect against raids and investigations.',   reqLevel: 3, reqDay: 55 },
-  skills:     { name: 'Skill Tree',          emoji: '🌳', desc: 'Specialize your criminal talents.',           reqLevel: 3, reqDay: 40 },
+  fronts:     { name: 'Front Businesses',    emoji: '🏢', desc: 'Launder money through legitimate fronts.',    reqLevel: 4, reqDay: 110, where: 'Sidebar → Fronts (launder your dirty cash)' },
+  territory:  { name: 'Territory Control',   emoji: '🏴', desc: 'Claim turf and earn passive income.',         reqLevel: 4, reqDay: 50, where: 'Travel to gang turf, then Crime & Territory → Take Over' },
+  vehicles:   { name: 'Vehicles',            emoji: '🚗', desc: 'Build your vehicle collection.',              reqLevel: 4, reqDay: 70, where: 'Sidebar → Vehicles (garage needs a safehouse)' },
+  rivals:     { name: 'Rival Dealers',       emoji: '🏴', desc: 'Compete with rival drug empires.',            reqLevel: 5, reqDay: 150, where: 'Sidebar → Rivals' },
+  defense:    { name: 'Territory Defense',   emoji: '🏰', desc: 'Defend your turf from attacks.',              reqLevel: 5, reqDay: 165, where: 'Sidebar → Territory Defense' },
+  bodies:     { name: 'Body Disposal',       emoji: '☠️', desc: 'Clean up after messy business.',              reqLevel: 4, reqDay: 95, where: 'Sidebar → Body Disposal' },
+  businesses: { name: 'Businesses',          emoji: '🏢', desc: 'Own and operate legitimate businesses.',      reqLevel: 5, reqDay: 130, where: 'Sidebar → Businesses' },
+  security:   { name: 'Security',            emoji: '🛡️', desc: 'Protect against raids and investigations.',   reqLevel: 4, reqDay: 85, where: 'Sidebar → Security' },
+  skills:     { name: 'Skill Tree',          emoji: '🌳', desc: 'Specialize your criminal talents.',           reqLevel: 4, reqDay: 45, where: 'Sidebar → Skills' },
   // TIER 3: Empire building (day 100-500) - serious operations
-  processing: { name: 'Drug Lab',            emoji: '⚗️', desc: 'Process raw product for higher margins.',     reqLevel: 4, reqDay: 120 },
-  heists:     { name: 'Heists',              emoji: '🎯', desc: 'Plan and execute high-risk jobs.',            reqLevel: 4, reqDay: 150 },
-  distribution: { name: 'Distribution',      emoji: '📡', desc: 'Set up drug distribution networks.',          reqLevel: 4, reqDay: 100 },
-  factions:   { name: 'Factions',            emoji: '⚔️', desc: 'Ally or war with powerful organizations.',    reqLevel: 5, reqDay: 200 },
-  shipping:   { name: 'Shipping Network',    emoji: '🚛', desc: 'Move product across your empire.',            reqLevel: 5, reqDay: 250 },
-  imports:    { name: 'Import/Export',        emoji: '🌍', desc: 'Trade goods across borders.',                 reqLevel: 5, reqDay: 300 },
+  processing: { name: 'Drug Lab',            emoji: '⚗️', desc: 'Process raw product for higher margins.',     reqLevel: 6, reqDay: 230, where: 'Sidebar → Drug Lab (needs an industrial property)' },
+  heists:     { name: 'Heists',              emoji: '🎯', desc: 'Plan and execute high-risk jobs.',            reqLevel: 6, reqDay: 270, where: 'Sidebar → Heists (needs 3+ crew)' },
+  distribution: { name: 'Distribution',      emoji: '📡', desc: 'Set up drug distribution networks.',          reqLevel: 5, reqDay: 190, where: 'Sidebar → Distribution (needs a territory)' },
+  factions:   { name: 'Factions',            emoji: '⚔️', desc: 'Ally or war with powerful organizations.',    reqLevel: 6, reqDay: 330, where: 'Sidebar → Factions' },
+  shipping:   { name: 'Shipping Network',    emoji: '🚛', desc: 'Move product across your empire.',            reqLevel: 7, reqDay: 420, where: 'Market tabs → Ship' },
+  imports:    { name: 'Import/Export',        emoji: '🌍', desc: 'Trade goods across borders.',                 reqLevel: 7, reqDay: 480, where: 'Market tabs → Import' },
   // TIER 4: Power player (day 250-1000) - high-level operations
-  politics:   { name: 'Politics',            emoji: '🏛️', desc: 'Corrupt officials and bend the law.',         reqLevel: 6, reqDay: 400 },
-  worldMap:   { name: 'World Map',           emoji: '🌍', desc: 'Expand operations globally.',                 reqLevel: 7, reqDay: 500 },
-  futures:    { name: 'Futures Trading',     emoji: '📊', desc: 'Speculate on drug price movements.',          reqLevel: 7, reqDay: 450 },
-  mafiaOps:   { name: 'Mafia Operations',    emoji: '🏢', desc: 'Run large-scale organized crime operations.', reqLevel: 10, reqDay: 750 },
+  politics:   { name: 'Politics',            emoji: '🏛️', desc: 'Corrupt officials and bend the law.',         reqLevel: 8, reqDay: 620, where: 'Sidebar → Politics' },
+  worldMap:   { name: 'World Map',           emoji: '🌍', desc: 'Expand operations globally.',                 reqLevel: 8, reqDay: 780, where: 'Travel → cross-region routes (pay the region contact)' },
+  futures:    { name: 'Futures Trading',     emoji: '📊', desc: 'Speculate on drug price movements.',          reqLevel: 8, reqDay: 720, where: 'Market tabs → Futures' },
+  mafiaOps:   { name: 'Mafia Operations',    emoji: '🏢', desc: 'Run large-scale organized crime operations.', reqLevel: 11, reqDay: 1100, where: 'Sidebar → Operations' },
   // Social (unlocks early but gated by day)
-  romance:    { name: 'Romance',             emoji: '💕', desc: 'Find love in the criminal underworld.',       reqLevel: 1, reqDay: 30 },
-  nightlife:  { name: 'Nightlife',           emoji: '🌙', desc: 'Hit the clubs and make connections.',         reqLevel: 1, reqDay: 40 },
+  romance:    { name: 'Romance',             emoji: '💕', desc: 'Find love in the criminal underworld.',       reqLevel: 2, reqDay: 40, where: 'Sidebar → People & Social → Romance' },
+  nightlife:  { name: 'Nightlife',           emoji: '🌙', desc: 'Hit the clubs and make connections.',         reqLevel: 2, reqDay: 55, where: 'Sidebar → People & Social → Nightlife' },
 };
 
 function getUnlockedFeatures(state) {
@@ -7525,40 +7756,40 @@ function getUnlockedFeatures(state) {
     achievements: true,
 
     // TIER 1: Early game (day 1-50) - basics
-    stash: level >= 2 || day >= 15,
-    crew: level >= 2 || day >= 30,
-    properties: level >= 2 || day >= 25,
-    safehouse: level >= 2 || day >= 20,
-    lifestyle: level >= 2 || day >= 25,
-    skills: level >= 3 || day >= 40,
+    stash: level >= 3 || day >= 10,
+    crew: level >= 3 || day >= 25,
+    properties: level >= 3 || day >= 30,
+    safehouse: level >= 3 || day >= 18,
+    lifestyle: level >= 3 || day >= 35,
+    skills: level >= 4 || day >= 45,
 
     // TIER 2: Establishing (day 50-250)
-    fronts: level >= 3 || day >= 60,
-    territory: level >= 3 || day >= 50,
-    vehicles: level >= 3 || day >= 45,
-    rivals: level >= 3 || day >= 75,
-    defense: level >= 3 || day >= 80,
-    bodies: level >= 3 || day >= 60,
-    businesses: level >= 3 || day >= 70,
-    security: level >= 3 || day >= 55,
+    fronts: level >= 4 || day >= 110,
+    territory: level >= 4 || day >= 50,
+    vehicles: level >= 4 || day >= 70,
+    rivals: level >= 5 || day >= 150,
+    defense: level >= 5 || day >= 165,
+    bodies: level >= 4 || day >= 95,
+    businesses: level >= 5 || day >= 130,
+    security: level >= 4 || day >= 85,
 
     // TIER 3: Empire building (day 100-500)
-    processing: level >= 4 || day >= 120,
-    heists: level >= 4 || day >= 150,
-    distribution: level >= 4 || day >= 100,
-    factions: level >= 5 || day >= 200,
-    shipping: level >= 5 || day >= 250,
-    imports: level >= 5 || day >= 300,
+    processing: level >= 6 || day >= 230,
+    heists: level >= 6 || day >= 270,
+    distribution: level >= 5 || day >= 190,
+    factions: level >= 6 || day >= 330,
+    shipping: level >= 7 || day >= 420,
+    imports: level >= 7 || day >= 480,
 
     // TIER 4: Power player (day 250-1000)
-    politics: level >= 6 || day >= 400,
-    worldMap: level >= 7 || day >= 500,
-    futures: level >= 7 || day >= 450,
-    mafiaOps: level >= 10 || day >= 750,
+    politics: level >= 8 || day >= 620,
+    worldMap: level >= 8 || day >= 780,
+    futures: level >= 8 || day >= 720,
+    mafiaOps: level >= 11 || day >= 1100,
 
     // Social
-    romance: level >= 1 || day >= 30,
-    nightlife: level >= 1 || day >= 40,
+    romance: level >= 2 || day >= 40,
+    nightlife: level >= 2 || day >= 55,
   };
 }
 

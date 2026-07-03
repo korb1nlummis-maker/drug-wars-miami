@@ -93,11 +93,59 @@ var DISTRICT_LOCATION_FLAVORS = {
 // 3. PRODUCT, INTEL, ISSUE POOLS
 // ============================================================
 
-var PROC_PRODUCTS = [
-  'cocaine', 'heroin', 'meth', 'ecstasy', 'marijuana',
-  'prescription pills', 'fentanyl', 'crack', 'LSD', 'ketamine',
-  'synthetic weed', 'DMT', 'mushrooms', 'codeine syrup'
-];
+// Products are now selected dynamically from the DRUGS the player has
+// actually unlocked (state.day >= minDay, kingpin level >= minLevel,
+// NG+-only drugs excluded outside New Game+), so a day-5 mission can
+// never demand cocaine (day 3200) or fentanyl (day 4000, NG+ only).
+// Mission text uses the drug's display name; mechanical fields use the
+// real DRUGS id so inventory checks can pass.
+function getProcUnlockedDrugs(state) {
+  var all = (typeof DRUGS !== 'undefined' && Array.isArray(DRUGS)) ? DRUGS : [];
+  if (!state || all.length === 0) return all;
+  var day = state.day || state.currentDay || 1;
+  var level = 1;
+  if (typeof getKingpinLevel === 'function') {
+    try {
+      var l = getKingpinLevel(state.xp || 0);
+      if (l && l.level) level = l.level;
+    } catch (e) { level = 1; }
+  }
+  var unlocked = all.filter(function(d) {
+    if (d.ngPlus) {
+      if (typeof isDrugAvailableNGPlus === 'function') {
+        if (!isDrugAvailableNGPlus(state, d)) return false;
+      } else if (!(state.newGamePlus && state.newGamePlus.active)) {
+        return false;
+      }
+    }
+    if (day < (d.minDay || 1)) return false;
+    if (level < (d.minLevel || 1)) return false;
+    return true;
+  });
+  if (unlocked.length > 0) return unlocked;
+  // Defensive fallback: weed is always unlocked from day 1
+  return all.filter(function(d) { return d.id === 'weed'; });
+}
+
+// Pick one unlocked drug; always returns {id, name} (weed fallback).
+function pickProcDrug(state) {
+  var unlocked = getProcUnlockedDrugs(state);
+  var drug = unlocked.length > 0 ? unlocked[Math.floor(Math.random() * unlocked.length)] : null;
+  return drug ? { id: drug.id, name: drug.name } : { id: 'weed', name: 'Weed' };
+}
+
+// Pick the most valuable unlocked drug (premium if unlocked, else the
+// most expensive unlocked one); always returns {id, name}.
+function pickProcPremiumDrug(state) {
+  var unlocked = getProcUnlockedDrugs(state);
+  if (unlocked.length === 0) return { id: 'weed', name: 'Weed' };
+  var premium = unlocked.filter(function(d) { return d.category === 'premium'; });
+  var pool = premium.length > 0 ? premium : unlocked.slice().sort(function(a, b) {
+    return (b.maxPrice || 0) - (a.maxPrice || 0);
+  }).slice(0, 1);
+  var drug = pool[Math.floor(Math.random() * pool.length)];
+  return { id: drug.id, name: drug.name };
+}
 
 var PROC_INTEL_TYPES = [
   'supply routes', 'stash locations', 'crew roster', 'financial records',
@@ -315,9 +363,11 @@ function calculateDynamicDifficulty(state) {
   var level = state.level || state.kingpinRank || 1;
   base += Math.floor(level / 3);
 
-  // Factor 2: Days played
+  // Factor 2: Days played — scaled to the stretched campaign pacing
+  // (act windows 1-500 / 500-1500 / 1500-2500 / 2500-3500 / 3500-5000).
+  // Old divisor of 15 maxed difficulty out within the first act.
   var day = state.day || state.currentDay || 1;
-  base += Math.floor(day / 15);
+  base += Math.floor(day / 500);
 
   // Factor 3: Current heat level
   var heat = state.heat || 0;
@@ -646,14 +696,15 @@ var MISSION_TEMPLATES = [
     difficultyRange: [1, 4],
     tags: ['transport', 'logistics'],
     generate: function(state, difficulty, district) {
-      var product = pickRandom(PROC_PRODUCTS);
+      var drug = pickProcDrug(state); // only drugs unlocked at the current day/level
       var locations = pickTwoLocations(state);
       var transport = pickRandom(PROC_TRANSPORT);
       var contactNpc = generateNPCByRole('buyer');
       var specificA = pickSpecificLocation(locations[0]);
       var specificB = pickSpecificLocation(locations[1]);
       return {
-        product: product,
+        product: drug.name,
+        productId: drug.id,
         districtA: locations[0],
         districtB: locations[1],
         specificLocationA: specificA,
@@ -808,8 +859,9 @@ var MISSION_TEMPLATES = [
     difficultyRange: [2, 5],
     tags: ['transport', 'stealth', 'logistics'],
     generate: function(state, difficulty, district) {
+      var smuggleDrug = pickProcPremiumDrug(state); // best drug actually unlocked right now
       var contraband = pickRandom([
-        '10 kilos of cocaine', 'a crate of automatic weapons', 'counterfeit currency',
+        '10 kilos of ' + smuggleDrug.name.toLowerCase(), 'a crate of automatic weapons', 'counterfeit currency',
         'exotic animals', 'stolen pharmaceuticals', 'blood diamonds',
         'human cargo', 'chemical precursors', 'stolen art'
       ]);
@@ -1134,11 +1186,16 @@ var MISSION_TEMPLATES = [
     difficultyRange: [1, 4],
     tags: ['production', 'chemistry'],
     generate: function(state, difficulty, district) {
-      var products = ['meth', 'crack', 'ecstasy', 'fentanyl', 'synthetic cathinones', 'GHB'];
+      // Cookable/synthetic drugs, limited to what is unlocked at the current day/level
+      var cookableIds = ['speed', 'crack', 'ghb', 'ecstasy', 'ketamine', 'methamphetamine', 'dmt', 'acid', 'lean', 'fentanyl'];
+      var cookable = getProcUnlockedDrugs(state).filter(function(d) { return cookableIds.indexOf(d.id) !== -1; });
+      var cookDrug = cookable.length > 0 ? pickRandom(cookable) : null;
+      if (!cookDrug) cookDrug = pickProcDrug(state);
       var hazards = ['toxic fumes', 'explosion risk', 'chemical burns', 'fire hazard', 'contamination'];
       var chemistNpc = generateNPCByRole('chemist');
       return {
-        product: pickRandom(products),
+        product: cookDrug.name,
+        productId: cookDrug.id,
         specificLocation: pickSpecificLocation(district),
         district: district,
         chemistNpc: chemistNpc.displayName,
@@ -2037,8 +2094,10 @@ function checkProceduralProgress(state, missionId) {
   switch (mission.templateId) {
     case 'delivery':
       var hasProduct = false;
-      if (state.inventory && data.product) {
-        var productKey = data.product.toLowerCase().replace(/\s+/g, '_');
+      if (state.inventory && (data.productId || data.product)) {
+        // productId is the real DRUGS id (new missions); fall back to the
+        // legacy name-mangling only for missions saved before the change.
+        var productKey = data.productId || String(data.product).toLowerCase().replace(/\s+/g, '_');
         hasProduct = (state.inventory[productKey] || 0) > 0;
       }
       atLocation = playerLoc === data.districtB || playerLoc === data.locationB;

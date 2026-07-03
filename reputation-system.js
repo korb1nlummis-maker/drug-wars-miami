@@ -105,12 +105,12 @@ function processReputationDaily(state) {
 
   // Street cred decays slightly toward 0 if very high or very low
   if (Math.abs(state.rep.streetCred) > 50) {
-    state.rep.streetCred += state.rep.streetCred > 0 ? -0.5 : 0.5;
+    state.rep.streetCred += state.rep.streetCred > 0 ? -0.7 : 0.5;
   }
 
   // Fear decays slowly
   if (state.rep.fear > 10) {
-    state.rep.fear = Math.max(0, state.rep.fear - 0.3);
+    state.rep.fear = Math.max(0, state.rep.fear - 0.4);
   }
 
   // Trust is stable (doesn't decay much)
@@ -134,13 +134,13 @@ function adjustRepFromAction(state, action, magnitude) {
   magnitude = magnitude || 1;
   switch (action) {
     case 'combat_victory':
-      adjustRep(state, 'streetCred', 3 * magnitude);
-      adjustRep(state, 'fear', 5 * magnitude);
+      adjustRep(state, 'streetCred', 1 * magnitude);
+      adjustRep(state, 'fear', 2 * magnitude);
       adjustRep(state, 'heatSignature', 4 * magnitude);
       break;
     case 'territory_claim':
-      adjustRep(state, 'streetCred', 5 * magnitude);
-      adjustRep(state, 'fear', 3 * magnitude);
+      adjustRep(state, 'streetCred', 2 * magnitude);
+      adjustRep(state, 'fear', 1 * magnitude);
       adjustRep(state, 'heatSignature', 5 * magnitude);
       break;
     case 'drug_sale':
@@ -148,15 +148,15 @@ function adjustRepFromAction(state, action, magnitude) {
       adjustRep(state, 'heatSignature', 1 * magnitude);
       break;
     case 'large_drug_sale':
-      adjustRep(state, 'streetCred', 3 * magnitude);
+      adjustRep(state, 'streetCred', 1 * magnitude);
       adjustRep(state, 'heatSignature', 4 * magnitude);
       break;
     case 'front_business':
-      adjustRep(state, 'publicImage', 3 * magnitude);
+      adjustRep(state, 'publicImage', 1 * magnitude);
       adjustRep(state, 'heatSignature', -1 * magnitude);
       break;
     case 'cop_kill':
-      adjustRep(state, 'fear', 10 * magnitude);
+      adjustRep(state, 'fear', 5 * magnitude);
       adjustRep(state, 'heatSignature', 15 * magnitude);
       adjustRep(state, 'publicImage', -10 * magnitude);
       break;
@@ -170,13 +170,13 @@ function adjustRepFromAction(state, action, magnitude) {
       adjustRep(state, 'fear', -10 * magnitude);
       break;
     case 'court_acquittal':
-      adjustRep(state, 'publicImage', 3 * magnitude);
-      adjustRep(state, 'streetCred', 2 * magnitude);
+      adjustRep(state, 'publicImage', 1 * magnitude);
+      adjustRep(state, 'streetCred', 1 * magnitude);
       break;
     case 'prison_no_snitch':
-      adjustRep(state, 'streetCred', 10 * magnitude);
-      adjustRep(state, 'trust', 15 * magnitude);
-      adjustRep(state, 'fear', 5 * magnitude);
+      adjustRep(state, 'streetCred', 5 * magnitude);
+      adjustRep(state, 'trust', 7 * magnitude);
+      adjustRep(state, 'fear', 2 * magnitude);
       break;
     case 'crew_hire':
       adjustRep(state, 'streetCred', 1 * magnitude);
@@ -188,14 +188,14 @@ function adjustRepFromAction(state, action, magnitude) {
       adjustRep(state, 'trust', -3 * magnitude);
       break;
     case 'general_positive':
-      adjustRep(state, 'streetCred', 2 * magnitude);
+      adjustRep(state, 'streetCred', 1 * magnitude);
       break;
     case 'general_negative':
       adjustRep(state, 'streetCred', -2 * magnitude);
       break;
     default:
-      // Fallback: just adjust street cred
-      adjustRep(state, 'streetCred', magnitude);
+      // Fallback: just adjust street cred (positive gains halved, min 1; negative hits unchanged)
+      adjustRep(state, 'streetCred', magnitude > 0 ? Math.max(1, Math.floor(magnitude / 2)) : magnitude);
   }
 }
 
