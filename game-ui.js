@@ -6432,7 +6432,6 @@ function renderStats() {
       ${renderToolbar()}
       ${backButton()}
       <h2 class="section-title" style="text-align:center;margin:1rem 0;">📊 EMPIRE STATS</h2>
-      <button class="btn btn-secondary" onclick="currentScreen='game'; render();" style="margin-bottom:1rem;">← BACK</button>
 
       <!-- Overview Cards -->
       <div class="stats-overview">
@@ -6622,18 +6621,23 @@ function buildLineChart(values, color, width, height) {
 
   const fillPoints = `0,${height} ${points.join(' ')} ${width},${height}`;
 
-  return `<svg viewBox="0 0 ${width} ${height}" class="stats-line-chart" preserveAspectRatio="none">
-    <defs>
-      <linearGradient id="grad-${color.replace(/[^a-z]/g, '')}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-      </linearGradient>
-    </defs>
-    <polygon points="${fillPoints}" fill="url(#grad-${color.replace(/[^a-z]/g, '')})" />
-    <polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
-    <text x="2" y="12" fill="${color}" font-size="10" opacity="0.7">$${max.toLocaleString()}</text>
-    <text x="2" y="${height - 2}" fill="${color}" font-size="10" opacity="0.7">$${min.toLocaleString()}</text>
-  </svg>`;
+  // Axis labels live in HTML, not the stretched SVG — preserveAspectRatio="none"
+  // distorts <text> and let the min/max labels collide with the line on flat data
+  const labelStyle = `position:absolute;left:4px;font-size:0.6rem;color:${color};opacity:0.75;pointer-events:none;text-shadow:0 0 3px #000`;
+  return `<div style="position:relative">
+    <svg viewBox="0 0 ${width} ${height}" class="stats-line-chart" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad-${color.replace(/[^a-z]/g, '')}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${fillPoints}" fill="url(#grad-${color.replace(/[^a-z]/g, '')})" />
+      <polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <span style="${labelStyle};top:2px">$${max.toLocaleString()}</span>
+    ${max !== min ? `<span style="${labelStyle};bottom:2px">$${min.toLocaleString()}</span>` : ''}
+  </div>`;
 }
 
 // Build a horizontal bar chart for drug profits
