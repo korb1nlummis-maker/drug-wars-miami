@@ -2178,7 +2178,10 @@ function getEffectiveMaxHp(state) {
 
 // Apply daily bank interest and track earnings for the Interest King achievement
 function applyBankInterest(state) {
-  const gain = Math.round(state.bank * getEffectiveBankRate(state));
+  // Interest only accrues on money that isn't borrowed — parking a cheap
+  // loan in the bank must never print money, no matter how skilled you are.
+  const principal = Math.max(0, (state.bank || 0) - (state.debt || 0));
+  const gain = Math.round(principal * getEffectiveBankRate(state));
   state.bank += gain;
   if (gain > 0 && state.achievementStats) state.achievementStats.bankInterestEarned = (state.achievementStats.bankInterestEarned || 0) + gain;
 }
@@ -2195,6 +2198,7 @@ function getEffectiveBankRate(state) {
 
 function waitDay(state) {
   state.day += 1;
+  state.sameDayHops = 0;
 
   // Daily processing (same as travel)
   if (typeof processLoansDaily === 'function') processLoansDaily(state);
@@ -4744,6 +4748,11 @@ function travel(state, destinationId, transportId) {
     }
   }
 
+  // Same-day rides are capped — no endless 0-day market hopping
+  if (transport.timeDays === 0 && (state.sameDayHops || 0) >= 3) {
+    return { success: false, msg: '🚕 Three rides today already — the cabbies are done hauling you around. Take real transport or call it a day.' };
+  }
+
   // Vehicle condition check: damaged vehicle adds travel time and risk
   var vehicleConditionPenalty = '';
   if (state.vehicleState && state.vehicleState.activeVehicleIndex !== null && state.vehicleState.garage) {
@@ -4849,6 +4858,8 @@ function travel(state, destinationId, transportId) {
   }
   } // end if (!isLocalTravel)
   state.day += daysUsed;
+  if (isLocalTravel) state.sameDayHops = (state.sameDayHops || 0) + 1;
+  else state.sameDayHops = 0;
 
   // Apply daily interest, crew management, and investigation for each day traveled
   const dailyMessages = [];

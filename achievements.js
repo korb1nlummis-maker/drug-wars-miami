@@ -1039,7 +1039,7 @@ function checkAchievements(state) {
       // Character selection
       case 'char_dropout': unlocked = state.characterId === 'dropout'; break;
       case 'char_corner_kid': unlocked = state.characterId === 'corner_kid'; break;
-      case 'char_excon': unlocked = state.characterId === 'excon'; break;
+      case 'char_excon': unlocked = state.characterId === 'ex_con'; break;
       case 'char_hustler': unlocked = state.characterId === 'hustler'; break;
       case 'char_connected': unlocked = state.characterId === 'connected_kid'; break;
       case 'char_cleanskin': unlocked = state.characterId === 'cleanskin'; break;
