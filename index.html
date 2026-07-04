@@ -1948,6 +1948,21 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   body { -webkit-text-size-adjust: 100%; }
 }
 
+/* ---- Attention system: badges + glow for anything that needs you ---- */
+.btn-sidebar, .mnav-btn, .main-tab-btn { position: relative; }
+.attn-badge {
+  position: absolute; top: 2px; right: 4px; min-width: 16px; height: 16px;
+  border-radius: 9px; background: #ff2d55; color: #fff; font-size: 0.62rem;
+  font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 4px; box-shadow: 0 0 8px rgba(255, 45, 85, 0.8); z-index: 3;
+  font-family: var(--font-display, sans-serif); pointer-events: none;
+}
+.attn-glow { animation: attnPulse 1.8s ease-in-out infinite; }
+@keyframes attnPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(255, 204, 0, 0.30); }
+  50% { box-shadow: 0 0 14px rgba(255, 204, 0, 0.70); }
+}
+
 @media (max-width: 768px) {
   html { font-size: 15px; }
   body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }

@@ -379,6 +379,11 @@ function getMiamiLocations() {
 
 // District event generation — called during waitDay
 function generateDistrictEvent(state) {
+  // Quiet streets while the tutorial teaches the basics
+  if (typeof getTutorialState === 'function') {
+    const _tut = getTutorialState();
+    if (_tut && _tut.active && !_tut.completed) return null;
+  }
   const district = getDistrictById(state.currentLocation);
   if (!district || !district.eventTypes || district.eventTypes.length === 0) return null;
 
