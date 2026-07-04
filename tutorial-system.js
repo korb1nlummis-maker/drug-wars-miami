@@ -668,12 +668,34 @@ function applyHighlights(step) {
           els[j].classList.add('tutorial-highlight');
         }
       }
+      // Mobile: if nothing VISIBLE got highlighted (the target lives in the
+      // hidden desktop sidebar), light up the bottom-bar route to it instead —
+      // the matching nav button if there is one, otherwise ☰ All
+      var anyVisible = false;
+      var hl = document.querySelectorAll('.tutorial-highlight');
+      for (var k = 0; k < hl.length; k++) {
+        if (hl[k].offsetParent !== null) { anyVisible = true; break; }
+      }
+      if (!anyVisible && typeof window !== 'undefined' && window.innerWidth <= 768) {
+        var navBtns = document.querySelectorAll('.mnav-btn');
+        var navMatch = null;
+        if (step.highlightMatch && navBtns.length) {
+          var ml2 = step.highlightMatch.toLowerCase();
+          for (var n = 0; n < navBtns.length; n++) {
+            if ((navBtns[n].textContent || '').toLowerCase().indexOf(ml2) !== -1) { navMatch = navBtns[n]; break; }
+          }
+        }
+        if (!navMatch && navBtns.length) navMatch = navBtns[navBtns.length - 1]; // ☰ All
+        if (navMatch) navMatch.classList.add('tutorial-highlight');
+      }
       // Bring the first highlighted target into view — critical on phones,
       // where the target is often below the fold or inside the scrolling
       // bottom bar
       var first = document.querySelector('.tutorial-highlight');
       if (first && typeof first.scrollIntoView === 'function') {
-        first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        // Never let a highlight scroll the page sideways (left-edge clipping)
+        if (window.scrollX !== 0) window.scrollTo({ left: 0 });
       }
     } catch (e) {
       // Selector might not exist yet
@@ -694,6 +716,15 @@ function clearHighlights() {
 
 // ---- RENDER TUTORIAL OVERLAY ----
 window.renderTutorialOverlay = function() {
+  // A blocking modal owns the screen — the tutorial card must never sit on
+  // top of its buttons. Yield completely until the modal is resolved.
+  if (typeof gameState !== 'undefined' && gameState) {
+    var modalOpen = (gameState.encounters && gameState.encounters.activeEncounter) ||
+      (gameState.pendingEvent && gameState.pendingEvent.type === 'le_encounter') ||
+      (gameState.heatSystem && gameState.heatSystem.activeChase && !gameState.heatSystem.activeChase.resolved) ||
+      gameState.pendingCeremony;
+    if (modalOpen) return '';
+  }
   var t = getTutorial();
   if (!t) return '';
 

@@ -1840,6 +1840,30 @@ function doBuySafehouseUpgrade(upgradeId) {
 // ============================================================
 // MAIN GAME SCREEN
 // ============================================================
+// ============================================================
+// ATTENTION SYSTEM — every tab/button that has something waiting
+// glows and wears a "!" badge, like any modern game
+// ============================================================
+function getAttentionFlags() {
+  const g = gameState || {};
+  const day = g.day || 1;
+  const f = {};
+  f.phone = (g.phone && g.phone.unreadCount) || 0;
+  f.skills = (g.skillPoints || 0) > 0 ? 1 : 0;
+  f.trade = (g.streetDeals && (g.streetDeals.offers || []).filter(o => (o.expiresDay || 0) >= day).length) || 0;
+  f.imports = (g.importExport && (g.importExport.completedShipments || []).length) || 0;
+  f.crew = (g.pendingCeremony ? 1 : 0) + ((g.henchmen || []).some(h => h.agenda && h.agenda.snapped) ? 1 : 0);
+  f.missions = (g.missions && g.missions.pendingDilemma) ? 1 : 0;
+  f.security = g.pendingRaid ? 1 : 0;
+  f.lifestyle = (g.lifestyle && (g.lifestyle.stress || 0) >= 80) ? 1 : 0;
+  f.court = (g.courtCase && !g.courtCase.resolved) ? 1 : 0;
+  f.total = f.phone + f.skills + f.trade + f.imports + f.crew + f.missions + f.security + f.lifestyle + f.court;
+  return f;
+}
+function attnBadge(n) {
+  return n > 0 ? '<span class="attn-badge">' + (n > 9 ? '9+' : n) + '</span>' : '';
+}
+
 function renderGame() {
   // Prison intercept - redirect to prison screen if incarcerated
   if (gameState.prison && gameState.prison.inPrison) {
@@ -2406,6 +2430,7 @@ function renderGame() {
   const mainMissionCount = gameState.missions && gameState.missions.activeMainMission ? 1 : 0;
   const sideMissionCount = gameState.missions ? (gameState.missions.activeMissions || []).length : 0;
   const missionAlert = (gameState.missions && gameState.missions.pendingDilemma) ? ' ⚖️' : '';
+  const _attn = getAttentionFlags();
   const totalMissions = mainMissionCount + sideMissionCount;
 
   // Progressive unlock gating
@@ -2435,7 +2460,7 @@ function renderGame() {
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🎯 MISSIONS</div>
-        <button class="btn btn-sidebar ${totalMissions > 0 ? 'btn-primary' : 'btn-secondary'}" style="border-color:#ff8844;color:#ff8844${totalMissions > 0 ? ';text-shadow:0 0 6px rgba(255,136,68,0.4)' : ''}" onclick="currentScreen='missions'; render();">📋 Missions${totalMissions > 0 ? ` (${totalMissions})` : ''}${missionAlert}</button>
+        <button class="btn btn-sidebar ${totalMissions > 0 ? 'btn-primary attn-glow' : 'btn-secondary'}" style="border-color:#ff8844;color:#ff8844${totalMissions > 0 ? ';text-shadow:0 0 6px rgba(255,136,68,0.4)' : ''}" onclick="currentScreen='missions'; render();">📋 Missions${totalMissions > 0 ? ` (${totalMissions})` : ''}${missionAlert}${attnBadge(_attn.missions)}</button>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">👑 EMPIRE</div>
@@ -2450,7 +2475,7 @@ function renderGame() {
             ${_isUnlocked('properties') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='properties'; render();">🏠 Properties${typeof getTotalPropertyCount === 'function' && getTotalPropertyCount(gameState) > 0 ? ` (${getTotalPropertyCount(gameState)})` : ''}</button>` : _lockedBtn('🏠', 'Properties', 'properties')}
             ${_isUnlocked('businesses') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff9900;color:#ff9900" onclick="currentScreen='businesses_v2'; render();">🏢 Businesses${gameState.businesses && gameState.businesses.owned ? ' (' + gameState.businesses.owned.length + ')' : ''}</button>` : _lockedBtn('🏢', 'Businesses', 'businesses')}
             ${_isUnlocked('futures') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00cc88;color:#00cc88" onclick="currentScreen='futures'; render();">📊 Futures${gameState.futures && (gameState.futures.contracts || []).length > 0 ? ` (${gameState.futures.contracts.length})` : ''}</button>` : _lockedBtn('📊', 'Futures', 'futures')}
-            ${_isUnlocked('imports') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="currentScreen='imports'; render();">🌍 Import/Export${gameState.importExport && gameState.importExport.activeShipments.length > 0 ? ` (${gameState.importExport.activeShipments.length})` : ''}</button>` : _lockedBtn('🌍', 'Import/Export', 'imports')}
+            ${_isUnlocked('imports') ? `<button class="btn btn-sidebar btn-secondary ${_attn.imports ? 'attn-glow' : ''}" style="border-color:#4488ff;color:#4488ff" onclick="currentScreen='imports'; render();">🌍 Import/Export${gameState.importExport && gameState.importExport.activeShipments.length > 0 ? ` (${gameState.importExport.activeShipments.length})` : ''}${attnBadge(_attn.imports)}</button>` : _lockedBtn('🌍', 'Import/Export', 'imports')}
           </div>
         </div>
 
@@ -2476,11 +2501,11 @@ function renderGame() {
             ${(() => { let b = []; if (gameState.phone && gameState.phone.unreadCount > 0) b.push('📱'); if ((gameState.lifestyle?.stress || 0) > 60) b.push('⚠️'); return b.length ? '<span class="group-badge">' + b.join('') + '</span>' : ''; })()}
           </div>
           <div class="sidebar-group-content ${openSidebarGroups.people ? 'open' : ''}">
-            ${_isUnlocked('crew') ? (gameState.henchmen.length > 0 ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='crew'; render();">👥 Crew (${gameState.henchmen.length}/${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})</button>` : '') : _lockedBtn('👥', 'Crew', 'crew')}
+            ${_isUnlocked('crew') ? (gameState.henchmen.length > 0 ? `<button class="btn btn-sidebar btn-secondary ${_attn.crew ? 'attn-glow' : ''}" onclick="currentScreen='crew'; render();">👥 Crew (${gameState.henchmen.length}/${typeof getMaxCrewSize === 'function' ? getMaxCrewSize(gameState) : 4})${attnBadge(_attn.crew)}</button>` : '') : _lockedBtn('👥', 'Crew', 'crew')}
             ${_isUnlocked('romance') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff6699;color:#ff6699" onclick="currentScreen='romance'; render();">💕 Romance</button>` : _lockedBtn('💕', 'Romance', 'romance')}
             ${_isUnlocked('nightlife') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ff44ff;color:#ff44ff" onclick="currentScreen='nightlife'; render();">🌙 Nightlife</button>` : _lockedBtn('🌙', 'Nightlife', 'nightlife')}
-            <button class="btn btn-sidebar btn-secondary" style="border-color:#00aaff;color:#00aaff" onclick="currentScreen='phone'; render();">📱 Phone${gameState.phone && gameState.phone.unreadCount > 0 ? ' <span class="badge">' + gameState.phone.unreadCount + '</span>' : ''}</button>
-            ${_isUnlocked('lifestyle') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='lifestyle'; render();">🏠 Lifestyle${(gameState.lifestyle?.stress || 0) > 60 ? ' ⚠️' : ''}</button>` : _lockedBtn('🏠', 'Lifestyle', 'lifestyle')}
+            <button class="btn btn-sidebar btn-secondary ${_attn.phone > 0 ? 'attn-glow' : ''}" style="border-color:#00aaff;color:#00aaff" onclick="currentScreen='phone'; render();">📱 Phone${attnBadge(_attn.phone)}</button>
+            ${_isUnlocked('lifestyle') ? `<button class="btn btn-sidebar btn-secondary ${_attn.lifestyle ? 'attn-glow' : ''}" style="border-color:#ffcc00;color:#ffcc00" onclick="currentScreen='lifestyle'; render();">🏠 Lifestyle${(gameState.lifestyle?.stress || 0) > 60 ? ' ⚠️' : ''}${attnBadge(_attn.lifestyle)}</button>` : _lockedBtn('🏠', 'Lifestyle', 'lifestyle')}
           </div>
         </div>
 
@@ -2511,7 +2536,7 @@ function renderGame() {
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">🧬 CHARACTER</div>
-        ${_isUnlocked('skills') ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}</button>` : _lockedBtn('🌳', 'Skills', 'skills')}
+        ${_isUnlocked('skills') ? `<button class="btn btn-sidebar btn-secondary ${_attn.skills ? 'attn-glow' : ''}" style="border-color:#00ff88;color:#00ff88" onclick="currentScreen='skilltree'; render();">🌳 Skills${(gameState.skillPoints || 0) > 0 ? ` <span style="color:#ff0;font-weight:bold">(${gameState.skillPoints})</span>` : ''}${attnBadge(_attn.skills)}</button>` : _lockedBtn('🌳', 'Skills', 'skills')}
         ${typeof renderIntimidation === 'function' ? `<button class="btn btn-sidebar btn-secondary" style="border-color:#bf5fff;color:#bf5fff" onclick="currentScreen='intimidation'; render();">😤 Intimidation</button>` : ''}
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='stats'; render();">📊 Stats</button>
         <button class="btn btn-sidebar btn-secondary" onclick="currentScreen='achievements'; render();">🏆 Achievements</button>
@@ -2609,9 +2634,9 @@ function renderGame() {
       <div class="mobile-nav">
         <button class="mnav-btn" onclick="currentScreen='travel'; render();">✈️<span>Travel</span></button>
         <button class="mnav-btn" onclick="doWait()">⏳<span>WAIT</span></button>
-        <button class="mnav-btn" onclick="currentScreen='game'; mainTab='buysell'; render();">💰<span>Trade</span></button>
+        <button class="mnav-btn ${_attn.trade > 0 ? 'attn-glow' : ''}" onclick="currentScreen='game'; mainTab='buysell'; render();">💰<span>Trade</span>${attnBadge(_attn.trade)}</button>
         ${loc.hasBank ? `<button class="mnav-btn" onclick="openBank()">🏦<span>Bank</span></button>` : `<button class="mnav-btn" onclick="currentScreen='stash'; render();">📦<span>Stash</span></button>`}
-        <button class="mnav-btn" onclick="toggleMobileActions()">☰<span>All</span></button>
+        <button class="mnav-btn ${_attn.total - _attn.trade > 0 ? 'attn-glow' : ''}" onclick="toggleMobileActions()">☰<span>All</span>${attnBadge(_attn.total - _attn.trade)}</button>
       </div>
     </div>
   `;
@@ -2704,6 +2729,7 @@ function renderTradeModal() {
           <input type="number" id="tradeAmount" value="${Math.min(1, maxAmount)}" min="0" max="${maxAmount}" class="trade-input" onchange="updateTradeTotal()">
           <button class="btn btn-sm" onclick="adjustTradeAmount(1)">+1</button>
           <button class="btn btn-sm" onclick="adjustTradeAmount(10)">+10</button>
+          <button class="btn btn-sm" style="border-color:var(--neon-cyan);color:var(--neon-cyan)" onclick="setTradeMax(${Math.max(1, Math.floor(maxAmount / 2))})">HALF</button>
           <button class="btn btn-sm btn-max" onclick="setTradeMax(${maxAmount})">MAX</button>
         </div>
         <p class="trade-total">Total: <span id="tradeTotal" class="neon-yellow">$${(unitPrice * Math.min(1, maxAmount)).toLocaleString()}</span></p>
@@ -2957,6 +2983,7 @@ function openWaitChooser() {
           <button class="btn btn-secondary" style="text-align:left;opacity:0.8" onclick="document.getElementById('modal-container').innerHTML=''; doWait('wait')">
             ⏳ <b>Just Wait</b><br><span style="font-size:0.65rem;color:var(--text-dim)">Let the day pass</span>
           </button>
+          <button class="btn btn-secondary" style="margin-top:0.2rem" onclick="document.getElementById('modal-container').innerHTML='';">✕ Never mind</button>
         </div>
       </div>
     </div>`;

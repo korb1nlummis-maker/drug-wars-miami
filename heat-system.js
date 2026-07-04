@@ -640,7 +640,9 @@ function processHeatSystemDaily(state) {
   const wtMsgs = processWiretapsDaily(state);
   msgs.push(...wtMsgs);
 
-  // Random law enforcement encounter check
+  // Random law enforcement encounter check (never during the tutorial)
+  const tutState = typeof getTutorialState === 'function' ? getTutorialState() : null;
+  if (tutState && tutState.active && !tutState.completed) return msgs;
   const tier = getHeatTier(state);
   const encounters = LE_ENCOUNTERS.filter(e => {
     if (e.tier === 'federal' && tier.id !== 'federal') return false;
