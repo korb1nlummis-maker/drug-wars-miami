@@ -335,18 +335,21 @@ function resolveChaseRound(state, action, chase) {
       msg = gain > 0 ? '💥 Rammed the cruiser! That\'ll leave a mark!' : '💥 The ram went wrong — they boxed you in!';
     }
   } else if (action === 'bail') {
-    // Abandon vehicle and flee on foot — lose the ABANDONED vehicle,
-    // not the on_foot entry we're about to switch to
-    chase.distance += 20;
+    // Abandon vehicle and flee on foot — only works if you actually have
+    // a vehicle to ditch (no free +20s while already on foot)
     const abandonedId = chase.playerVehicle.id;
-    chase.playerVehicle = CHASE_VEHICLES[0]; // on foot
-    const hs = state.heatSystem || {};
-    if (abandonedId !== 'on_foot') {
+    if (abandonedId === 'on_foot') {
+      chase.distance -= 5;
+      msg = '🏃 Nothing to bail from — you stumble looking for an exit that isn\'t there!';
+    } else {
+      chase.distance += 20;
+      chase.playerVehicle = CHASE_VEHICLES[0]; // on foot
+      const hs = state.heatSystem || {};
       const vIdx = (hs.vehicles || []).indexOf(abandonedId);
       if (vIdx >= 0) hs.vehicles.splice(vIdx, 1);
       if (hs.activeVehicle === abandonedId) hs.activeVehicle = 'on_foot';
+      msg = '🏃 Bailed from the vehicle! Running on foot!';
     }
-    msg = '🏃 Bailed from the vehicle! Running on foot!';
   } else if (action === 'surrender') {
     chase.distance = 0;
     chase.resolved = true;
