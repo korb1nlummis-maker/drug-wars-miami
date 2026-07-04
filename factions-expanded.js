@@ -262,15 +262,17 @@ function initFactionState(characterId) {
   if (typeof FACTIONS !== 'undefined') {
     for (const f of FACTIONS) {
       // Try to find a Miami faction that maps to this old faction
+      // Legacy faction ids → Miami faction ids (must match FACTIONS in
+      // faction-system.js exactly — wrong keys silently drop relations)
       const mapping = {
         colombian_cartel: 'colombian_connection',
-        mexican_cartel: 'miami_cartel_remnants',
-        italian_mafia: 'dixie_mafia',
-        russian_mob: 'eastern_bloc',
-        yakuza: 'eastern_bloc',
+        mexican_syndicate: 'cartel_remnants',
+        italian_mob: 'dixie_mafia',
+        russian_bratva: 'eastern_bloc',
         chinese_triad: 'port_authority',
         jamaican_posse: 'zoe_pound',
-        biker_gang: 'southern_boys',
+        street_kings: 'los_cubanos',
+        euro_syndicate: 'southern_boys',
       };
       const miamiId = mapping[f.id];
       const mRel = miamiId && miamiData[miamiId] ? miamiData[miamiId].relation : 0;
@@ -292,6 +294,12 @@ function initFactionState(characterId) {
     factionEvents: [],
     diplomacyCooldowns: {},
   };
+
+  // Seed standings under the MIAMI ids too — territory gangs, ambushes,
+  // and news events adjust standings by Miami faction id directly
+  for (const faction of MIAMI_FACTIONS) {
+    result.standings[faction.id] = miamiData[faction.id].relation;
+  }
 
   // Merge in Miami faction data at top level
   for (const [key, val] of Object.entries(miamiData)) {

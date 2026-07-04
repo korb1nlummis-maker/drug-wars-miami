@@ -98,6 +98,13 @@ function ensureFactionState(state) {
     if (f.factionPower[faction.id] === undefined) f.factionPower[faction.id] = faction.strength;
     if (!f.factionTerritory[faction.id]) f.factionTerritory[faction.id] = [...faction.territory];
   }
+  // Miami gangs get standings entries too — territory and ambush code
+  // adjusts standings by Miami faction id
+  if (typeof MIAMI_FACTIONS !== 'undefined') {
+    for (const mf of MIAMI_FACTIONS) {
+      if (f.standings[mf.id] === undefined) f.standings[mf.id] = 0;
+    }
+  }
   return f;
 }
 
