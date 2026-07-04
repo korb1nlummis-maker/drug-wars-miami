@@ -1109,6 +1109,7 @@ function renderHowToPlay() {
       ${S('💰', 'Trading & the Living Market', `
         <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
         <p><b>The spread:</b> street dealers buy from you at ~85% of the listed market price. Buying and re-selling in the same district <b>loses money</b> — real profit means moving product to a district where the price beats your cost by more than the dealer's cut. That's the whole game.</p>
+        <p><b>🤝 Street offers:</b> named buyers approach you with <b>private deals above list price</b> — no dealer cut. COUNTER once per deal (speech skill decides who blinks). Treat a buyer right and they become a <b>regular</b>: bigger orders, loyalty premiums, back every few days. Stand them up and they're gone. Careful dealing hot — some "buyers" wear a wire, and first-timers occasionally grab and run. Bring your rep up and more offers find you.</p>
         <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
         ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
       `)}
@@ -2106,6 +2107,7 @@ function renderGame() {
     const chartsHtml = showChart ? renderAllCharts() : '';
     mainContent = `
       ${tradeModal}
+      ${typeof renderStreetDealsPanel === 'function' ? renderStreetDealsPanel() : ''}
       <div class="market-section">
         <h3 class="section-title">💰 BUY / SELL <button class="btn btn-sm ${showChart ? 'btn-sell' : 'btn-secondary'}" onclick="showChart=!showChart; render();" style="margin-left:1rem;">📈 ${showChart ? 'HIDE' : 'SHOW'} CHARTS</button></h3>
         <table class="data-table drug-table">
