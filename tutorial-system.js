@@ -689,11 +689,13 @@ window.renderTutorialOverlay = function() {
         if (typeof render === 'function') render();
       }, 4000);
     }
-    return '<div style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:9500;pointer-events:none;max-width:350px;width:90%;">' +
-      '<div style="background:rgba(17,17,40,0.95);border:1px solid var(--neon-pink,#ff2d95);border-radius:8px;padding:0.4rem 0.7rem;pointer-events:auto;display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;box-shadow:0 2px 12px rgba(255,45,149,0.2);" onclick="dismissTutorialHint();render();">' +
+    // Bottom-anchored (above the mobile nav), full text, never covers the toolbar
+    var hintBottom = (typeof window !== 'undefined' && window.innerWidth <= 768) ? '66px' : '14px';
+    return '<div style="position:fixed;bottom:' + hintBottom + ';left:50%;transform:translateX(-50%);z-index:9500;pointer-events:none;max-width:420px;width:94%;">' +
+      '<div style="background:rgba(17,17,40,0.97);border:1px solid var(--neon-pink,#ff2d95);border-radius:8px;padding:0.5rem 0.7rem;pointer-events:auto;display:flex;align-items:flex-start;gap:0.5rem;font-size:0.75rem;line-height:1.35;box-shadow:0 2px 12px rgba(255,45,149,0.25);" onclick="dismissTutorialHint();render();">' +
         '<span style="color:var(--neon-pink);font-weight:bold;white-space:nowrap;">' + hint.title + '</span>' +
-        '<span style="color:var(--text-dim);flex:1;">' + hint.text.substring(0, 60) + (hint.text.length > 60 ? '...' : '') + '</span>' +
-        '<span style="color:#888;font-size:0.65rem;cursor:pointer;">✕</span>' +
+        '<span style="color:var(--text-main);flex:1;">' + hint.text + '</span>' +
+        '<span style="color:#aaa;font-size:0.9rem;cursor:pointer;padding:0 0.2rem;">✕</span>' +
       '</div>' +
     '</div>';
   }
@@ -1044,7 +1046,7 @@ window.render = function() {
 
 // ---- WRAP doWait() TO FORCE TUTORIAL DRUG PRICE RISE ----
 var _origDoWait = window.doWait;
-window.doWait = function() {
+window.doWait = function(stance) {
   var t = getTutorial();
   var shouldOverridePrice = false;
 
@@ -1060,7 +1062,7 @@ window.doWait = function() {
     }
   }
 
-  _origDoWait();
+  _origDoWait(stance);
 
   // After wait, force drug price up during tutorial
   if (shouldOverridePrice && t && t._priceOverride && t._priceOverride.oldPrice) {

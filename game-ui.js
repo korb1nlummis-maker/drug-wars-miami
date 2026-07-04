@@ -36,6 +36,14 @@ function backButton(label) {
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================
+// Mobile: full-screen action grid behind the ☰ button
+function toggleMobileActions() {
+  const sheet = document.getElementById('mobile-actions-sheet');
+  if (!sheet) return;
+  sheet.style.display = sheet.style.display === 'none' ? 'block' : 'none';
+  playSound('click');
+}
+
 // Single-lane notification queue: one toast on screen at a time, duplicates
 // merged into a ×N counter, hold time shrinks when a backlog builds so bursts
 // drain quickly. Tap a toast to advance to the next one.
@@ -1101,6 +1109,19 @@ function renderHowToPlay() {
       <h2 class="section-title neon-cyan" style="text-align:center;">📖 THE HANDBOOK</h2>
       <p class="text-dim" style="text-align:center;font-size:0.85rem;margin-bottom:1rem">Everything in the game, in the order you'll meet it. Tap a section to open it.</p>
 
+      <details class="htp-section" open style="border:1px solid var(--neon-pink);border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.5rem;">
+        <summary style="cursor:pointer;font-weight:bold;color:var(--neon-pink);font-size:0.95rem;padding:0.3rem 0;">🚀 Start Here: Your First Hour</summary>
+        <div style="padding:0.4rem 0 0.2rem;color:var(--text-main);line-height:1.65;font-size:0.85rem;">
+          <p><b>1.</b> Open <b>💰 Buy / Sell</b> and buy a cheap drug — spend about half your cash.</p>
+          <p><b>2.</b> <b>Never sell where you just bought.</b> Dealers lowball their own product back. Either <b>⏳ WAIT</b> a day (prices move overnight) or <b>✈️ TRAVEL</b> to a district where Price Intel shows a higher number.</p>
+          <p><b>3.</b> Sell. Dealers pay ~85% of list, so profit = the price gap beating their cut. That loop — buy low, move, sell high — is the engine of everything.</p>
+          <p><b>4.</b> Watch for <b>🤝 STREET OFFERS</b> at the top of Buy/Sell — private buyers pay OVER list with no dealer cut. Best money in the early game.</p>
+          <p><b>5.</b> Your debt with Vinnie compounds 0.8% <i>every day</i>. Pay him down early — tap <b>🦈 Money Men</b>.</p>
+          <p><b>6.</b> Read your 📱 phone and the 📰 news. The city tells you where the money is; headlines move prices in real time.</p>
+          <p style="color:var(--neon-green);font-size:0.8rem;">💡 On a phone: the bottom bar has Travel / Day / Trade / Bank, and <b>☰ All</b> opens everything else.</p>
+        </div>
+      </details>
+
       ${S('🎯', 'The Long Game', `
         <p>The campaign runs <b>5,000 days across 5 acts</b> — The Come Up (days 1–500), Building the Empire (500–1500), The Empire (1500–2500), The Reckoning (2500–3500), and The Endgame (3500–5000). Systems, drugs, story missions, and world regions unlock as the days pass. Nobody rushes this — the game is designed to be lived in.</p>
         ${TIP('When a 🔓 unlock card appears, read it — it tells you exactly where the new system lives.')}
@@ -1109,9 +1130,33 @@ function renderHowToPlay() {
       ${S('💰', 'Trading & the Living Market', `
         <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
         <p><b>The spread:</b> street dealers buy from you at ~85% of the listed market price. Buying and re-selling in the same district <b>loses money</b> — real profit means moving product to a district where the price beats your cost by more than the dealer's cut. That's the whole game.</p>
-        <p><b>🤝 Street offers:</b> named buyers approach you with <b>private deals above list price</b> — no dealer cut. COUNTER once per deal (speech skill decides who blinks). Treat a buyer right and they become a <b>regular</b>: bigger orders, loyalty premiums, back every few days. Stand them up and they're gone. Careful dealing hot — some "buyers" wear a wire, and first-timers occasionally grab and run. Bring your rep up and more offers find you.</p>
         <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
         ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
+      `)}
+
+      ${S('⏳', 'Spending Your Days', `
+        <p>WAIT is a choice, not dead time:</p>
+        <p>🏪 <b>Work the Corner</b> — hand-to-hand retail from your stash at full price. Small steady cash, +heat, builds street cred.</p>
+        <p>👁️ <b>Case the Block</b> — runners bring back price intel from two nearby districts, sometimes sniff out a private buyer, sometimes clock the unmarked car (-heat).</p>
+        <p>😶 <b>Lay Low</b> — blinds shut, beeper off. Heat cools 2-3x faster. Do this when the news says the DEA is in town.</p>
+        ${TIP('Heat rises when you move weight and falls when you don\'t. The rhythm of hustle and cool-down IS the game.')}
+      `)}
+
+      ${S('🤝', 'Street Offers & Regulars', `
+        <p>Named buyers walk up with <b>private deals above list price</b> — no dealer cut. They appear at the top of Buy/Sell.</p>
+        <p><b>COUNTER</b> once per deal: speech skill decides who blinks — win +8-18%, lose and they may walk.</p>
+        <p><b>Regulars:</b> treat a buyer right and they come back every few days with growing orders and loyalty premiums up to +40%. Stand one up and trust bleeds until they find another dealer. You can hold five.</p>
+        <p><b>The risk:</b> dealing while hot (heat 40+), some "buyers" wear a wire — product seized, investigation opened. And ~1 in 25 strangers grabs the bag and runs.</p>
+        ${TIP('More street cred = more walk-up offers. Work the corner and close deals to build it.')}
+      `)}
+
+      ${S('🦈', 'The Money Men', `
+        <p>Three lenders, three temperaments — all compound <b>daily</b>:</p>
+        <p>🦈 <b>Vinnie</b> — 0.8%/day, up to $50k, fronts anyone. Miss payments and the questions come with a bat.</p>
+        <p>💎 <b>Ruthie</b> (Level 3+) — 0.5%/day, up to $150k. She lends to people with a name to lose.</p>
+        <p>🏦 <b>Don Ozzie</b> (Level 8+) — 0.3%/day, up to $1M. Cartel money at bank rates; collections has no necks.</p>
+        <p><b>TALK TERMS</b> once per loan — speech skill can shave 10-25% off the rate. Fail and they stop taking your calls for 5 days.</p>
+        ${TIP('Always pay the expensive paper first. $10k at Vinnie costs $80/day; the same at Ozzie costs $30.')}
       `)}
 
       ${S('🤝', 'Suppliers', `
@@ -2346,7 +2391,7 @@ function renderGame() {
       <div class="sidebar-section">
         <div class="sidebar-label">🏪 SERVICES</div>
         ${loc.hasBank ? `<button class="btn btn-sidebar btn-secondary" onclick="openBank()">🏦 Bank</button>` : ''}
-        ${loc.hasLoanShark ? `<button class="btn btn-sidebar btn-secondary" onclick="openLoanShark()">🦈 Loan Shark</button>` : ''}
+        ${loc.hasLoanShark ? `<button class="btn btn-sidebar btn-secondary" onclick="typeof openLenders === 'function' ? openLenders() : openLoanShark()">🦈 Money Men</button>` : ''}
         ${loc.hasHospital && gameState.health < gameState.maxHealth ? `<button class="btn btn-sidebar btn-secondary" onclick="doHospital()">🏥 Hospital</button>` : ''}
         ${loc.hasBlackMarket ? `<button class="btn btn-sidebar btn-secondary" onclick="currentScreen='blackmarket'; render();">🏴 Black Market</button>` : ''}
         ${_isUnlocked('stash') ? (() => {
@@ -2505,6 +2550,20 @@ function renderGame() {
           ${mainTabBar}
           ${mainContent}
         </div>
+      </div>
+      <div id="mobile-actions-sheet" class="mobile-actions-sheet" style="display:none;">
+        <div class="mobile-actions-head">
+          <b class="neon-cyan">☰ ALL ACTIONS</b>
+          <button class="btn btn-sm btn-secondary" onclick="toggleMobileActions()">✕ CLOSE</button>
+        </div>
+        ${sidebar}
+      </div>
+      <div class="mobile-nav">
+        <button class="mnav-btn" onclick="currentScreen='travel'; render();">✈️<span>Travel</span></button>
+        <button class="mnav-btn" onclick="doWait()">⏳<span>Day</span></button>
+        <button class="mnav-btn" onclick="currentScreen='game'; mainTab='buysell'; render();">💰<span>Trade</span></button>
+        ${loc.hasBank ? `<button class="mnav-btn" onclick="openBank()">🏦<span>Bank</span></button>` : `<button class="mnav-btn" onclick="currentScreen='stash'; render();">📦<span>Stash</span></button>`}
+        <button class="mnav-btn" onclick="toggleMobileActions()">☰<span>All</span></button>
       </div>
     </div>
   `;
@@ -2829,10 +2888,96 @@ function showNewsStory(eventIndex) {
   document.body.appendChild(overlay);
 }
 
-function doWait() {
+// How do you spend the day? (tutorial keeps the classic one-tap wait)
+function openWaitChooser() {
+  playSound('click');
+  const held = Object.values(gameState.inventory || {}).reduce((s, v) => s + v, 0);
+  const html = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3 class="neon-cyan">⏳ SPEND THE DAY</h3>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <button class="btn btn-sell" style="text-align:left" onclick="document.getElementById('modal-container').innerHTML=''; doWait('corner')">
+            🏪 <b>Work the Corner</b><br><span style="font-size:0.65rem;color:var(--text-dim)">Hand-to-hand retail${held > 0 ? ' from your stash' : ' (odd jobs — holding nothing)'} · small cash, +heat, builds street cred</span>
+          </button>
+          <button class="btn btn-secondary" style="text-align:left;border-color:var(--neon-cyan);color:var(--neon-cyan)" onclick="document.getElementById('modal-container').innerHTML=''; doWait('scout')">
+            👁️ <b>Case the Block</b><br><span style="font-size:0.65rem;color:var(--text-dim)">Scout nearby district prices · chance to sniff out a private deal · no heat</span>
+          </button>
+          <button class="btn btn-secondary" style="text-align:left" onclick="document.getElementById('modal-container').innerHTML=''; doWait('laylow')">
+            😶 <b>Lay Low</b><br><span style="font-size:0.65rem;color:var(--text-dim)">Off the streets entirely · heat cools much faster · no income</span>
+          </button>
+          <button class="btn btn-secondary" style="text-align:left;opacity:0.8" onclick="document.getElementById('modal-container').innerHTML=''; doWait('wait')">
+            ⏳ <b>Just Wait</b><br><span style="font-size:0.65rem;color:var(--text-dim)">Let the day pass</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('modal-container').innerHTML = html;
+}
+
+function doWait(stance) {
+  const t = gameState && gameState.tutorial;
+  const tutorialActive = t && t.active && !t.completed;
+  if (!stance && !tutorialActive) { openWaitChooser(); return; }
+  stance = stance || 'wait';
   const oldXp = gameState.xp || 0;
   const result = waitDay(gameState);
   if (!result.success) return;
+
+  // Stance effects — how you spent the day shapes what it produced
+  if (stance === 'corner' && !gameState.gameOver) {
+    const heldIds = Object.keys(gameState.inventory || {}).filter(id => gameState.inventory[id] > 0 && gameState.prices && gameState.prices[id]);
+    if (heldIds.length) {
+      const id = heldIds[Math.floor(Math.random() * heldIds.length)];
+      const drug = DRUGS.find(d => d.id === id);
+      const qty = Math.min(gameState.inventory[id], 2 + Math.floor(Math.random() * 6));
+      const unit = Math.max(1, Math.round(gameState.prices[id] * (0.95 + Math.random() * 0.20)));
+      const take = unit * qty;
+      gameState.inventory[id] -= qty;
+      if (gameState.inventory[id] <= 0) delete gameState.inventory[id];
+      gameState.cash += take;
+      gameState.dirtyMoney = (gameState.dirtyMoney || 0) + take;
+      gameState.drugsSold = (gameState.drugsSold || 0) + qty;
+      gameState.heat = Math.min(100, (gameState.heat || 0) + 1.5);
+      if (typeof adjustRep === 'function' && Math.random() < 0.35) adjustRep(gameState, 'streetCred', 1);
+      result.msgs.push(`🏪 Worked the corner: moved ${qty} ${drug ? drug.name : id} hand-to-hand for $${take.toLocaleString()} (full retail — no dealer cut). +1.5 heat.`);
+    } else {
+      const oddJob = 40 + Math.floor(Math.random() * 120);
+      gameState.cash += oddJob;
+      result.msgs.push(`🏪 Nothing to sell, so you ran errands for the corner store. +$${oddJob} clean.`);
+    }
+    if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(gameState);
+  } else if (stance === 'scout' && !gameState.gameOver) {
+    const nearby = LOCATIONS.filter(l => (l.region || 'miami') === 'miami' && l.id !== gameState.currentLocation);
+    const picks = nearby.sort(() => Math.random() - 0.5).slice(0, 2);
+    if (!gameState.knownPrices) gameState.knownPrices = {};
+    const names = [];
+    for (const loc of picks) {
+      const entry = gameState.knownPrices[loc.id] || {};
+      for (const d of DRUGS.slice(0, 6)) {
+        if (d.minDay && gameState.day < d.minDay) continue;
+        entry[d.id] = Math.max(1, Math.round(((d.minPrice + d.maxPrice) / 2) * (loc.priceModifier || 1) * (0.85 + Math.random() * 0.3)));
+      }
+      entry._day = gameState.day;
+      gameState.knownPrices[loc.id] = entry;
+      names.push(loc.name);
+    }
+    result.msgs.push(`👁️ Cased the block: your runners brought back price intel from ${names.join(' and ')}. (Check Price Intel + the travel map.)`);
+    if (typeof ensureStreetDealsState === 'function' && Math.random() < 0.30) {
+      const sd = ensureStreetDealsState(gameState);
+      const offer = typeof sdMakeBuyerOffer === 'function' ? sdMakeBuyerOffer(gameState, null) : null;
+      if (offer && sd.offers.length < 3) { sd.offers.push(offer); result.msgs.push(`🤝 Word travels — ${offer.name} heard you're holding and wants to talk. (BUY/SELL tab)`); }
+    }
+    if (Math.random() < 0.15) {
+      gameState.heat = Math.max(0, (gameState.heat || 0) - 2);
+      result.msgs.push('🚔 You clocked the unmarked car on the corner and rerouted everyone. -2 heat.');
+    }
+  } else if (stance === 'laylow' && !gameState.gameOver) {
+    const cooled = 4 + Math.floor(Math.random() * 4);
+    gameState.heat = Math.max(0, (gameState.heat || 0) - cooled);
+    if (typeof gameState.stress === 'number') gameState.stress = Math.max(0, gameState.stress - 5);
+    result.msgs.push(`😶 Laid low all day. Blinds shut, beeper off. -${cooled} extra heat.`);
+  }
 
   // Show messages
   for (const m of result.msgs) gameState.messageLog.push(m);
