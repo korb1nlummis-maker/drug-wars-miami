@@ -109,31 +109,38 @@ function getTutorialDrugName() {
 }
 
 var tutorialBoughtDrug = null;
+var tutorialWaitDay = null;
 
 
 // ---- STEP REWARD DEFINITIONS ----
-var STEP_REWARDS = {
-  0:  { cash: 500,  label: '+$500' },
-  1:  { cash: 500,  label: '+$500' },
-  2:  { cash: 500,  label: '+$500' },
-  3:  { cash: 500,  label: '+$500' },
-  4:  { cash: 500,  label: '+$500' },
-  5:  { cash: 750,  label: '+$750' },
-  6:  { cash: 750,  label: '+$750' },
-  7:  { cash: 750,  label: '+$750' },
-  8:  { cash: 750,  label: '+$750 + 👥 Rookie Lookout (crew member - watches for cops)', special: 'crew' },
-  9:  { cash: 750,  label: '+$750' },
-  10: { cash: 1000, label: '+$1,000' },
-  11: { cash: 1000, label: '+$1,000' },
-  12: { cash: 1000, label: '+$1,000 + 🔫 Starter Pistol (15 dmg, 70% accuracy)', special: 'weapon' },
-  13: { cash: 1000, label: '+$1,000' },
-  14: { cash: 1000, label: '+$1,000' },
-  15: { cash: 1500, label: '+$1,500' },
-  16: { cash: 1500, label: '+$1,500' },
-  17: { cash: 1500, label: '+$1,500' },
-  18: { cash: 1500, label: '+$1,500' },
-  19: { cash: 1500, label: '+$1,500' },
+// Keyed by step ID so inserting steps never misaligns rewards
+var STEP_REWARDS_BY_ID = {
+  welcome:              { cash: 500,  label: '+$500' },
+  read_market:          { cash: 500,  label: '+$500' },
+  buy_drug:             { cash: 500,  label: '+$500' },
+  confirm_buy:          { cash: 500,  label: '+$500' },
+  wait_market:          { cash: 500,  label: '+$500' },
+  sell_drug:            { cash: 750,  label: '+$750' },
+  travel:               { cash: 750,  label: '+$750' },
+  travel_screen:        { cash: 750,  label: '+$750' },
+  buy_low_sell_high:    { cash: 750,  label: '+$750' },
+  inventory_management: { cash: 750,  label: '+$750 + 👥 Rookie Lookout (crew member - watches for cops)', special: 'crew' },
+  heat_system:          { cash: 750,  label: '+$750' },
+  crew:                 { cash: 1000, label: '+$1,000' },
+  fronts:               { cash: 1000, label: '+$1,000' },
+  laundering:           { cash: 1000, label: '+$1,000 + 🔫 Starter Pistol (15 dmg, 70% accuracy)', special: 'weapon' },
+  skills:               { cash: 1000, label: '+$1,000' },
+  territory:            { cash: 1000, label: '+$1,000' },
+  factions:             { cash: 1500, label: '+$1,500' },
+  missions:             { cash: 1500, label: '+$1,500' },
+  phone:                { cash: 1500, label: '+$1,500' },
+  heists:               { cash: 1500, label: '+$1,500' },
+  romance:              { cash: 1500, label: '+$1,500' },
 };
+function getStepReward(stepIndex) {
+  var st = TUTORIAL_STEPS[stepIndex];
+  return st ? STEP_REWARDS_BY_ID[st.id] || null : null;
+}
 
 
 // ---- 20 GUIDED TUTORIAL STEPS ----
@@ -209,13 +216,32 @@ var TUTORIAL_STEPS = [
     highlightSelector: '#tradeAmount',
     arrowText: 'Enter amount and confirm',
   },
-  // === STEP 4: Selling Drugs (interactive) ===
+  // === STEP 4b: Wait for the market (interactive) ===
+  {
+    id: 'wait_market',
+    title: 'LET THE MARKET MOVE',
+    getText: function() {
+      return 'Golden rule: <b>never sell where you just bought</b> — dealers lowball their own product back. Click <b>⏳ WAIT</b>. Prices move overnight, and word is your product is about to get hot.';
+    },
+    action: 'wait',
+    interactive: true,
+    waitFor: function() {
+      if (!gameState) return false;
+      if (tutorialWaitDay === null) { tutorialWaitDay = gameState.day; return false; }
+      return gameState.day > tutorialWaitDay;
+    },
+    highlightSelector: '.btn-sidebar',
+    highlightMatch: 'WAIT',
+    arrowText: 'Click ⏳ WAIT',
+  },
+  // === STEP 4c: Selling Drugs (interactive) ===
   {
     id: 'sell_drug',
     title: 'SELL DRUGS',
     getText: function() {
       var name = tutorialBoughtDrug ? getDrugDisplayName(tutorialBoughtDrug) : 'your drug';
-      return 'Click <b>SELL</b> on <b>' + name + '</b>. Sell higher than you bought = profit.';
+      var p = tutorialBoughtDrug && gameState && gameState.prices ? gameState.prices[tutorialBoughtDrug] : null;
+      return 'The price of <b>' + name + '</b> jumped overnight' + (p ? ' to <b>$' + p.toLocaleString() + '</b>' : '') + '! Click <b>SELL</b> and cash in. (Tip: dealers pay ~85% of list — you profit when the price beats your cost by more than their cut. Selling 50+ at once floods the corner.)';
     },
     action: 'wait',
     interactive: true,
@@ -532,7 +558,7 @@ function isTutorialActive() {
 // ---- REWARD GRANTING ----
 function grantStepReward(stepIndex) {
   if (!gameState) return;
-  var reward = STEP_REWARDS[stepIndex];
+  var reward = getStepReward(stepIndex);
   if (!reward) return;
 
   // Track which rewards have been given
@@ -718,7 +744,7 @@ window.renderTutorialOverlay = function() {
 
   // Reward preview
   var rewardInfo = '';
-  var reward = STEP_REWARDS[t.step];
+  var reward = getStepReward(t.step);
   if (reward) {
     rewardInfo = '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--neon-green,#39ff14);text-shadow:0 0 6px rgba(57,255,20,0.3);">' +
       'Reward: ' + reward.label + '</div>';
@@ -829,6 +855,7 @@ window.startTutorial = function() {
     gameState.tutorial.rewardsGiven = {};
   }
   tutorialBoughtDrug = null;
+  tutorialWaitDay = null;
   render();
 };
 
@@ -1024,7 +1051,7 @@ window.doWait = function() {
   // If tutorial is active and player is on or near the sell step, rig prices upward
   if (t && t.active && tutorialBoughtDrug) {
     var step = TUTORIAL_STEPS[t.step];
-    if (step && (step.id === 'sell_drug' || step.id === 'confirm_buy')) {
+    if (step && (step.id === 'wait_market' || step.id === 'sell_drug' || step.id === 'confirm_buy')) {
       shouldOverridePrice = true;
       t._priceOverride = {
         drugId: tutorialBoughtDrug,
@@ -1038,7 +1065,7 @@ window.doWait = function() {
   // After wait, force drug price up during tutorial
   if (shouldOverridePrice && t && t._priceOverride && t._priceOverride.oldPrice) {
     var oldP = t._priceOverride.oldPrice;
-    var newP = Math.round(oldP * (1.4 + Math.random() * 0.4));
+    var newP = Math.round(oldP * (1.5 + Math.random() * 0.4));
     if (gameState.prices) {
       gameState.prices[t._priceOverride.drugId] = newP;
     }
@@ -1109,7 +1136,7 @@ window.getTutorialStepInfo = function(stepIndex) {
     title: step.title,
     action: step.action,
     interactive: !!step.interactive,
-    reward: STEP_REWARDS[stepIndex] || null,
+    reward: getStepReward(stepIndex),
   };
 };
 
