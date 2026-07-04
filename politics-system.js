@@ -206,13 +206,13 @@ function gatherIntel(state) {
   if (pol.lastIntelDay === (state.day || 0)) {
     return { success: false, msg: 'Already gathered intel today. Your contacts need time to find new information.' };
   }
-  pol.lastIntelDay = state.day || 0;
 
-  // Costs money (intel isn't free)
+  // Costs money (intel isn't free) — check BEFORE burning the daily cooldown
   var intelCost = 500 + totalIntel * 200;
   if ((state.cash || 0) < intelCost) {
     return { success: false, msg: 'Intel costs $' + intelCost.toLocaleString() + '. Not enough cash.' };
   }
+  pol.lastIntelDay = state.day || 0;
   state.cash -= intelCost;
 
   const intelTypes = [

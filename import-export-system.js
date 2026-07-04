@@ -137,15 +137,13 @@ function progressSourceConnection(state, sourceId) {
   // Progress the connection (takes multiple attempts)
   if (!ie.contactProgress) ie.contactProgress = {};
   const currentProg = ie.contactProgress[sourceId] || 0;
-  const progressGain = 25 + Math.floor(Math.random() * 25); // 25-50% per attempt
+  let progressGain = 25 + Math.floor(Math.random() * 25); // 25-50% per attempt
+  // Immigrant: community roots make the first overseas connection come fast
+  if (state.characterId === 'immigrant' && ie.unlockedSources.length === 0) progressGain *= 2;
   ie.contactProgress[sourceId] = Math.min(100, currentProg + progressGain);
 
   if (ie.contactProgress[sourceId] >= 100) {
     ie.unlockedSources.push(sourceId);
-    // Immigrant character bonus
-    if (state.characterId === 'immigrant' && ie.unlockedSources.length === 1) {
-      ie.contactProgress[sourceId] = 100;
-    }
     if (typeof adjustRep === 'function') {
       adjustRep(state, 'streetCred', 5);
     }

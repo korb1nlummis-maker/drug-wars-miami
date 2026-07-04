@@ -152,7 +152,7 @@ function getLabTier(state, locationId) {
   const propsHere = Array.isArray(state.properties[locationId]) ? state.properties[locationId] : [];
   for (const prop of propsHere) {
     if (prop.type === 'industrial') {
-      maxTier = Math.max(maxTier, prop.tier || 1);
+      maxTier = Math.max(maxTier, (prop.tier || 0) + 1); // tiers are 0-indexed
     }
   }
   return maxTier;

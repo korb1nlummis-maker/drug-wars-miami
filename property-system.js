@@ -87,7 +87,8 @@ function getStashCapacity(state, locationId) {
       total += ptype.tiers[prop.tier].stashCapacity;
       // Hidden rooms upgrade bonus
       if (prop.upgrades && prop.upgrades.includes('hidden_rooms')) {
-        total += 100;
+        const up = PROPERTY_UPGRADES.find(u => u.id === 'hidden_rooms');
+        total += (up && up.stashBonus) || 5000;
       }
     }
   }
@@ -271,7 +272,7 @@ function processPropertiesDaily(state) {
 
       // Raid risk based on heat and investigation level
       const investigationLevel = typeof getInvestigationLevel === 'function'
-        ? getInvestigationLevel(state.investigation ? state.investigation.points : 0).level
+        ? getInvestigationLevel(state.investigation ? state.investigation.points : 0)
         : 0;
       const raidChance = (investigationLevel * 0.01) + (state.heat > 50 ? 0.02 : 0);
 

@@ -214,8 +214,7 @@ function processCrewExpansionDaily(state) {
     if (!member.traits) member.traits = [];
     if (!member.uniqueId) member.uniqueId = 'crew_' + Math.random().toString(36).substr(2, 8);
 
-    // Track days served
-    member.daysServed++;
+    // (daysServed is incremented once per day by processCrewDaily in game-engine)
 
     // Hidden loyalty drifts based on traits and conditions
     let loyaltyDrift = 0;
