@@ -720,7 +720,20 @@ function checkAchievements(state) {
   if (!state.achievements) state.achievements = [];
   if (!state.achievementStats) state.achievementStats = {};
   const earned = [];
-  const stats = state.achievementStats;
+  // Read counters from BOTH trackers: updateAchievementStats writes
+  // state.achievementStats, but many expansion systems (prison, encounters,
+  // romance, weather, rackets, ...) write state.stats. Counters only go up,
+  // so numeric collisions take the max; object counters shallow-merge.
+  const stats = (() => {
+    const merged = Object.assign({}, state.stats || {});
+    for (const k of Object.keys(state.achievementStats)) {
+      const v = state.achievementStats[k], cur = merged[k];
+      if (typeof v === 'number' && typeof cur === 'number') merged[k] = Math.max(cur, v);
+      else if (v && cur && typeof v === 'object' && typeof cur === 'object' && !Array.isArray(v) && !Array.isArray(cur)) merged[k] = Object.assign({}, cur, v);
+      else if (v !== undefined) merged[k] = v;
+    }
+    return merged;
+  })();
   const total = state.cash + state.bank;
 
   for (const ach of ACHIEVEMENTS) {
@@ -1006,8 +1019,8 @@ function checkAchievements(state) {
       case 'secret_speech_resolved': unlocked = (stats.speechResolutions || 0) >= 10; break;
       case 'secret_lost_everything': {
         // Track hitting zero with nothing, then reward the comeback
-        if (state.cash === 0 && (state.bank || 0) === 0 && Object.keys(state.inventory || {}).length === 0) stats.lostEverything = true;
-        unlocked = (stats.lostEverything || false) && total >= 100000;
+        if (state.cash === 0 && (state.bank || 0) === 0 && Object.keys(state.inventory || {}).length === 0) state.achievementStats.lostEverything = true;
+        unlocked = (state.achievementStats.lostEverything || stats.lostEverything || false) && total >= 100000;
         break;
       }
 
