@@ -238,6 +238,10 @@ function processImportExportDaily(state) {
 
       if (eventResult.status === 'seized') {
         ie.totalSeized += shipment.amount;
+        if (typeof addStress === 'function') {
+          const stressMsg = addStress(state, 'shipment_seized');
+          if (stressMsg) msgs.push(stressMsg);
+        }
         msgs.push(shipment.type === 'export'
           ? `💀 Export cargo seized en route to ${shipment.sourceId} — ${shipment.amount}× ${shipment.drugId} gone.`
           : `💀 Lost ${shipment.amount}× ${shipment.drugId} shipment from ${shipment.sourceId}`);

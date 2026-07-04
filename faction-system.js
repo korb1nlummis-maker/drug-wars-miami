@@ -261,6 +261,7 @@ function resolveFactionBattle(state, factionId) {
 
   war.battles++;
   const playerWon = playerRoll > factionRoll;
+  if (typeof addStress === 'function') addStress(state, 'war_battle');
 
   if (playerWon) {
     war.playerWins++;

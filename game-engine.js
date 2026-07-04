@@ -5565,6 +5565,10 @@ function resolveCombatRound(state, action, event) {
     }
 
     // Post-combat consequences: hospital bills, scars
+    if (results.playerDamage > 0 && typeof addStress === 'function') {
+      const stressMsg = addStress(state, 'combat');
+      if (stressMsg) results.msg += ' ' + stressMsg;
+    }
     if (results.playerDamage > 0 && state.health > 0 && state.health < 100) {
       // Hospital bill if health drops below 50
       if (state.health < 50) {
@@ -6021,6 +6025,10 @@ function updateInvestigation(state, trigger, amount) {
   if (state.investigation.level > oldLevel) {
     const info = INVESTIGATION_LEVELS[state.investigation.level];
     messages.push(`🔍 Investigation escalated: ${info.emoji} ${info.name} — ${info.desc}`);
+    if (typeof addStress === 'function') {
+      const stressMsg = addStress(state, 'investigation_escalation');
+      if (stressMsg) messages.push(stressMsg);
+    }
   }
 
   return messages;
@@ -6093,6 +6101,10 @@ function createDEARaidEvent(state) {
 // ============================================================
 function initCourtCase(state, context) {
   context = context || {}; // { resisted: true } = arrest after failed escape, { fought: true } = arrest after losing a fight with police
+  if (typeof addStress === 'function') {
+    const stressMsg = addStress(state, 'arrest');
+    if (stressMsg) state.messageLog.push(stressMsg);
+  }
   // An arrest is news — corners go quiet, prices react
   if (typeof reportPlayerEvent === 'function') {
     reportPlayerEvent(state, 'busted', { locId: state.currentLocation });

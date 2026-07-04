@@ -1131,6 +1131,7 @@ function renderHowToPlay() {
         <p>Buy low, sell high. Prices <b>move every second</b> — watch the ▲▼ arrows — and react to the news: shootouts spike a district, floods of product crash a drug, DEA raids dry up supply. Selling 50+ units at once crashes the local price; buying big creates a shortage.</p>
         <p><b>The spread:</b> street dealers buy from you at ~85% of the listed market price. Buying and re-selling in the same district <b>loses money</b> — real profit means moving product to a district where the price beats your cost by more than the dealer's cut. That's the whole game.</p>
         <p>Blighted neighborhoods pay <b>desperation prices</b>; thriving ones go soft. Your own actions move the market you trade in.</p>
+        <p><b>District events move markets too:</b> a block party spikes party drugs, a gallery opening brings premium prices, a protest or ICE raid tanks sales for days. When an event message says prices are moving — believe it.</p>
         ${TIP('Check 🗺️ Price Intel before traveling, and read the 📺 News — headlines are trade signals.')}
       `)}
 
@@ -1183,6 +1184,14 @@ function renderHowToPlay() {
         <p>Take over districts (needs 2+ healthy crew, level/day gates) for income, sell bonuses, and district control. Defend turf with fortifications and structures. Heat brings police encounters; the Investigation meter brings the DEA. Shootouts make headlines and change district ecology.</p>
       `)}
 
+      ${S('🚔', 'Cops: Stops, Chases & Wiretaps', `
+        <p>Heat isn't a number, it's <b>who</b> is watching: 👮 Local (beat cops), 🕵️ City (detectives), 🏛️ Federal (DEA/FBI) — hover the heat meter to see all three. Deal hot enough and they come to YOU: patrol stops, checkpoints, stings, DEA raids.</p>
+        <p>When they stop you: <b>COMPLY</b> (clean = walk away; holding = confiscation and a fine, or a full arrest at sting level and up), <b>BRIBE</b> (priced by who's asking — feds rarely take the envelope), or <b>RUN</b> — slip away, or it becomes a <b>chase</b>.</p>
+        <p><b>Chases:</b> five rounds — floor it (speed), evade (handling), ram (slows them, +heat), bail (lose the car), surrender. Driving skill and your chase vehicle decide the odds; get caught and it's court with a resisting charge.</p>
+        <p><b>Wiretaps:</b> deal from the same corner 5 days straight at city heat and they tap you — every deal builds evidence. Counter-measures at the Black Market: burner phones, bug sweeps, a lawyer on retainer, a corrupt cop who tips you off.</p>
+        ${TIP('A trashed public image means more stops. Fear keeps street trouble away — but cops don\'t scare.')}
+      `)}
+
       ${S('⚖️', 'The Law: Charges, Court & Prison', `
         <p>Get caught and the charges are built from <b>real evidence</b>: quantity thresholds (possession → intent → trafficking), the gun you carry, dirty cash, unburied bodies, your bribe history, and whether you ran or fought. Cases range from a street bust to a <b>capital murder trial</b>. Lawyers, witness problems, plea deals, and fall guys are all levers.</p>
         ${TIP('Offshore money survives conviction. Cash and bank balances don\'t.')}
@@ -1197,12 +1206,19 @@ function renderHowToPlay() {
         ${TIP('The Coast Guard cycles hot and clear lanes weekly. A "hot" lane is +10% risk — wait it out or reroute.')}
       `)}
 
+      ${S('🌍', 'Import / Export', `
+        <p><b>Imports:</b> connect with overseas sources (Jamaica is the easy entry), order product at 20-50% of street price, pick a shipping method (mule → speedboat → container → plane → narco sub), and collect where you ordered it when it lands. Unreliable sources lose more cargo.</p>
+        <p><b>Exports:</b> ship YOUR product abroad. Virgin markets pay a premium; markets that produce the drug fire-sale it (the modal warns you). Product leaves now, the payout wires back <b>dirty</b> when it lands — if customs doesn't take it. Each market absorbs ~120 units a week.</p>
+        ${TIP('Raw exports roughly break even. Bribed customs officials, the narco sub, and low heat are what make the trade print.')}
+      `)}
+
       ${S('🔫', 'Weapons & the Gunsmith', `
         <p>Weapon tiers unlock with rank (shotguns Lv3, rifles Lv5, snipers Lv7, heavy Lv9+). The Black Market\'s Gunsmith installs upgrades — suppressors, scopes, AP rounds — plus body armor and tactical gear. Carrying illegal hardware is a court charge if you\'re caught.</p>
       `)}
 
       ${S('⚗️', 'Processing & Distribution', `
-        <p>Buy an industrial property to unlock the lab: re-bag, refine, cut, and cook for higher margins. Chemistry grows with practice (lab-worker crew help). Distribution networks sell your stock passively per district — supply them and manage dealer loyalty.</p>
+        <p>Buy an industrial property to unlock the lab: re-bag, refine, cut, and cook for higher margins. Chemistry grows with practice (lab-worker crew help). <b>Upgrade the property's tier</b> (Garage Workshop → Industrial Workshop → Lab Complex) to unlock bigger recipes — the designer blend needs the full Lab Complex. Distribution networks sell your stock passively per district — supply them and manage dealer loyalty.</p>
+        ${TIP('Every property has a 🔧 Hardening panel — cameras, reinforced doors, hidden rooms (+5,000 stash), escape tunnels. Security decides how raids go.')}
       `)}
 
       ${S('💕', 'People: Romance, NPCs & Bosses', `
@@ -1211,6 +1227,12 @@ function renderHowToPlay() {
 
       ${S('🌍', 'The World', `
         <p>Miami is home, but the map opens over time: the Caribbean, South and Central America, Mexico, US cities, Europe, Africa, Asia. Each region has its own prices, dangers, bosses — and its own music. Unlock regions via net worth and contacts.</p>
+      `)}
+
+      ${S('🔥', 'Reputation: Five Faces', `
+        <p>Hover your rep to see five dimensions, each doing real work: <b>🔥 Street Cred</b> earns better buy AND sell prices (up to 10% each way). <b>💀 Fear</b> keeps street trouble away. <b>🤝 Trust</b> holds your crew together and unlocks partnership paths. <b>📺 Public Image</b> speeds heat decay when good — and draws police stops when trashed. <b>🚨 Heat Signature</b> accelerates the investigation when high.</p>
+        <p><b>Stress</b> is the other ledger: combat, arrests, seized shipments, and war all pile it on. Past 80 it costs health; past 95 you risk a breakdown. Spend it down — gym, spa, family dinners, a real vacation.</p>
+        ${TIP('Different endings want different reps: the Politician needs image, the Warlord needs fear, the Partnership needs trust.')}
       `)}
 
       ${S('📊', 'Rank, Skills & Endings', `
