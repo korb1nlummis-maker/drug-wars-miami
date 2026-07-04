@@ -238,7 +238,18 @@ function processImportExportDaily(state) {
 
       if (eventResult.status === 'seized') {
         ie.totalSeized += shipment.amount;
-        msgs.push(`💀 Lost ${shipment.amount}× ${shipment.drugId} shipment from ${shipment.sourceId}`);
+        msgs.push(shipment.type === 'export'
+          ? `💀 Export cargo seized en route to ${shipment.sourceId} — ${shipment.amount}× ${shipment.drugId} gone.`
+          : `💀 Lost ${shipment.amount}× ${shipment.drugId} shipment from ${shipment.sourceId}`);
+      } else if (shipment.type === 'export') {
+        // Made it (delays don't matter for outbound payouts)
+        const payout = shipment.lockedRevenue || 0;
+        state.cash += payout;
+        state.dirtyMoney = (state.dirtyMoney || 0) + payout;
+        shipment.status = 'sold';
+        ie.completedShipments.push(shipment);
+        ie.totalExports = (ie.totalExports || 0) + 1;
+        msgs.push(`🌍💵 Export sold in ${shipment.sourceId}: +$${payout.toLocaleString()} (dirty). The wire came through.`);
       } else if (eventResult.status === 'delayed') {
         shipment.arrivalDay += 2;
         ongoing.push(shipment);
@@ -275,6 +286,12 @@ function processImportExportDaily(state) {
 function processShipmentEvents(state, shipment) {
   // Calculate interception risk
   let risk = shipment.riskBase;
+
+  // Source reliability: sketchy partners lose cargo more often
+  const relSource = INTERNATIONAL_SOURCES.find(s2 => s2.id === shipment.sourceId);
+  if (relSource && typeof relSource.reliability === 'number') {
+    risk += (1 - relSource.reliability) * 0.10;
+  }
 
   // Heat increases risk
   risk += (state.heat || 0) * 0.002;
@@ -336,6 +353,12 @@ function collectShipment(state, shipmentId) {
   if (idx === -1) return { success: false, msg: 'Shipment not found' };
 
   const shipment = ie.completedShipments[idx];
+  if (shipment.type === 'export') return { success: false, msg: 'Export payouts wire in automatically.' };
+  // Cargo lands where you ordered it — be there to collect
+  if (shipment.destinationId && state.currentLocation !== shipment.destinationId) {
+    const dloc = typeof LOCATIONS !== 'undefined' ? LOCATIONS.find(l => l.id === shipment.destinationId) : null;
+    return { success: false, msg: `Cargo is waiting in ${dloc ? dloc.name : shipment.destinationId} — pick it up there.` };
+  }
   const amount = shipment.finalAmount || shipment.amount;
 
   // Add to inventory
@@ -376,37 +399,67 @@ function bribeCustomsOfficial(state, sourceId) {
 // ============================================================
 // EXPORT (sell abroad for premium)
 // ============================================================
-function exportDrugsInternational(state, drugId, amount, destinationId) {
+function exportDrugsInternational(state, drugId, amount, destinationId, methodId) {
   const source = INTERNATIONAL_SOURCES.find(s => s.id === destinationId);
   if (!source) return { success: false, msg: 'Unknown destination' };
-
   if (!state.importExport) return { success: false, msg: 'No connections' };
-  if (!state.importExport.unlockedSources.includes(destinationId)) {
+  const ie = state.importExport;
+  if (!ie.unlockedSources.includes(destinationId)) {
     return { success: false, msg: 'Not connected to this market' };
   }
-
+  amount = Math.floor(amount);
+  if (!amount || amount <= 0) return { success: false, msg: 'Enter an amount' };
   if ((state.inventory[drugId] || 0) < amount) {
     return { success: false, msg: `Don't have ${amount}× ${drugId}` };
   }
+  const method = SHIPPING_METHODS.find(m => m.id === (methodId || 'boat')) || SHIPPING_METHODS[1];
+  if (amount > method.capacity) return { success: false, msg: `Max ${method.capacity} units via ${method.name}` };
+  if (ie.blockedRoutes && ie.blockedRoutes[destinationId]) return { success: false, msg: 'Route is blocked — lay low a few days.' };
 
-  // Export price: 1.5× to 2.5× of base price (selling at markup abroad)
-  const drug = (typeof DRUGS !== 'undefined') ? DRUGS.find(d => d.id === drugId) : null;
-  const basePrice = drug ? (drug.minPrice + drug.maxPrice) / 2 : 5000;
-  const exportMultiplier = 1.5 + Math.random();
-  const revenue = Math.round(basePrice * exportMultiplier * amount);
-
-  state.inventory[drugId] -= amount;
-  if (state.inventory[drugId] <= 0) delete state.inventory[drugId];
-  state.cash += revenue;
-
-  state.importExport.totalExports++;
-
-  // Heat and rep
-  state.heat = Math.min(100, state.heat + 5);
-  if (typeof adjustRep === 'function') {
-    adjustRep(state, 'streetCred', 3);
-    adjustRep(state, 'heatSignature', 5);
+  // Weekly quota per market: foreign demand is finite
+  if (!ie.exportQuota) ie.exportQuota = {};
+  const q = ie.exportQuota[destinationId] || { weekStart: state.day, used: 0 };
+  if (state.day - q.weekStart >= 7) { q.weekStart = state.day; q.used = 0; }
+  const EXPORT_WEEKLY_CAP = 120;
+  if (q.used + amount > EXPORT_WEEKLY_CAP) {
+    return { success: false, msg: `${source.name} can only move ${EXPORT_WEEKLY_CAP - q.used} more units this week.` };
   }
 
-  return { success: true, msg: `🌍 Exported ${amount}× ${drugId} to ${source.name} for $${revenue.toLocaleString()}` };
+  if (state.cash < method.cost) return { success: false, msg: `Shipping via ${method.name} costs $${method.cost.toLocaleString()}` };
+
+  // Product leaves NOW; money comes back later — if the cargo survives
+  state.cash -= method.cost;
+  state.inventory[drugId] -= amount;
+  if (state.inventory[drugId] <= 0) delete state.inventory[drugId];
+  q.used += amount;
+  ie.exportQuota[destinationId] = q;
+
+  const drug = (typeof DRUGS !== 'undefined') ? DRUGS.find(d => d.id === drugId) : null;
+  const basePrice = drug ? (drug.minPrice + drug.maxPrice) / 2 : 5000;
+  // Dumping into a producer market is a fire sale; virgin markets pay a premium
+  const producesIt = (source.drugs || []).includes(drugId);
+  const exportMult = producesIt ? 0.6 : (1.15 + Math.random() * 0.3);
+
+  const shipment = {
+    id: 'exp_' + Math.random().toString(36).substr(2, 8),
+    type: 'export',
+    sourceId: destinationId,
+    drugId,
+    amount,
+    methodId: method.id,
+    methodName: method.name,
+    lockedRevenue: Math.round(basePrice * exportMult * amount),
+    departDay: state.day,
+    arrivalDay: state.day + method.speed,
+    status: 'in_transit',
+    riskBase: method.riskBase,
+  };
+  ie.activeShipments.push(shipment);
+
+  if (amount >= 50) {
+    state.heat = Math.min(100, state.heat + 8);
+    if (typeof adjustRep === 'function') adjustRep(state, 'heatSignature', 6);
+  }
+  const warn = producesIt ? ' ⚠️ They PRODUCE ' + (drug ? drug.name : drugId) + ' — expect fire-sale prices.' : '';
+  return { success: true, msg: `🌍 Export shipment out! ${amount}× ${drug ? drug.name : drugId} to ${source.name} via ${method.name}. Payout lands day ${shipment.arrivalDay}.${warn}` };
 }

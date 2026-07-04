@@ -176,6 +176,58 @@ function promoteCrew(state, crewIndex) {
   return { success: true, newRank: nextRank, msg: member.name + ' promoted to ' + nextRankData.name + '!' };
 }
 
+// Resolve the promotion ceremony the crew is waiting on
+const CREW_CEREMONIES = [
+  { id: 'lavish', name: 'Lavish Party', emoji: '🍾', costPerRank: 5000,
+    desc: 'Rent the club, open bar, everyone sees the family celebrate. Whole crew +8 loyalty, but the flash draws eyes (+3 heat).' },
+  { id: 'blood_oath', name: 'Blood Oath', emoji: '🩸', costPerRank: 0,
+    desc: 'Old-school. Candles, knives, promises. The promoted swears for life (+15 loyalty, betrayal risk wiped); the rest find it grim (-2 loyalty, +3 fear).' },
+  { id: 'handshake', name: 'Quiet Handshake', emoji: '🤝', costPerRank: 0,
+    desc: 'No fuss, back to work. Free, but the promoted wanted recognition (-5 hidden loyalty).' },
+];
+
+function resolveCeremony(state, choice) {
+  const pc = state.pendingCeremony;
+  if (!pc) return { success: false, msg: 'No ceremony pending' };
+  const cer = CREW_CEREMONIES.find(c => c.id === choice);
+  if (!cer) return { success: false, msg: 'Unknown ceremony' };
+  const member = (state.henchmen || []).find(h => h.uniqueId === pc.crewId) || (state.henchmen || [])[pc.crewIndex];
+  const rankIdx = member ? _resolveRankIndex(member.rank) : 1;
+  const cost = cer.costPerRank * Math.max(1, rankIdx);
+  if (cost > 0 && state.cash < cost) return { success: false, msg: 'The ' + cer.name + ' runs $' + cost.toLocaleString() + ' — you can\'t cover it.' };
+
+  state.cash -= cost;
+  let msg;
+  if (cer.id === 'lavish') {
+    for (const h of state.henchmen || []) {
+      h.loyalty = Math.min(100, (h.loyalty || 50) + 8);
+      h.hiddenLoyalty = Math.min(100, (h.hiddenLoyalty || h.loyalty) + 8);
+    }
+    state.heat = Math.min(100, (state.heat || 0) + 3);
+    if (typeof adjustRep === 'function') adjustRep(state, 'publicImage', 2);
+    msg = '🍾 ' + pc.memberName + '\'s ' + pc.rankName + ' party is the talk of the streets. The whole crew stands taller. ($' + cost.toLocaleString() + ')';
+  } else if (cer.id === 'blood_oath') {
+    if (member) {
+      member.loyalty = Math.min(100, (member.loyalty || 50) + 15);
+      member.hiddenLoyalty = 100;
+      member.oathSworn = true;
+      member.betrayalRisk = 0;
+    }
+    for (const h of state.henchmen || []) {
+      if (h === member) continue;
+      h.loyalty = Math.max(0, (h.loyalty || 50) - 2);
+    }
+    if (typeof adjustRep === 'function') adjustRep(state, 'fear', 3);
+    msg = '🩸 ' + pc.memberName + ' swears the oath by candlelight. Bound for life. The others exchange glances.';
+  } else {
+    if (member) member.hiddenLoyalty = Math.max(0, (member.hiddenLoyalty || member.loyalty || 50) - 5);
+    if (typeof adjustRep === 'function') adjustRep(state, 'trust', 1);
+    msg = '🤝 A firm handshake and back to business. ' + pc.memberName + ' nods… a little flatly.';
+  }
+  state.pendingCeremony = null;
+  return { success: true, msg };
+}
+
 // Get trait object by ID
 function getTraitById(traitId) {
   return CREW_TRAITS.find(t => t.id === traitId);
