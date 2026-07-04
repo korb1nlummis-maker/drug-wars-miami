@@ -16,7 +16,7 @@ const INTERNATIONAL_SOURCES = [
     drugs: ['ecstasy', 'acid'], priceMultiplier: 0.5, reliability: 0.9,
     minRep: 25, minAct: 3, desc: 'European labs. Reliable quality.' },
   { id: 'thailand', name: 'Thailand', emoji: '🇹🇭', region: 'Southeast Asia',
-    drugs: ['heroin', 'opium', 'meth'], priceMultiplier: 0.35, reliability: 0.7,
+    drugs: ['heroin', 'opium', 'methamphetamine'], priceMultiplier: 0.35, reliability: 0.7,
     minRep: 35, minAct: 3, desc: 'Golden Triangle connections.' },
   { id: 'jamaica', name: 'Jamaica', emoji: '🇯🇲', region: 'Caribbean',
     drugs: ['weed', 'hashish'], priceMultiplier: 0.4, reliability: 0.8,
@@ -26,7 +26,7 @@ const INTERNATIONAL_SOURCES = [
     drugs: ['cocaine'], priceMultiplier: 0.2, reliability: 0.65,
     minRep: 50, minAct: 3, ngPlusOnly: true, desc: 'Deep jungle labs. Cheapest cocaine.' },
   { id: 'myanmar', name: 'Myanmar', emoji: '🇲🇲', region: 'Southeast Asia',
-    drugs: ['heroin', 'meth'], priceMultiplier: 0.2, reliability: 0.5,
+    drugs: ['heroin', 'methamphetamine'], priceMultiplier: 0.2, reliability: 0.5,
     minRep: 60, minAct: 4, ngPlusOnly: true, desc: 'Shan State. High risk, huge reward.' },
   { id: 'morocco', name: 'Morocco', emoji: '🇲🇦', region: 'North Africa',
     drugs: ['hashish', 'weed'], priceMultiplier: 0.3, reliability: 0.75,
@@ -137,15 +137,13 @@ function progressSourceConnection(state, sourceId) {
   // Progress the connection (takes multiple attempts)
   if (!ie.contactProgress) ie.contactProgress = {};
   const currentProg = ie.contactProgress[sourceId] || 0;
-  const progressGain = 25 + Math.floor(Math.random() * 25); // 25-50% per attempt
+  let progressGain = 25 + Math.floor(Math.random() * 25); // 25-50% per attempt
+  // Immigrant: community roots make the first overseas connection come fast
+  if (state.characterId === 'immigrant' && ie.unlockedSources.length === 0) progressGain *= 2;
   ie.contactProgress[sourceId] = Math.min(100, currentProg + progressGain);
 
   if (ie.contactProgress[sourceId] >= 100) {
     ie.unlockedSources.push(sourceId);
-    // Immigrant character bonus
-    if (state.characterId === 'immigrant' && ie.unlockedSources.length === 1) {
-      ie.contactProgress[sourceId] = 100;
-    }
     if (typeof adjustRep === 'function') {
       adjustRep(state, 'streetCred', 5);
     }

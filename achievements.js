@@ -507,7 +507,7 @@ const ACHIEVEMENTS = [
   { id: 'smuggler', name: 'International Smuggler', desc: 'Connect with 3 international sources', emoji: '🌍', category: 'import', xp: 30 },
   { id: 'global_network', name: 'Global Network', desc: 'Connect with all available sources', emoji: '🌐', category: 'import', xp: 60, hidden: true },
   { id: 'seized_survivor', name: 'Cost of Business', desc: 'Have a shipment seized', emoji: '🚨', category: 'import', xp: 10 },
-  { id: 'narco_sub', name: 'Narco Sub Captain', desc: 'Complete a shipment via Narco Sub', emoji: '🔻', category: 'import', xp: 40, hidden: true },
+  { id: 'narco_sub_shipment', name: 'Narco Sub Captain', desc: 'Complete a shipment via Narco Sub', emoji: '🔻', category: 'import', xp: 40, hidden: true },
   { id: 'import_baron', name: 'Import Baron', desc: 'Complete 10 international imports', emoji: '📬', category: 'import', xp: 50 },
 
   // === FACTIONS (8) ===
@@ -667,7 +667,7 @@ const ACHIEVEMENTS = [
   // ============================================================
   // V6 — BUSINESS ACHIEVEMENTS (10)
   // ============================================================
-  { id: 'first_business', name: 'Entrepreneur', desc: 'Purchase your first business', emoji: '🏢', category: 'business_v2', xp: 25 },
+  { id: 'first_business_v2', name: 'Entrepreneur', desc: 'Purchase your first business', emoji: '🏢', category: 'business_v2', xp: 25 },
   { id: 'business_empire', name: 'Business Empire', desc: 'Own 5 different businesses', emoji: '🏙️', category: 'business_v2', xp: 75 },
   { id: 'business_mogul', name: 'Mogul', desc: 'Own 10 different businesses', emoji: '👑', category: 'business_v2', xp: 150 },
   { id: 'music_mogul', name: 'Music Mogul', desc: 'Have a signed artist blow up', emoji: '🎵', category: 'business_v2', xp: 75 },
@@ -720,7 +720,20 @@ function checkAchievements(state) {
   if (!state.achievements) state.achievements = [];
   if (!state.achievementStats) state.achievementStats = {};
   const earned = [];
-  const stats = state.achievementStats;
+  // Read counters from BOTH trackers: updateAchievementStats writes
+  // state.achievementStats, but many expansion systems (prison, encounters,
+  // romance, weather, rackets, ...) write state.stats. Counters only go up,
+  // so numeric collisions take the max; object counters shallow-merge.
+  const stats = (() => {
+    const merged = Object.assign({}, state.stats || {});
+    for (const k of Object.keys(state.achievementStats)) {
+      const v = state.achievementStats[k], cur = merged[k];
+      if (typeof v === 'number' && typeof cur === 'number') merged[k] = Math.max(cur, v);
+      else if (v && cur && typeof v === 'object' && typeof cur === 'object' && !Array.isArray(v) && !Array.isArray(cur)) merged[k] = Object.assign({}, cur, v);
+      else if (v !== undefined) merged[k] = v;
+    }
+    return merged;
+  })();
   const total = state.cash + state.bank;
 
   for (const ach of ACHIEVEMENTS) {
@@ -770,7 +783,7 @@ function checkAchievements(state) {
       case 'specialist_cocaine': unlocked = (stats.drugsSoldById?.cocaine || 0) >= 100; break;
       case 'specialist_heroin': unlocked = (stats.drugsSoldById?.heroin || 0) >= 100; break;
       case 'specialist_weed': unlocked = (stats.drugsSoldById?.weed || 0) >= 200; break;
-      case 'specialist_meth': unlocked = (stats.drugsSoldById?.meth || 0) >= 100; break;
+      case 'specialist_meth': unlocked = (stats.drugsSoldById?.methamphetamine || 0) >= 100; break;
       case 'specialist_crack': unlocked = (stats.drugsSoldById?.crack || 0) >= 100; break;
       case 'specialist_ecstasy': unlocked = (stats.drugsSoldById?.ecstasy || 0) >= 100; break;
       case 'total_100_sold': unlocked = state.drugsSold >= 100; break;
@@ -1006,8 +1019,8 @@ function checkAchievements(state) {
       case 'secret_speech_resolved': unlocked = (stats.speechResolutions || 0) >= 10; break;
       case 'secret_lost_everything': {
         // Track hitting zero with nothing, then reward the comeback
-        if (state.cash === 0 && (state.bank || 0) === 0 && Object.keys(state.inventory || {}).length === 0) stats.lostEverything = true;
-        unlocked = (stats.lostEverything || false) && total >= 100000;
+        if (state.cash === 0 && (state.bank || 0) === 0 && Object.keys(state.inventory || {}).length === 0) state.achievementStats.lostEverything = true;
+        unlocked = (state.achievementStats.lostEverything || stats.lostEverything || false) && total >= 100000;
         break;
       }
 
@@ -1039,7 +1052,7 @@ function checkAchievements(state) {
       // Character selection
       case 'char_dropout': unlocked = state.characterId === 'dropout'; break;
       case 'char_corner_kid': unlocked = state.characterId === 'corner_kid'; break;
-      case 'char_excon': unlocked = state.characterId === 'excon'; break;
+      case 'char_excon': unlocked = state.characterId === 'ex_con'; break;
       case 'char_hustler': unlocked = state.characterId === 'hustler'; break;
       case 'char_connected': unlocked = state.characterId === 'connected_kid'; break;
       case 'char_cleanskin': unlocked = state.characterId === 'cleanskin'; break;
@@ -1175,7 +1188,7 @@ function checkAchievements(state) {
         break;
       }
       case 'seized_survivor': unlocked = state.importExport && (state.importExport.totalSeized || 0) > 0; break;
-      case 'narco_sub': unlocked = (stats.narcoSubShipments || 0) >= 1; break;
+      case 'narco_sub_shipment': unlocked = (stats.narcoSubShipments || 0) >= 1; break;
       case 'import_baron': unlocked = state.importExport && (state.importExport.totalImports || 0) >= 10; break;
 
       // Factions
@@ -1356,6 +1369,7 @@ function checkAchievements(state) {
       case 'npc_betrayed': unlocked = Object.values((state.npcStories && state.npcStories.metNPCs) || {}).some(n => n.outcome === 'betrayed' || (n.relationship || 0) <= -50); break;
 
       // === BUSINESSES V2 ===
+      case 'first_business_v2': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 1; break;
       case 'business_empire': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 3; break;
       case 'business_mogul': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 6; break;
       case 'music_mogul': unlocked = (((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).some(b => /record|studio|music/i.test(b.id || b.businessId || ''))); break;

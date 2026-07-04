@@ -18,7 +18,7 @@ const PROCESSING_RECIPES = [
     supplies: { chemicals: 2 }, heatGen: 3,
     desc: 'Purify raw cocaine into premium product' },
   { id: 'cook_meth', name: 'Cook Meth', emoji: '🧪',
-    input: { meth: 5 }, output: { meth: 7 }, // higher yield
+    input: { methamphetamine: 5 }, output: { methamphetamine: 7 }, // higher yield
     qualityBoost: 1.6, skillReq: 3, timeHours: 8, labTier: 1,
     supplies: { chemicals: 3, equipment: 1 }, heatGen: 5,
     desc: 'Synthesize methamphetamine from precursors' },
@@ -87,7 +87,7 @@ function initProcessingState() {
     activeJobs: [], // { recipeId, startDay, completionDay, locationId, quality }
     completedBatches: [], // ready for pickup
     totalBatchesCooked: 0,
-    chemistryXp: 0, // 0-100, increases with successful processing
+    chemistryXp: 0, // 0-1000, increases with successful processing (level caps at 10)
   };
 }
 
@@ -100,13 +100,13 @@ function getChemistryLevel(state) {
   // Skill tree bonus
   const skillBonus = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'chemistryBonus') || 0 : 0;
   // Character bonus (The Dropout gets chemistry bonus)
-  const charBonus = (state.characterPassive === 'chemistry_boost') ? 1 : 0;
+  const charBonus = (state.characterId === 'dropout' || (state.characterPassive && state.characterPassive.id === 'chemistry_basics')) ? 1 : 0;
   return Math.min(10, Math.floor(baseXp / 10) + skillBonus + charBonus);
 }
 
 function gainChemistryXp(state, amount) {
   if (!state.processing) state.processing = initProcessingState();
-  state.processing.chemistryXp = Math.min(100, (state.processing.chemistryXp || 0) + amount);
+  state.processing.chemistryXp = Math.min(1000, (state.processing.chemistryXp || 0) + amount);
 }
 
 // ============================================================
@@ -152,7 +152,7 @@ function getLabTier(state, locationId) {
   const propsHere = Array.isArray(state.properties[locationId]) ? state.properties[locationId] : [];
   for (const prop of propsHere) {
     if (prop.type === 'industrial') {
-      maxTier = Math.max(maxTier, prop.tier || 1);
+      maxTier = Math.max(maxTier, (prop.tier || 0) + 1); // tiers are 0-indexed
     }
   }
   return maxTier;

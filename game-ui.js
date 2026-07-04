@@ -3862,6 +3862,7 @@ function doTravel(destId, transportId, isWorldTransport) {
   const dest = LOCATIONS.find(l => l.id === destId);
   updateAchievementStats(gameState, 'travel', {
     transport: transportId,
+    transportId: transportId,
     region: dest ? dest.region : null,
     noEncounter: (result.travelEvents || []).length === 0,
   });

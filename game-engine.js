@@ -462,7 +462,7 @@ const DRUG_CHARGE_THRESHOLDS = {
   premium: { intent: 5, trafficking: 20 },
 };
 
-const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
+const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'methamphetamine'];
 
 // ============================================================
 // MONEY LAUNDERING / FRONT COMPANIES
@@ -2080,11 +2080,6 @@ function generatePrices(state) {
       }
     }
 
-    // Processed drug quality bonus (selling premium product)
-    if (typeof getProcessedDrugPriceMod === 'function') {
-      price *= getProcessedDrugPriceMod(state, drug.id);
-    }
-
     // Game day scaling: price volatility increases over 5000 days
     if (typeof getGameDayScaling === 'function') {
       var priceScale = getGameDayScaling(state);
@@ -2178,7 +2173,10 @@ function getEffectiveMaxHp(state) {
 
 // Apply daily bank interest and track earnings for the Interest King achievement
 function applyBankInterest(state) {
-  const gain = Math.round(state.bank * getEffectiveBankRate(state));
+  // Interest only accrues on money that isn't borrowed — parking a cheap
+  // loan in the bank must never print money, no matter how skilled you are.
+  const principal = Math.max(0, (state.bank || 0) - (state.debt || 0));
+  const gain = Math.round(principal * getEffectiveBankRate(state));
   state.bank += gain;
   if (gain > 0 && state.achievementStats) state.achievementStats.bankInterestEarned = (state.achievementStats.bankInterestEarned || 0) + gain;
 }
@@ -2195,6 +2193,7 @@ function getEffectiveBankRate(state) {
 
 function waitDay(state) {
   state.day += 1;
+  state.sameDayHops = 0;
 
   // Daily processing (same as travel)
   if (typeof processLoansDaily === 'function') processLoansDaily(state);
@@ -2443,7 +2442,7 @@ function waitDay(state) {
     if (state.characterFlags) state.characterFlags.onProbation = false;
   }
   if (charId === 'ex_con' && day >= 380 && (state.henchmen || []).length >= 5 && !bt.excon_prison_crew) {
-    bt.excon_crew = true;
+    bt.excon_prison_crew = true;
     msgs.push('👥 Half your crew did time. They understand. In prison you learn who\'s real and who\'s not. Out here, that loyalty is everything. Your crew would die for you.');
     if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { prison_brotherhood: 1 } }, 'backstory', 'excon_crew');
   }
@@ -2695,7 +2694,8 @@ function waitDay(state) {
     }
 
     // DROPOUT: University wants to honor you (if rich and clean)
-    if (charId === 'dropout' && day >= 120 && nwNow > 500000 && (state.heat || 0) < 20 && !bt.dropout_honor) {
+    var nwHonor = typeof calculateNetWorth === 'function' ? calculateNetWorth(state) : state.cash;
+    if (charId === 'dropout' && day >= 120 && nwHonor > 500000 && (state.heat || 0) < 20 && !bt.dropout_honor) {
       bt.dropout_honor = true;
       msgs.push('🎓 University of Miami wants you as a guest speaker. "Self-made success story." The irony isn\'t lost on you.');
       if (typeof applyConsequences === 'function') applyConsequences(state, { traits: { public_figure: true }, stats: { publicImage: 10 } }, 'backstory', 'dropout_honor');
@@ -3680,6 +3680,10 @@ function waitDay(state) {
     const facMsgs = processFactionDaily(state);
     msgs.push(...facMsgs);
   }
+  if (typeof processMiamiFactionsDaily === 'function') {
+    const miamiFacMsgs = processMiamiFactionsDaily(state);
+    msgs.push(...miamiFacMsgs);
+  }
   if (typeof processHeatSystemDaily === 'function') {
     const heatMsgs = processHeatSystemDaily(state);
     msgs.push(...heatMsgs);
@@ -4439,6 +4443,12 @@ function sellDrug(state, drugId, amount) {
       if (nomadBonus > 0) price = Math.round(price * (1 + nomadBonus));
     }
   }
+  // Processed drug quality bonus: YOUR premium batch sells above street
+  // price — applied to the sale, never to the market walk (it would compound)
+  if (typeof getProcessedDrugPriceMod === 'function') {
+    const qualityMod = getProcessedDrugPriceMod(state, drugId);
+    if (qualityMod > 1) price = Math.round(price * qualityMod);
+  }
   // Skill tree: haggler sell bonus
   const skillSellMod = getSkillEffect(state, 'sellMod');
   if (skillSellMod > 0) price = Math.round(price * (1 + skillSellMod));
@@ -4704,7 +4714,8 @@ function getAvailableTransport(state, destinationId) {
     if (t.sameRegionOnly && !sameRegion) continue;
     const minLvl = TRANSPORT_TIER_LEVEL[t.tier] || 1;
     const locked = playerLevel < minLvl;
-    const cost = Math.round(t.costPerRegion * (sameRegion ? 1 : 2.5) * state.transportCostMultiplier);
+    let cost = Math.round(t.costPerRegion * (sameRegion ? 1 : 2.5) * state.transportCostMultiplier);
+    if ((state.activeBuffs || []).some(b => b.effect === 'transport_cost_x2' && state.day < b.expiresDay)) cost *= 2;
     const carryLimit = cargoBonus > 0 ? Math.round(t.inventoryLimit * (1 + cargoBonus)) : t.inventoryLimit;
     results.push({ id, ...t, inventoryLimit: carryLimit, cost, canAfford: state.cash >= cost && !locked, canCarry: getInventoryCount(state) <= carryLimit, locked, minLevel: minLvl });
   }
@@ -4742,6 +4753,11 @@ function travel(state, destinationId, transportId) {
     if (wx.waterRoutesBlocked && (transport.type === 'boat' || transport.type === 'ship')) {
       return { success: false, msg: '⛈️ Tropical storm! Water routes are blocked.' };
     }
+  }
+
+  // Same-day rides are capped — no endless 0-day market hopping
+  if (transport.timeDays === 0 && (state.sameDayHops || 0) >= 3) {
+    return { success: false, msg: '🚕 Three rides today already — the cabbies are done hauling you around. Take real transport or call it a day.' };
   }
 
   // Vehicle condition check: damaged vehicle adds travel time and risk
@@ -4849,6 +4865,8 @@ function travel(state, destinationId, transportId) {
   }
   } // end if (!isLocalTravel)
   state.day += daysUsed;
+  if (isLocalTravel) state.sameDayHops = (state.sameDayHops || 0) + 1;
+  else state.sameDayHops = 0;
 
   // Apply daily interest, crew management, and investigation for each day traveled
   const dailyMessages = [];
@@ -5223,14 +5241,15 @@ function processEvent(state, template, location) {
     }
     case 'reputation_event': {
       if (state.reputation > 20) {
-        state.activeBuffs.push({ type: 'price_discount', value: 0.9, duration: 1 });
+        state.activeBuffs.push({ id: 'rep_discount', name: 'Respected Buyer', emoji: '🤝', expiresDay: state.day + 1, effect: 'buy_price_minus_30pct' });
         return { ...template, resolved: true };
       }
       return null;
     }
     case 'hurricane': {
-      state.transportCostMultiplier = 2;
-      state.activeBuffs.push({ type: 'transport_cost', value: 2, duration: 3 });
+      // Temporary surcharge via buff — never touch transportCostMultiplier,
+      // that's the permanent-discount channel (smuggler captain etc.)
+      state.activeBuffs.push({ id: 'hurricane_transport', name: 'Hurricane Surcharge', emoji: '🌀', expiresDay: state.day + 3, effect: 'transport_cost_x2' });
       return { ...template, resolved: true };
     }
     case 'war_zone': {
@@ -5279,7 +5298,6 @@ function resolveCombatRound(state, action, event) {
     if (typeof getTraitBonuses === 'function') {
       var tbCombat = getTraitBonuses(state);
       if (tbCombat.combatDamage) playerPower = Math.round(playerPower * (1 + tbCombat.combatDamage));
-      if (tbCombat.combatAccuracy) hitChance = Math.min(0.95, hitChance + tbCombat.combatAccuracy);
     }
     // Skill tree: brawler damage boost
     const damageMod = getSkillEffect(state, 'damageMod');
@@ -5305,6 +5323,8 @@ function resolveCombatRound(state, action, event) {
       playerPower = Math.round(playerPower * Math.min(2, 1 + 0.15 * (event.enemyCount - 1)));
     }
     let hitChance = weapon.accuracy + (activeCrewCount * 0.05);
+    // Trait bonuses: brave/heroic traits sharpen aim
+    if (typeof tbCombat !== 'undefined' && tbCombat && tbCombat.combatAccuracy) hitChance = Math.min(0.95, hitChance + tbCombat.combatAccuracy);
     // Scope item: +15% accuracy
     if (hasItem(state, 'scope')) hitChance += 0.15;
     // Skill tree: weapons expert accuracy bonus
@@ -6419,6 +6439,12 @@ function acceptPleaDeal(state) {
   state.day += prisonDays;
   for (var i = 0; i < prisonDays; i++) {
     if (typeof processLoansDaily === 'function') processLoansDaily(state); else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+  }
+
+  // Story flags: this IS cooperating with the feds (Informant / The Deal endings)
+  if (typeof setCampaignFlag === 'function') {
+    setCampaignFlag(state, 'cooperated', true);
+    setCampaignFlag(state, 'negotiatedDeal', true);
   }
 
   // Mark as snitch if faction intel given

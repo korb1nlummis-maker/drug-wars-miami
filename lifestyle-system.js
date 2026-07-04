@@ -265,10 +265,10 @@ function processLifestyleDaily(state) {
   const ls = state.lifestyle;
   const msgs = [];
 
-  // Advance time period
+  // Advance time period (flavor only — daily costs run every tick, or rent
+  // and child support would only bill every 4th day)
   advanceTimePeriod(state);
-  if (ls.timeOfDay === 0) {
-    // New day cycle — process daily costs
+  {
     const tier = LIFESTYLE_TIERS.find(t => t.id === (ls.lifestyleTier || 'modest')) || LIFESTYLE_TIERS[1];
 
     // Deduct daily lifestyle cost

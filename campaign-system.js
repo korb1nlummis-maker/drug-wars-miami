@@ -27,7 +27,7 @@ const CAMPAIGN_ACTS = [
     desc: 'Money is flowing. Expand your territory, grow your crew, and establish your presence.',
     dayRange: [500, 1500],
     milestones: [
-      { id: 'territory_3', name: 'Power Base', desc: 'Control 3 territories', check: s => Object.keys(s.territory || {}).length >= 3, reward: 'Territory defense bonus' },
+      { id: 'territory_3', name: 'Power Base', desc: 'Control 3 territories', check: s => Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 3, reward: 'Territory defense bonus' },
       { id: 'net_worth_100k', name: 'Six Figures', desc: 'Reach $100,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 100000; }, reward: 'Unlock premium suppliers' },
       { id: 'crew_5', name: 'Full Crew', desc: 'Have 5+ crew members', check: s => (s.henchmen || []).length >= 5, reward: 'Crew specialization unlocked' },
       { id: 'first_front', name: 'Clean Money', desc: 'Buy your first front business', check: s => (s.frontBusinesses || []).length >= 1, reward: 'Laundering operational' },
@@ -43,7 +43,7 @@ const CAMPAIGN_ACTS = [
     desc: 'You\'re a player now. Diversify, launder, and consolidate before the heat catches up.',
     dayRange: [1500, 2500],
     milestones: [
-      { id: 'territory_5', name: 'Regional Control', desc: 'Control 5+ territories', check: s => Object.keys(s.territory || {}).length >= 5, reward: 'Regional price control' },
+      { id: 'territory_5', name: 'Regional Control', desc: 'Control 5+ territories', check: s => Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 5, reward: 'Regional price control' },
       { id: 'net_worth_500k', name: 'Half Million', desc: 'Reach $500,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 500000; }, reward: 'Elite connections' },
       { id: 'properties_3', name: 'Property Mogul', desc: 'Own 3+ properties', check: s => getTotalPropertyCount(s) >= 3, reward: 'Property synergy bonus' },
       { id: 'distribution_setup', name: 'Distribution Network', desc: 'Set up distribution in 2+ locations', check: s => Object.keys(s.distribution || {}).length >= 2, reward: 'Passive income grows' },
@@ -62,7 +62,7 @@ const CAMPAIGN_ACTS = [
       { id: 'survive_investigation', name: 'Beat the Heat', desc: 'Survive a level 4+ investigation', check: s => (s.investigation && s.investigation.points >= 70 && s.investigation.timesArrested >= 1), reward: 'Investigation resistance' },
       { id: 'million_net_worth', name: 'Millionaire', desc: 'Reach $1,000,000 net worth', check: s => { const nw = (s.cash||0) + (s.bank||0) - (s.debt||0); return nw >= 1000000; }, reward: 'Elite status' },
       { id: 'lieutenant_promoted', name: 'Chain of Command', desc: 'Promote someone to Lieutenant or higher', check: s => (s.henchmen || []).some(h => (h.rank || 0) >= 2), reward: 'Delegation bonus' },
-      { id: 'territory_7', name: 'Empire Builder', desc: 'Control 7+ territories', check: s => Object.keys(s.territory || {}).length >= 7, reward: 'Territory income doubled' },
+      { id: 'territory_7', name: 'Empire Builder', desc: 'Control 7+ territories', check: s => Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 7, reward: 'Territory income doubled' },
     ],
     requiredMilestones: 2,
     modifiers: { encounterDifficulty: 1.6, heatGainMod: 1.5, priceVolatility: 1.5 },
@@ -89,14 +89,14 @@ const CAMPAIGN_ENDINGS = [
     subtitle: 'Total Domination',
     narrative: 'You stand at the top. Every corner, every deal, every dollar flows through your empire. The city bends to your will. But the throne is cold, and the view from the top reveals nothing but enemies in every direction. You won the game. The question is whether the game won you.',
     check: s => {
-      const territories = Object.keys(s.territory || {}).length;
+      const territories = Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length;
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
       const crew = (s.henchmen || []).length;
       return territories >= 5 && nw >= 500000 && crew >= 6;
     },
     priority: 10,
     gradeCheck: s => {
-      const territories = Object.keys(s.territory || {}).length;
+      const territories = Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length;
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
       if (territories >= 10 && nw >= 2000000) return 'S';
       if (territories >= 7 && nw >= 1000000) return 'A';
@@ -177,7 +177,7 @@ const CAMPAIGN_ENDINGS = [
     narrative: 'It didn\'t happen all at once. First the territory, then the crew, then the money. Each loss led to the next like dominos falling across the city. By the end, you were back where you started — a nobody with nothing, watching the sun set over Miami and wondering where it all went wrong. But you\'re alive. That counts for something.',
     check: s => {
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
-      return nw < 0 && Object.keys(s.territory || {}).length === 0 && (s.henchmen || []).length <= 1;
+      return nw < 0 && Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length === 0 && (s.henchmen || []).length <= 1;
     },
     priority: 3,
     gradeCheck: () => 'C',
@@ -189,7 +189,7 @@ const CAMPAIGN_ENDINGS = [
     subtitle: 'Shared Power',
     narrative: 'Neither of you could take the other out without destroying everything. So you sat down, split the city, and shook hands over champagne. An uneasy peace. Both of you too strong to fight, too proud to serve. The city has two kings now. How long that lasts is anyone\'s guess.',
     check: s => {
-      return (s.rep && s.rep.trust >= 50) && Object.keys(s.territory || {}).length >= 3 && (s.campaign && s.campaign.flags && s.campaign.flags.allianceForged);
+      return (s.rep && s.rep.trust >= 50) && Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 3 && (s.campaign && s.campaign.flags && s.campaign.flags.allianceForged);
     },
     priority: 7,
     gradeCheck: s => {
@@ -206,12 +206,14 @@ const CAMPAIGN_ENDINGS = [
     narrative: 'The judge owed you. The commissioner owed you. The mayor? He was your candidate from the start. You traded bullets for ballots and street corners for corner offices. The drug money built campaign coffers. The enforcers became lobbyists. You are the power behind every decision in this city, and nobody will ever see your hand on the lever.',
     check: s => {
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
-      return nw >= 200000 && (s.stats && s.stats.totalBribesPaid >= 50000) && (s.rep && s.rep.publicImage >= 30);
+      const bribes = ((s.politics && s.politics.totalBribesPaid) || 0) + ((s.stats && s.stats.totalBribesPaid) || 0);
+      return nw >= 200000 && bribes >= 50000 && (s.rep && s.rep.publicImage >= 30);
     },
     priority: 8,
     gradeCheck: s => {
-      if (s.stats && s.stats.totalBribesPaid >= 200000) return 'S';
-      if (s.stats && s.stats.totalBribesPaid >= 100000) return 'A';
+      const bribes = ((s.politics && s.politics.totalBribesPaid) || 0) + ((s.stats && s.stats.totalBribesPaid) || 0);
+      if (bribes >= 200000) return 'S';
+      if (bribes >= 100000) return 'A';
       return 'B';
     },
   },
@@ -222,7 +224,9 @@ const CAMPAIGN_ENDINGS = [
     subtitle: 'What Really Matters',
     narrative: 'You had everything. Territory, money, power, respect. And then you looked at the person sitting across the dinner table — really looked — and saw the fear in their eyes. The choice was simple once you stopped lying to yourself. You walked away from all of it. The penthouse became a suburb. The empire became a memory. Some nights you miss it. Every night, you know you made the right call.',
     check: s => {
-      return (s.campaign && s.campaign.flags && s.campaign.flags.choseFamily);
+      if (s.campaign && s.campaign.flags && s.campaign.flags.choseFamily) return true;
+      const rels = s.romance && s.romance.relationships;
+      return !!(rels && Object.values(rels).some(r => r && (r.stage === 'partner' || r.hasKids)));
     },
     priority: 9,
     gradeCheck: () => 'A',
@@ -251,11 +255,11 @@ const CAMPAIGN_ENDINGS = [
     subtitle: 'Absorb Everything',
     narrative: 'One by one, they all fell. The Colombians, the Cubans, the bikers, the mob — every organization that dared to operate in your city. Some were conquered by force. Some surrendered. Some were absorbed so quietly their own people didn\'t realize it had happened. You own it all now. Every gram, every corner, every dollar. The weight of it is crushing. But there is no one left to share it with.',
     check: s => {
-      return Object.keys(s.territory || {}).length >= 10;
+      return Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 10;
     },
     priority: 10,
     gradeCheck: s => {
-      const t = Object.keys(s.territory || {}).length;
+      const t = Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length;
       if (t >= 20) return 'S';
       if (t >= 15) return 'A';
       if (t >= 10) return 'B';
@@ -293,7 +297,7 @@ const NG_PLUS_ENDINGS = [
     narrative: 'You\'ve done it all before. The come up, the empire, the reckoning. But this time you rewrote every rule. Your name isn\'t just known — it\'s eternal. Every dealer, every cop, every politician speaks it in whispers. You didn\'t just build an empire. You built a mythology. In a hundred years, when the streets have changed and the drugs have new names, they will still tell stories about you.',
     check: s => {
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
-      const territories = Object.keys(s.territory || {}).length;
+      const territories = Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length;
       return s.newGamePlus && nw >= 2000000 && territories >= 10 && (s.henchmen || []).length >= 8;
     },
     priority: 15,
@@ -373,7 +377,7 @@ const NG_PLUS_ENDINGS = [
     subtitle: 'Blood and Iron',
     narrative: 'Diplomacy? Negotiation? Mergers? Those are for the first playthrough. This time, you chose violence. Every rival crushed, every territory taken by force, every enemy buried. Your crew is an army. Your safehouses are fortresses. Miami isn\'t a city anymore. It\'s a warzone with one winner. You stand in the ruins of everyone who ever opposed you.',
     check: s => {
-      return s.newGamePlus && (s.rep && s.rep.fear >= 80) && (s.peopleKilled || 0) >= 30 && s.factions && Object.keys(s.factions.wars || {}).length >= 0 && (s.factions.absorptions || []).length >= 2;
+      return s.newGamePlus && (s.rep && s.rep.fear >= 80) && (s.peopleKilled || 0) >= 30 && ((s.achievementStats && s.achievementStats.warsWon) || 0) >= 1 && s.factions && (s.factions.absorptions || []).length >= 2;
     },
     priority: 12,
     gradeCheck: s => {
@@ -405,7 +409,7 @@ const NG_PLUS_ENDINGS = [
     subtitle: 'Flawless Victory',
     narrative: 'Zero arrests. Zero scandals. Zero failed missions. You played the game a second time and you played it perfectly. Every move calculated, every risk measured, every outcome predetermined. The streets are yours, the money is clean, and your record is spotless. They say crime doesn\'t pay. You proved it pays very, very well — when you do it right.',
     check: s => {
-      return s.newGamePlus && (s.investigation && s.investigation.timesArrested === 0) && (s.heat || 0) < 20 && (s.cash||0) + (s.bank||0) >= 500000 && Object.keys(s.territory || {}).length >= 5;
+      return s.newGamePlus && (s.investigation && s.investigation.timesArrested === 0) && (s.heat || 0) < 20 && (s.cash||0) + (s.bank||0) >= 500000 && Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length >= 5;
     },
     priority: 15,
     gradeCheck: s => {
@@ -426,7 +430,7 @@ const NG_PLUS_ENDINGS = [
       if (!s.newGamePlus || !s.newGamePlus.active) return false;
       if ((s.newGamePlus.tier || 1) < 5) return false;
       const nw = (s.cash||0) + (s.bank||0) - (s.debt||0);
-      const territories = Object.keys(s.territory || {}).length;
+      const territories = Object.keys(s.territory || {}).filter(k => (s.territory[k] || {}).controlled).length;
       const crew = (s.henchmen || []).length;
       const completedEndings = (s.newGamePlus.completedEndings || []).length;
       return nw >= 5000000 && territories >= 8 && crew >= 10 && completedEndings >= 8;
@@ -477,7 +481,7 @@ function getActModifiers(state) {
 function checkActMilestones(state) {
   if (!state.campaign) state.campaign = initCampaign();
   const campaign = state.campaign;
-  const currentActNum = campaign.currentAct;
+  const currentActNum = getCurrentActNumber(state);
   const act = CAMPAIGN_ACTS.find(a => a.act === currentActNum);
   if (!act) return null;
 

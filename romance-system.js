@@ -380,6 +380,11 @@ function processRomanceDaily(state, currentDay) {
     // Reset the neglect-crisis latch once you're back in touch
     if (daysSince < NEGLECT_THRESHOLD) rel.neglectFired = false;
 
+    // Full commitment latches the Family First story flag
+    if ((rel.stage === 'partner' || rel.hasKids) && typeof setCampaignFlag === 'function') {
+      setCampaignFlag(state, 'choseFamily', true);
+    }
+
     processJealousy(rom, npcId);
 
     // --- Story beats: unique per-NPC events fire when points cross thresholds ---
