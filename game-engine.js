@@ -4215,6 +4215,11 @@ function buyDrug(state, drugId, amount) {
   // Skill tree: haggler buy discount
   const skillBuyMod = getSkillEffect(state, 'buyMod');
   if (skillBuyMod < 0) price = Math.round(price * (1 + skillBuyMod));
+  // Reputation: street cred earns dealer respect — better buy prices (capped -10%)
+  if (typeof getRepEffects === 'function') {
+    const repFxB = getRepEffects(state);
+    if (repFxB.buyMod < 0) price = Math.round(price * (1 + Math.max(-0.10, repFxB.buyMod)));
+  }
   // Buff: cartel prices
   if (hasBuff(state, 'cartel_prices')) price = Math.round(price * 0.70);
   // Skill tree: kingmaker global cost reduction
@@ -4329,8 +4334,12 @@ function buyDrug(state, drugId, amount) {
     else if (_locPolB && _locPolB.policeIntensity === 'low') buyHeat *= 0.7;
     const _hgmB = getSkillEffect(state, 'heatGainMod');
     if (_hgmB) buyHeat *= Math.max(0.3, 1 + _hgmB);
-    if (buyHeat > 0) state.heat = Math.min(100, (state.heat || 0) + buyHeat);
+    if (buyHeat > 0) {
+      state.heat = Math.min(100, (state.heat || 0) + buyHeat);
+      if (typeof addTieredHeat === 'function') addTieredHeat(state, buyHeat, 'buying');
+    }
   }
+  if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
   state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
@@ -4448,6 +4457,11 @@ function sellDrug(state, drugId, amount) {
   if (typeof getProcessedDrugPriceMod === 'function') {
     const qualityMod = getProcessedDrugPriceMod(state, drugId);
     if (qualityMod > 1) price = Math.round(price * qualityMod);
+  }
+  // Reputation: street cred moves product at a premium (capped +10%)
+  if (typeof getRepEffects === 'function') {
+    const repFxS = getRepEffects(state);
+    if (repFxS.sellMod > 0) price = Math.round(price * (1 + Math.min(0.10, repFxS.sellMod)));
   }
   // Skill tree: haggler sell bonus
   const skillSellMod = getSkillEffect(state, 'sellMod');
@@ -4579,8 +4593,12 @@ function sellDrug(state, drugId, amount) {
     else if (_locPol && _locPol.policeIntensity === 'low') dealHeat *= 0.7;
     const _hgm = getSkillEffect(state, 'heatGainMod');
     if (_hgm) dealHeat *= Math.max(0.3, 1 + _hgm);
-    if (dealHeat > 0) state.heat = Math.min(100, (state.heat || 0) + dealHeat);
+    if (dealHeat > 0) {
+      state.heat = Math.min(100, (state.heat || 0) + dealHeat);
+      if (typeof addTieredHeat === 'function') addTieredHeat(state, dealHeat, 'dealing');
+    }
   }
+  if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Faction standing adjustment from selling in gang territory
   let factionSellMsgs = [];
   if (typeof adjustFactionStandingFromDeal === 'function') {
@@ -5956,6 +5974,11 @@ function updateInvestigation(state, trigger, amount) {
   if (amount > 0 && typeof getGameDayScaling === 'function') {
     var invScale = getGameDayScaling(state);
     amount = Math.round(amount * (invScale.investigationMod || 1.0));
+  }
+  // Reputation: a hot signature draws investigators faster (capped +50%)
+  if (amount > 0 && typeof getRepEffects === 'function') {
+    var repFxI = getRepEffects(state);
+    if (repFxI.investigationMod > 0) amount = Math.round(amount * (1 + Math.min(0.5, repFxI.investigationMod)));
   }
 
   // Lawyer reduces investigation gain by 40%

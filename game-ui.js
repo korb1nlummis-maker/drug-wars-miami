@@ -2496,6 +2496,20 @@ function renderGame() {
     encounterModal = renderEncounterModal();
   }
 
+  // Crew promotion ceremony choice
+  var ceremonyModal = '';
+  if (gameState.pendingCeremony && typeof CREW_CEREMONIES !== 'undefined') {
+    ceremonyModal = renderCeremonyModal();
+  }
+
+  // Law-enforcement encounter / active police chase overlays
+  var leModal = '';
+  if (gameState.heatSystem && gameState.heatSystem.activeChase && !gameState.heatSystem.activeChase.resolved) {
+    leModal = renderChaseModal();
+  } else if (gameState.pendingEvent && gameState.pendingEvent.type === 'le_encounter') {
+    leModal = renderLEEncounterModal();
+  }
+
   // Security alert popup
   var securityAlert = '';
   const heatCritical = gameState.heat > 80;
@@ -2540,6 +2554,8 @@ function renderGame() {
       ${notificationTicker}
       ${securityAlert}
       ${encounterModal}
+      ${leModal}
+      ${ceremonyModal}
       ${tutorialOverlay}
       <div class="game-layout">
         ${sidebar}
@@ -4828,16 +4844,30 @@ function renderProperties() {
     }).join('');
   }).join('');
 
-  // Owned properties summary
-  const ownedCards = ownedHere.map(p => {
+  // Owned properties summary — with security upgrade installs
+  const ownedCards = ownedHere.map((p, propIdx) => {
     const propType = PROPERTY_TYPES.find(pt => pt.id === p.typeId || pt.id === p.type) || PROPERTY_TYPES[p.typeId];
     const tierData = propType ? propType.tiers[p.tier] : null;
+    const installed = p.upgrades || [];
+    const upgradeRows = (typeof PROPERTY_UPGRADES !== 'undefined' ? PROPERTY_UPGRADES : []).map(up => {
+      const has = installed.includes(up.id);
+      const canAfford = gameState.cash >= up.cost;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:0.72rem;padding:2px 0">
+        <span title="${up.desc}">${up.emoji} ${up.name} <span class="text-dim">(+${up.securityBonus} sec${up.stashBonus ? ', +' + up.stashBonus.toLocaleString() + ' stash' : ''})</span></span>
+        ${has ? '<span class="neon-green">✓</span>'
+          : `<button class="btn btn-sm ${canAfford ? 'btn-buy' : 'btn-secondary'}" ${canAfford ? `onclick="doInstallPropertyUpgrade(${propIdx}, '${up.id}')"` : 'disabled'}>$${up.cost.toLocaleString()}</button>`}
+      </div>`;
+    }).join('');
     return `<div class="property-card owned">
       <div class="prop-header">
         <span style="font-size:1.3rem">${propType ? propType.emoji : '🏠'}</span>
-        <div><div class="prop-name">${tierData ? tierData.name : (propType ? propType.name : (p.type || p.typeId))}</div></div>
+        <div><div class="prop-name">${tierData ? tierData.name : (propType ? propType.name : (p.type || p.typeId))}</div>
+        <div class="text-dim" style="font-size:0.7rem">🛡️ Security ${p.security || (tierData ? tierData.security : 0)}${installed.length ? ' +' + installed.length + ' upgrades' : ''}</div></div>
         <span class="prop-tier">T${p.tier + 1}</span>
       </div>
+      <details style="margin-top:0.3rem"><summary style="cursor:pointer;font-size:0.75rem;color:var(--neon-purple)">🔧 Hardening (${installed.length}/${typeof PROPERTY_UPGRADES !== 'undefined' ? PROPERTY_UPGRADES.length : 6})</summary>
+        <div style="margin-top:4px">${upgradeRows}</div>
+      </details>
     </div>`;
   }).join('');
 
@@ -4898,12 +4928,33 @@ function renderProperties() {
 
 function doBuyProperty(typeId, tier) {
   if (typeof buyProperty !== 'function') return;
-  const result = buyProperty(gameState, typeId, tier - 1);
+  // Owning this type here means the button is a TIER UPGRADE, not a purchase
+  const locId = gameState.currentLocation;
+  const propsHere = (gameState.properties && gameState.properties[locId]) || [];
+  const existingIdx = propsHere.findIndex(p => p.type === typeId || p.typeId === typeId);
+  let result;
+  if (existingIdx >= 0 && typeof upgradeProperty === 'function') {
+    result = upgradeProperty(gameState, locId, existingIdx);
+  } else {
+    result = buyProperty(gameState, typeId, tier - 1);
+  }
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
     if (typeof updateAchievementStats === 'function') updateAchievementStats(gameState, 'property_buy', { typeId, tier });
     processNewAchievements();
+  } else {
+    alert(result.msg);
+  }
+  render();
+}
+
+function doInstallPropertyUpgrade(propIdx, upgradeId) {
+  if (typeof addPropertyUpgrade !== 'function') return;
+  const result = addPropertyUpgrade(gameState, gameState.currentLocation, propIdx, upgradeId);
+  if (result.success) {
+    playSound('cash');
+    gameState.messageLog.push(result.msg);
   } else {
     alert(result.msg);
   }
@@ -5348,6 +5399,7 @@ function renderImportExport() {
       actions = `<button class="btn btn-sm btn-secondary" style="border-color:#4488ff;color:#4488ff" onclick="doProgressConnection('${src.id}')">📞 Make Contact</button>`;
     } else if (src.isUnlocked && !src.isBlocked) {
       actions = `<button class="btn btn-sm btn-buy" onclick="showImportModal('${src.id}')">📥 Import</button>`;
+      actions += ` <button class="btn btn-sm btn-secondary" style="border-color:#00ff88;color:#00ff88" onclick="showExportModal('${src.id}')">📤 Export</button>`;
       if (!ie.bribedOfficials || !ie.bribedOfficials[src.id]) {
         actions += ` <button class="btn btn-sm btn-secondary" style="border-color:#ff9500;color:#ff9500" onclick="doBribeOfficial('${src.id}')">🤝 Bribe</button>`;
       }
@@ -5377,6 +5429,7 @@ function renderImportExport() {
       <div class="status-row" style="justify-content:center;gap:2rem;margin-bottom:1rem">
         <span class="stat"><span class="stat-label">Connected</span> <span class="stat-value neon-cyan">${(ie.unlockedSources || []).length}</span></span>
         <span class="stat"><span class="stat-label">Total Imports</span> <span class="stat-value neon-green">${ie.totalImports || 0}</span></span>
+        <span class="stat"><span class="stat-label">Total Exports</span> <span class="stat-value" style="color:#00ff88">${ie.totalExports || 0}</span></span>
         <span class="stat"><span class="stat-label">Seized</span> <span class="stat-value neon-red">${ie.totalSeized || 0}</span></span>
       </div>
       ${(ie.completedShipments || []).length > 0 ? `<h3 style="color:#00ff88;margin:0.5rem 0">📬 ARRIVED</h3><div class="char-grid" style="grid-template-columns:repeat(2,1fr)">${completedShipments}</div>` : ''}
@@ -5415,6 +5468,58 @@ function showImportModal(sourceId) {
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+let exportModalDest = null;
+
+function showExportModal(sourceId) {
+  exportModalDest = sourceId;
+  const source = INTERNATIONAL_SOURCES.find(s => s.id === sourceId);
+  if (!source) return;
+  const inv = Object.entries(gameState.inventory || {}).filter(([, q]) => q > 0);
+  if (inv.length === 0) { alert('Nothing in your inventory to export.'); return; }
+  const drugOptions = inv.map(([d, q]) => {
+    const produces = (source.drugs || []).includes(d);
+    return `<option value="${d}">${d} (have ${q})${produces ? ' ⚠️ they produce this — fire-sale prices' : ''}</option>`;
+  }).join('');
+  const methodOptions = SHIPPING_METHODS.map(m => `<option value="${m.id}">${m.emoji} ${m.name} (${m.capacity} max, ${m.speed}d, $${m.cost.toLocaleString()}, ${Math.round(m.riskBase * 100)}% risk)</option>`).join('');
+  const q = (gameState.importExport && gameState.importExport.exportQuota && gameState.importExport.exportQuota[sourceId]) || { weekStart: gameState.day, used: 0 };
+  const quotaLeft = (gameState.day - q.weekStart >= 7) ? 120 : Math.max(0, 120 - q.used);
+
+  const modal = document.createElement('div');
+  modal.id = 'export-modal';
+  modal.innerHTML = `
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center">
+      <div style="background:var(--bg-dark);border:1px solid #00ff88;border-radius:8px;padding:1.5rem;max-width:420px;width:90%">
+        <h3 style="color:#00ff88;margin:0 0 0.5rem">📤 Export to ${source.name}</h3>
+        <p class="text-dim" style="font-size:0.75rem;margin:0 0 1rem">Product ships now; the payout wires back (dirty) when it lands — if it isn't seized. Virgin markets pay a premium. Weekly capacity left: <b style="color:#00ff88">${quotaLeft} units</b>.</p>
+        <div style="margin-bottom:0.5rem"><label class="text-dim">Drug (from inventory):</label><br><select id="export-drug" class="game-input" style="width:100%">${drugOptions}</select></div>
+        <div style="margin-bottom:0.5rem"><label class="text-dim">Amount:</label><br><input id="export-amount" type="number" class="game-input" style="width:100%" min="1" max="200" value="10"></div>
+        <div style="margin-bottom:1rem"><label class="text-dim">Method:</label><br><select id="export-method" class="game-input" style="width:100%">${methodOptions}</select></div>
+        <button class="btn btn-primary" onclick="doOrderExport()">📤 Ship It</button>
+        <button class="btn btn-secondary" onclick="closeExportModal()">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeExportModal() {
+  const modal = document.getElementById('export-modal');
+  if (modal) modal.remove();
+  exportModalDest = null;
+}
+
+function doOrderExport() {
+  if (!exportModalDest) return;
+  const drugId = document.getElementById('export-drug').value;
+  const amount = parseInt(document.getElementById('export-amount').value) || 0;
+  const methodId = document.getElementById('export-method').value;
+  const result = exportDrugsInternational(gameState, drugId, amount, exportModalDest, methodId);
+  gameState.messageLog.push(result.msg);
+  if (result.success) playSound('cash'); else alert(result.msg);
+  closeExportModal();
+  render();
 }
 
 function closeImportModal() {
@@ -8881,6 +8986,131 @@ function renderEncounterModal() {
       choicesHtml +
     '</div>' +
   '</div>';
+}
+
+// ============================================================
+// LAW ENFORCEMENT ENCOUNTER + POLICE CHASE MODALS
+// ============================================================
+function renderLEEncounterModal() {
+  var ev = gameState.pendingEvent;
+  if (!ev || ev.type !== 'le_encounter') return '';
+  var carrying = Object.values(gameState.inventory || {}).reduce(function(a, b) { return a + (b || 0); }, 0);
+  var bribeCost = typeof getLEBribeCost === 'function' ? getLEBribeCost(gameState, ev) : 0;
+  var canBribe = gameState.cash >= bribeCost;
+  var riskNote = carrying > 0
+    ? '<p style="color:#ff8844;font-size:0.8rem;">You\'re holding <b>' + carrying + ' units</b>. ' + (ev.severity >= 3 ? 'If they search you, this is an ARREST.' : 'A search means confiscation and a fine.') + '</p>'
+    : '<p style="color:#39ff14;font-size:0.8rem;">You\'re clean. A search finds nothing.</p>';
+
+  return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid #ff4444;border-radius:12px;padding:24px;max-width:520px;width:90%;text-align:center;box-shadow:0 0 30px rgba(255,68,68,0.3);">' +
+      '<div style="font-size:3em;margin-bottom:8px;">' + (ev.emoji || '🚔') + '</div>' +
+      '<h2 style="color:#ff4444;margin:0 0 8px 0;">' + (ev.encounterName || 'Police Stop') + '</h2>' +
+      '<p style="color:#ccc;">' + (((LE_ENCOUNTERS.find(function(e) { return e.id === ev.encounterType; }) || {}).desc) || 'They want a word with you.') + '</p>' +
+      riskNote +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;">' +
+        '<button class="btn btn-secondary" onclick="doLEAction(\'comply\')">🙌 Comply' + (carrying > 0 ? ' <span style="font-size:0.65rem;color:#ff8844">(risk search)</span>' : '') + '</button>' +
+        '<button class="btn ' + (canBribe ? 'btn-primary' : 'btn-secondary') + '" ' + (canBribe ? '' : 'disabled ') + 'onclick="doLEAction(\'bribe\')">🤝 Bribe ($' + bribeCost.toLocaleString() + ')' + (ev.tier === 'federal' ? ' <span style="font-size:0.65rem;color:#ff4444">(feds rarely bite)</span>' : '') + '</button>' +
+        '<button class="btn btn-danger" onclick="doLEAction(\'run\')">🏃 Run <span style="font-size:0.65rem">(may trigger a chase)</span></button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function doLEAction(action) {
+  if (typeof resolveLEEncounter !== 'function') { gameState.pendingEvent = null; render(); return; }
+  var result = resolveLEEncounter(gameState, action);
+  if (result && result.msgs) {
+    for (var i = 0; i < result.msgs.length; i++) {
+      gameState.messageLog.push(result.msgs[i]);
+      if (typeof showNotification === 'function') showNotification(result.msgs[i], result.arrested ? 'error' : 'info');
+    }
+  }
+  if (result && result.goToCourt) { currentScreen = 'court'; }
+  if (typeof playSound === 'function') playSound(result && result.arrested ? 'siren' : 'click');
+  render();
+}
+
+function renderChaseModal() {
+  var chase = gameState.heatSystem && gameState.heatSystem.activeChase;
+  if (!chase) return '';
+  var pv = chase.playerVehicle || { name: 'On Foot', emoji: '🏃' };
+  var pct = Math.round(chase.distance);
+  var barColor = pct >= 66 ? '#39ff14' : pct >= 33 ? '#ffe600' : '#ff4444';
+  var lastMsg = chase.lastMsg ? '<p style="color:#ffe600;font-size:0.85rem;margin:6px 0;">' + chase.lastMsg + '</p>' : '';
+
+  return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid #ff9500;border-radius:12px;padding:24px;max-width:540px;width:90%;text-align:center;box-shadow:0 0 30px rgba(255,149,0,0.35);">' +
+      '<div style="font-size:2.6em;">🚔💨 ' + pv.emoji + '</div>' +
+      '<h2 style="color:#ff9500;margin:4px 0;">POLICE CHASE — ' + (chase.encounterName || '') + '</h2>' +
+      '<p style="color:#ccc;font-size:0.85rem;">Round ' + (chase.round + 1) + '/' + chase.maxRounds + ' · ' + pv.name + '</p>' +
+      '<div style="background:#111;border:1px solid #444;border-radius:6px;height:18px;margin:10px 0;overflow:hidden;">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';transition:width 0.3s;"></div>' +
+      '</div>' +
+      '<p style="font-size:0.75rem;color:#888;">Distance: ' + pct + '% — reach 100% to escape, hit 0% and they take you in.</p>' +
+      lastMsg +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;">' +
+        '<button class="btn btn-primary" onclick="doChaseAction(\'floor_it\')">🏎️ Floor It <span style="font-size:0.65rem">(speed)</span></button>' +
+        '<button class="btn btn-primary" onclick="doChaseAction(\'evade\')">🔄 Evade <span style="font-size:0.65rem">(handling)</span></button>' +
+        '<button class="btn btn-secondary" onclick="doChaseAction(\'ram\')">💥 Ram <span style="font-size:0.65rem">(+heat, slows them)</span></button>' +
+        (pv.id !== 'on_foot' ? '<button class="btn btn-secondary" onclick="doChaseAction(\'bail\')">🏃 Bail Out <span style="font-size:0.65rem">(lose vehicle)</span></button>' : '') +
+        '<button class="btn btn-danger" onclick="doChaseAction(\'surrender\')">🏳️ Surrender</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function doChaseAction(action) {
+  if (typeof resolveActiveChase !== 'function') return;
+  var chase = gameState.heatSystem && gameState.heatSystem.activeChase;
+  var result = resolveActiveChase(gameState, action);
+  if (!result) { render(); return; }
+  if (result.escaped || result.caught) {
+    gameState.messageLog.push(result.msg);
+    if (typeof showNotification === 'function') showNotification(result.msg, result.caught ? 'error' : 'success');
+    if (result.goToCourt || (result.caught && gameState.courtCase && !gameState.courtCase.resolved)) currentScreen = 'court';
+    if (typeof playSound === 'function') playSound(result.caught ? 'siren' : 'success');
+  } else if (chase) {
+    chase.lastMsg = result.msg;
+  }
+  render();
+}
+
+// ============================================================
+// CREW PROMOTION CEREMONY MODAL
+// ============================================================
+function renderCeremonyModal() {
+  var pc = gameState.pendingCeremony;
+  if (!pc) return '';
+  var member = (gameState.henchmen || []).find(function(h) { return h.uniqueId === pc.crewId; }) || (gameState.henchmen || [])[pc.crewIndex];
+  var rankIdx = member && typeof _resolveRankIndex === 'function' ? _resolveRankIndex(member.rank) : 1;
+  var buttons = CREW_CEREMONIES.map(function(c) {
+    var cost = c.costPerRank * Math.max(1, rankIdx);
+    var canAfford = gameState.cash >= cost;
+    return '<div style="border:1px solid #444;border-radius:8px;padding:10px;margin:6px 0;text-align:left">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+        '<b>' + c.emoji + ' ' + c.name + '</b>' +
+        '<button class="btn btn-sm ' + (canAfford ? 'btn-primary' : 'btn-secondary') + '" ' + (canAfford ? '' : 'disabled ') + 'onclick="doCeremony(\'' + c.id + '\')">' + (cost > 0 ? '$' + cost.toLocaleString() : 'FREE') + '</button>' +
+      '</div>' +
+      '<div class="text-dim" style="font-size:0.72rem;margin-top:4px">' + c.desc + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9998;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid #ffe600;border-radius:12px;padding:22px;max-width:500px;width:90%;text-align:center;box-shadow:0 0 30px rgba(255,230,0,0.25);">' +
+      '<div style="font-size:2.6em;">🎖️</div>' +
+      '<h2 style="color:#ffe600;margin:4px 0;">' + pc.memberName + ' MADE ' + (pc.rankName || '').toUpperCase() + '</h2>' +
+      '<p style="color:#ccc;font-size:0.85rem;">The crew is watching how you mark the occasion.</p>' +
+      buttons +
+    '</div>' +
+  '</div>';
+}
+
+function doCeremony(choice) {
+  if (typeof resolveCeremony !== 'function') { gameState.pendingCeremony = null; render(); return; }
+  var result = resolveCeremony(gameState, choice);
+  gameState.messageLog.push(result.msg);
+  if (result.success) { if (typeof playSound === 'function') playSound(choice === 'lavish' ? 'cash' : 'click'); }
+  else alert(result.msg);
+  render();
 }
 
 // ============================================================

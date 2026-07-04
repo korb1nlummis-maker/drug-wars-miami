@@ -326,13 +326,17 @@ function resolveChaseRound(state, action, chase) {
     state.heat = Math.min(100, (state.heat || 0) + 5);
     msg = '💥 Rammed the cruiser! That\'ll leave a mark!';
   } else if (action === 'bail') {
-    // Abandon vehicle and flee on foot
+    // Abandon vehicle and flee on foot — lose the ABANDONED vehicle,
+    // not the on_foot entry we're about to switch to
     chase.distance += 20;
+    const abandonedId = chase.playerVehicle.id;
     chase.playerVehicle = CHASE_VEHICLES[0]; // on foot
-    // Lose the vehicle
     const hs = state.heatSystem || {};
-    const vIdx = (hs.vehicles || []).indexOf(chase.playerVehicle.id);
-    if (vIdx >= 0) hs.vehicles.splice(vIdx, 1);
+    if (abandonedId !== 'on_foot') {
+      const vIdx = (hs.vehicles || []).indexOf(abandonedId);
+      if (vIdx >= 0) hs.vehicles.splice(vIdx, 1);
+      if (hs.activeVehicle === abandonedId) hs.activeVehicle = 'on_foot';
+    }
     msg = '🏃 Bailed from the vehicle! Running on foot!';
   } else if (action === 'surrender') {
     chase.distance = 0;
@@ -370,6 +374,117 @@ function resolveChaseRound(state, action, chase) {
     escaped: false, caught: false,
     round: chase.round, maxRounds: chase.maxRounds, distance: chase.distance,
   };
+}
+
+// ============================================================
+// LE ENCOUNTER RESOLUTION (the pendingEvent set by daily processing)
+// ============================================================
+function getLEBribeCost(state, ev) {
+  const tier = HEAT_TIERS.find(t => t.id === ev.tier) || HEAT_TIERS[0];
+  return Math.round(tier.effects.bailCost * (0.6 + ev.severity * 0.2));
+}
+
+function resolveLEEncounter(state, action) {
+  const ev = state.pendingEvent;
+  if (!ev || ev.type !== 'le_encounter') return null;
+  if (!state.heatSystem) state.heatSystem = initHeatState();
+  const hs = state.heatSystem;
+  const carrying = Object.values(state.inventory || {}).reduce((a, b) => a + (b || 0), 0);
+  const out = { msgs: [], arrested: false, chase: false, goToCourt: false };
+
+  if (action === 'bribe') {
+    const cost = getLEBribeCost(state, ev);
+    if (state.cash < cost) {
+      out.msgs.push(`💸 A bribe here runs $${cost.toLocaleString()} — you can't cover it. They notice you checking your pockets.`);
+      action = 'comply';
+    } else {
+      state.cash -= cost;
+      let chance = 0.75 + (getCounterMeasureEffect(state, 'evidenceDestroy') > 0 ? 0.15 : 0);
+      if (ev.tier === 'federal') chance -= 0.30; // feds don't take envelopes lightly
+      if (Math.random() < chance) {
+        out.msgs.push(`🤝 $${cost.toLocaleString()} changes hands. "Drive safe." They pull away.`);
+        addTieredHeat(state, 4, 'bribe');
+        if (state.politics) state.politics.totalBribesPaid = (state.politics.totalBribesPaid || 0) + cost;
+        state.pendingEvent = null;
+        return out;
+      }
+      out.msgs.push('🚔 He pockets the cash AND calls it in. Wrong cop to bribe.');
+      state.heat = Math.min(100, (state.heat || 0) + 5);
+      addTieredHeat(state, 6, 'failed_bribe');
+      action = 'comply';
+    }
+  }
+
+  if (action === 'run') {
+    // Chance to slip away before it becomes a chase
+    let escape = (1 - ev.escapeDifficulty) * 0.6;
+    if (typeof getCharacterPassiveValue === 'function') escape += getCharacterPassiveValue(state, 'escapeChance') || 0;
+    if (typeof getSkillEffect === 'function') escape += (getSkillEffect(state, 'chaseEscape') || 0) * 0.5;
+    if (Math.random() < Math.max(0.05, Math.min(0.9, escape))) {
+      out.msgs.push('🏃 You slip through an alley before they can box you in. Heart pounding, but free.');
+      addTieredHeat(state, 6, 'fled');
+      state.heat = Math.min(100, (state.heat || 0) + 4);
+      state.pendingEvent = null;
+      return out;
+    }
+    hs.activeChase = initiateChase(state, ev.encounterType);
+    state.pendingEvent = null;
+    out.chase = true;
+    out.msgs.push(`🚨 They're on you! ${hs.activeChase.playerVehicle.emoji} The chase is on!`);
+    return out;
+  }
+
+  // Comply — submit to the stop/search
+  state.pendingEvent = null;
+  if (carrying <= 0) {
+    out.msgs.push('👮 They pat you down, run your name, find nothing. "Stay out of trouble." Local heat cools a little.');
+    hs.local = Math.max(0, (hs.local || 0) - 3);
+    return out;
+  }
+  if (ev.severity <= 2) {
+    // Street-level shakedown: lose a cut of product plus a "processing fee"
+    let seized = 0;
+    for (const id of Object.keys(state.inventory)) {
+      const qty = state.inventory[id] || 0;
+      const take = Math.ceil(qty * (0.25 + ev.severity * 0.15));
+      state.inventory[id] = qty - take;
+      seized += take;
+      if (state.inventory[id] <= 0) delete state.inventory[id];
+    }
+    const tier = HEAT_TIERS.find(t => t.id === ev.tier) || HEAT_TIERS[0];
+    const fine = Math.min(state.cash, tier.effects.bailCost);
+    state.cash = Math.max(0, state.cash - fine);
+    addTieredHeat(state, 8, 'search');
+    state.heat = Math.min(100, (state.heat || 0) + 5);
+    out.msgs.push(`👮 They find your stash. ${seized} units confiscated plus a $${fine.toLocaleString()} "processing fee". It could have been worse.`);
+    return out;
+  }
+  // Severity 3+ while holding: full arrest, straight to court
+  out.arrested = true;
+  out.goToCourt = true;
+  out.msgs.push(`${ev.emoji} ${ev.encounterName} — hands behind your back. You're going in.`);
+  if (typeof initCourtCase === 'function') initCourtCase(state);
+  return out;
+}
+
+// Wraps resolveChaseRound for the active chase; on catch → court
+function resolveActiveChase(state, action) {
+  const hs = state.heatSystem;
+  if (!hs || !hs.activeChase) return null;
+  const result = resolveChaseRound(state, action, hs.activeChase);
+  if (result && (result.escaped || result.caught)) {
+    hs.activeChase = null;
+    if (result.caught) {
+      addTieredHeat(state, 12, 'chase_caught');
+      state.heat = Math.min(100, (state.heat || 0) + 8);
+      if (typeof initCourtCase === 'function') initCourtCase(state, { resisted: true });
+      result.goToCourt = true;
+    } else {
+      addTieredHeat(state, 8, 'chase_escaped');
+      state.heat = Math.min(100, (state.heat || 0) + 6);
+    }
+  }
+  return result;
 }
 
 // ============================================================
@@ -480,6 +595,11 @@ function processHeatSystemDaily(state) {
     // Counter-measure mitigation
     const searchResist = getCounterMeasureEffect(state, 'searchResist');
     chance *= (1 - searchResist);
+    // Reputation: a trashed public image means more stops
+    if (typeof getRepEffects === 'function') {
+      const repFxP = getRepEffects(state);
+      if (repFxP.policeAttentionMod > 0) chance *= (1 + repFxP.policeAttentionMod);
+    }
     // Raid warning might prevent it
     if (enc.severity >= 4 && getCounterMeasureEffect(state, 'raidWarning') > 0) {
       if (Math.random() < 0.6) {
@@ -507,12 +627,16 @@ function processHeatSystemDaily(state) {
     }
   }
 
-  // Track dealing patterns for wiretap triggers
-  if (hs.lastDealLocation === state.currentLocation) {
+  // Track dealing patterns for wiretap triggers — only days you actually
+  // dealt count toward the pattern; a quiet day breaks it
+  if (hs.dealtToday && hs.lastDealLocation === state.currentLocation) {
     hs.consecutiveSameLocation = (hs.consecutiveSameLocation || 0) + 1;
+  } else if (hs.dealtToday) {
+    hs.consecutiveSameLocation = 1;
   } else {
     hs.consecutiveSameLocation = 0;
   }
+  hs.dealtToday = false;
 
   // Check wiretap triggers
   const newWiretap = checkWiretapTriggers(state);
