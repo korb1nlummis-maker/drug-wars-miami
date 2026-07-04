@@ -1430,7 +1430,7 @@ function applyNGPlusStartBonus(state) {
 }
 
 // --- Start New Game Plus (transition function) ---
-function startNewGamePlus(oldState) {
+function buildNgPlusCarryover(oldState) {
   if (!oldState) return null;
 
   // Determine new tier

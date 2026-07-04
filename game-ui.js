@@ -693,8 +693,17 @@ function startNewGamePlus() {
 }
 
 function applyNewGamePlusModifiers(state) {
-  // NG+ bonuses: carry over meta-progression
-  state.newGamePlus = true;
+  // NG+ meta-progression: the object shape EVERYTHING checks
+  // (newGamePlus.active / .tier / .completedEndings) — a bare boolean here
+  // used to apply the difficulty mods but lock out all NG+ content
+  let ngMeta = {};
+  try { ngMeta = JSON.parse(localStorage.getItem('drugwars_ngplus_meta') || '{}'); } catch (e) {}
+  const ngTier = Math.min(5, Math.max(1, (ngMeta.highestTierCompleted || 0) + 1));
+  state.newGamePlus = {
+    active: true,
+    tier: ngTier,
+    completedEndings: ngMeta.completedEndings || [],
+  };
   state.ngPlusLevel = (state.ngPlusLevel || 0) + 1;
 
   // Bonus starting cash
@@ -704,15 +713,16 @@ function applyNewGamePlusModifiers(state) {
   state.citiesVisited = ['miami'];
 
   // Harder difficulty: enemies tougher, prices more volatile, heat decays slower
+  const tierStep = state.newGamePlus.tier - 1;
   state.ngPlusModifiers = {
-    enemyDamageMultiplier: 1.5,
-    enemyHealthMultiplier: 1.5,
-    priceVolatility: 1.3,
-    heatDecayRate: 0.7,
-    loanSharkInterest: 1.5,
-    investigationRate: 1.3,
-    xpMultiplier: 1.5,
-    cashBonusMultiplier: 1.25
+    enemyDamageMultiplier: 1.5 + 0.2 * tierStep,
+    enemyHealthMultiplier: 1.5 + 0.2 * tierStep,
+    priceVolatility: 1.3 + 0.1 * tierStep,
+    heatDecayRate: Math.max(0.4, 0.7 - 0.07 * tierStep),
+    loanSharkInterest: 1.5 + 0.15 * tierStep,
+    investigationRate: 1.3 + 0.1 * tierStep,
+    xpMultiplier: 1.5 + 0.1 * tierStep,
+    cashBonusMultiplier: 1.25 + 0.05 * tierStep
   };
 
   // Start with some skills already unlocked (bonus skill points)
