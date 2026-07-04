@@ -42,6 +42,11 @@ function processEncountersDaily(state) {
   // Check if encounter triggers (35% base chance, modified by weather/lookouts)
   if (enc.activeEncounter) return msgs;
   var encounterChance = 0.35;
+  // Reputation: fear keeps street trouble away (capped -30%)
+  if (typeof getRepEffects === 'function') {
+    var repFxE = getRepEffects(state);
+    if (repFxE.encounterMod < 0) encounterChance *= Math.max(0.7, 1 + repFxE.encounterMod);
+  }
   // Game day scaling: encounters get more frequent over time
   if (typeof getGameDayScaling === 'function') {
     var encScale = getGameDayScaling(state);

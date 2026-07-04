@@ -1778,8 +1778,12 @@ function resolveNPCOutcome(state, outcomeIndex) {
     }
 
     // Reputation
-    if (typeof outcome.effects.reputation === 'number' && typeof state.reputation === 'number') {
-      state.reputation += outcome.effects.reputation;
+    if (typeof outcome.effects.reputation === 'number') {
+      if (typeof adjustRepFromAction === 'function') {
+        adjustRepFromAction(state, outcome.effects.reputation >= 0 ? 'general_positive' : 'general_negative', Math.abs(outcome.effects.reputation));
+      } else if (typeof state.reputation === 'number') {
+        state.reputation += outcome.effects.reputation;
+      }
     }
 
     // Player HP

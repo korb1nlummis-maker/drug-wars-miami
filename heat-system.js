@@ -595,6 +595,11 @@ function processHeatSystemDaily(state) {
     // Counter-measure mitigation
     const searchResist = getCounterMeasureEffect(state, 'searchResist');
     chance *= (1 - searchResist);
+    // Reputation: a trashed public image means more stops
+    if (typeof getRepEffects === 'function') {
+      const repFxP = getRepEffects(state);
+      if (repFxP.policeAttentionMod > 0) chance *= (1 + repFxP.policeAttentionMod);
+    }
     // Raid warning might prevent it
     if (enc.severity >= 4 && getCounterMeasureEffect(state, 'raidWarning') > 0) {
       if (Math.random() < 0.6) {
