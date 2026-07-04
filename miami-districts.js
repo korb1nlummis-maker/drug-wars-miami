@@ -466,8 +466,17 @@ function generateDistrictEvent(state) {
 
   // Apply effects
   if (event.heat) state.heat = Math.max(0, Math.min(100, (state.heat || 0) + event.heat));
-  if (event.cash) state.cash += event.cash;
-  if (event.repBoost) state.reputation = Math.min(100, (state.reputation || 0) + event.repBoost);
+  if (event.cash) {
+    // Street windfalls are drug money — keep the clean/dirty ledger honest
+    state.cash += event.cash;
+    state.dirtyMoney = (state.dirtyMoney || 0) + event.cash;
+  }
+  if (event.repBoost) {
+    // reputation is a derived field — write through adjustRep or it's
+    // silently recomputed away the next day
+    if (typeof adjustRep === 'function') adjustRep(state, 'streetCred', event.repBoost);
+    else state.reputation = Math.min(100, (state.reputation || 0) + event.repBoost);
+  }
 
   return { type: eventType, ...event };
 }

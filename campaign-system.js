@@ -377,7 +377,7 @@ const NG_PLUS_ENDINGS = [
     subtitle: 'Blood and Iron',
     narrative: 'Diplomacy? Negotiation? Mergers? Those are for the first playthrough. This time, you chose violence. Every rival crushed, every territory taken by force, every enemy buried. Your crew is an army. Your safehouses are fortresses. Miami isn\'t a city anymore. It\'s a warzone with one winner. You stand in the ruins of everyone who ever opposed you.',
     check: s => {
-      return s.newGamePlus && (s.rep && s.rep.fear >= 80) && (s.peopleKilled || 0) >= 30 && s.factions && Object.keys(s.factions.wars || {}).length >= 0 && (s.factions.absorptions || []).length >= 2;
+      return s.newGamePlus && (s.rep && s.rep.fear >= 80) && (s.peopleKilled || 0) >= 30 && ((s.achievementStats && s.achievementStats.warsWon) || 0) >= 1 && s.factions && (s.factions.absorptions || []).length >= 2;
     },
     priority: 12,
     gradeCheck: s => {

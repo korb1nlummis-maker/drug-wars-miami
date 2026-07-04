@@ -100,7 +100,7 @@ function getChemistryLevel(state) {
   // Skill tree bonus
   const skillBonus = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'chemistryBonus') || 0 : 0;
   // Character bonus (The Dropout gets chemistry bonus)
-  const charBonus = (state.characterPassive === 'chemistry_boost') ? 1 : 0;
+  const charBonus = (state.characterId === 'dropout' || (state.characterPassive && state.characterPassive.id === 'chemistry_basics')) ? 1 : 0;
   return Math.min(10, Math.floor(baseXp / 10) + skillBonus + charBonus);
 }
 
