@@ -3824,6 +3824,10 @@ function waitDay(state) {
     const earlyMsgs = processEarlyGameDaily(state);
     if (earlyMsgs && earlyMsgs.length) msgs.push(...earlyMsgs);
   }
+  if (typeof processStreetDealsDaily === 'function') {
+    const sdMsgs = processStreetDealsDaily(state);
+    if (sdMsgs && sdMsgs.length) msgs.push(...sdMsgs);
+  }
   // (crew agendas ride inside processCrewExpansionDaily, wired above)
   if (typeof processMafiaOpsDaily === 'function') {
     const mafiaOpsMsgs = processMafiaOpsDaily(state);
