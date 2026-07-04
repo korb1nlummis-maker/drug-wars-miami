@@ -2197,8 +2197,8 @@ function waitDay(state) {
   state.day += 1;
 
   // Daily processing (same as travel)
-  const debtRate = GAME_CONFIG.debtInterestRate * getNgPlusMod(state, 'loanSharkInterest', 1);
-  state.debt = Math.round(state.debt * (1 + debtRate));
+  if (typeof processLoansDaily === 'function') processLoansDaily(state);
+  else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate * getNgPlusMod(state, 'loanSharkInterest', 1)));
   applyBankInterest(state);
   const msgs = [];
 
@@ -4853,7 +4853,7 @@ function travel(state, destinationId, transportId) {
   // Apply daily interest, crew management, and investigation for each day traveled
   const dailyMessages = [];
   for (let i = 0; i < daysUsed; i++) {
-    state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+    if (typeof processLoansDaily === 'function') processLoansDaily(state); else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
     applyBankInterest(state);
 
     // Process crew pay and loyalty
@@ -6418,7 +6418,7 @@ function acceptPleaDeal(state) {
   // Serve time
   state.day += prisonDays;
   for (var i = 0; i < prisonDays; i++) {
-    state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+    if (typeof processLoansDaily === 'function') processLoansDaily(state); else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
   }
 
   // Mark as snitch if faction intel given
@@ -6585,7 +6585,7 @@ function resolveCourtCase(state) {
         state.henchmen.pop(); // Least loyal leaves
       }
       // Debt compounds
-      state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
+      if (typeof processLoansDaily === 'function') processLoansDaily(state); else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
       applyBankInterest(state);
       // Business income trickles in (50% without you there)
       if (state.frontBusinesses) {
