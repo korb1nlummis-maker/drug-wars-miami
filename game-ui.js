@@ -2496,6 +2496,14 @@ function renderGame() {
     encounterModal = renderEncounterModal();
   }
 
+  // Law-enforcement encounter / active police chase overlays
+  var leModal = '';
+  if (gameState.heatSystem && gameState.heatSystem.activeChase && !gameState.heatSystem.activeChase.resolved) {
+    leModal = renderChaseModal();
+  } else if (gameState.pendingEvent && gameState.pendingEvent.type === 'le_encounter') {
+    leModal = renderLEEncounterModal();
+  }
+
   // Security alert popup
   var securityAlert = '';
   const heatCritical = gameState.heat > 80;
@@ -2540,6 +2548,7 @@ function renderGame() {
       ${notificationTicker}
       ${securityAlert}
       ${encounterModal}
+      ${leModal}
       ${tutorialOverlay}
       <div class="game-layout">
         ${sidebar}
@@ -8881,6 +8890,93 @@ function renderEncounterModal() {
       choicesHtml +
     '</div>' +
   '</div>';
+}
+
+// ============================================================
+// LAW ENFORCEMENT ENCOUNTER + POLICE CHASE MODALS
+// ============================================================
+function renderLEEncounterModal() {
+  var ev = gameState.pendingEvent;
+  if (!ev || ev.type !== 'le_encounter') return '';
+  var carrying = Object.values(gameState.inventory || {}).reduce(function(a, b) { return a + (b || 0); }, 0);
+  var bribeCost = typeof getLEBribeCost === 'function' ? getLEBribeCost(gameState, ev) : 0;
+  var canBribe = gameState.cash >= bribeCost;
+  var riskNote = carrying > 0
+    ? '<p style="color:#ff8844;font-size:0.8rem;">You\'re holding <b>' + carrying + ' units</b>. ' + (ev.severity >= 3 ? 'If they search you, this is an ARREST.' : 'A search means confiscation and a fine.') + '</p>'
+    : '<p style="color:#39ff14;font-size:0.8rem;">You\'re clean. A search finds nothing.</p>';
+
+  return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid #ff4444;border-radius:12px;padding:24px;max-width:520px;width:90%;text-align:center;box-shadow:0 0 30px rgba(255,68,68,0.3);">' +
+      '<div style="font-size:3em;margin-bottom:8px;">' + (ev.emoji || '🚔') + '</div>' +
+      '<h2 style="color:#ff4444;margin:0 0 8px 0;">' + (ev.encounterName || 'Police Stop') + '</h2>' +
+      '<p style="color:#ccc;">' + (((LE_ENCOUNTERS.find(function(e) { return e.id === ev.encounterType; }) || {}).desc) || 'They want a word with you.') + '</p>' +
+      riskNote +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;">' +
+        '<button class="btn btn-secondary" onclick="doLEAction(\'comply\')">🙌 Comply' + (carrying > 0 ? ' <span style="font-size:0.65rem;color:#ff8844">(risk search)</span>' : '') + '</button>' +
+        '<button class="btn ' + (canBribe ? 'btn-primary' : 'btn-secondary') + '" ' + (canBribe ? '' : 'disabled ') + 'onclick="doLEAction(\'bribe\')">🤝 Bribe ($' + bribeCost.toLocaleString() + ')' + (ev.tier === 'federal' ? ' <span style="font-size:0.65rem;color:#ff4444">(feds rarely bite)</span>' : '') + '</button>' +
+        '<button class="btn btn-danger" onclick="doLEAction(\'run\')">🏃 Run <span style="font-size:0.65rem">(may trigger a chase)</span></button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function doLEAction(action) {
+  if (typeof resolveLEEncounter !== 'function') { gameState.pendingEvent = null; render(); return; }
+  var result = resolveLEEncounter(gameState, action);
+  if (result && result.msgs) {
+    for (var i = 0; i < result.msgs.length; i++) {
+      gameState.messageLog.push(result.msgs[i]);
+      if (typeof showNotification === 'function') showNotification(result.msgs[i], result.arrested ? 'error' : 'info');
+    }
+  }
+  if (result && result.goToCourt) { currentScreen = 'court'; }
+  if (typeof playSound === 'function') playSound(result && result.arrested ? 'siren' : 'click');
+  render();
+}
+
+function renderChaseModal() {
+  var chase = gameState.heatSystem && gameState.heatSystem.activeChase;
+  if (!chase) return '';
+  var pv = chase.playerVehicle || { name: 'On Foot', emoji: '🏃' };
+  var pct = Math.round(chase.distance);
+  var barColor = pct >= 66 ? '#39ff14' : pct >= 33 ? '#ffe600' : '#ff4444';
+  var lastMsg = chase.lastMsg ? '<p style="color:#ffe600;font-size:0.85rem;margin:6px 0;">' + chase.lastMsg + '</p>' : '';
+
+  return '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:var(--card-bg,#1a1a2e);border:2px solid #ff9500;border-radius:12px;padding:24px;max-width:540px;width:90%;text-align:center;box-shadow:0 0 30px rgba(255,149,0,0.35);">' +
+      '<div style="font-size:2.6em;">🚔💨 ' + pv.emoji + '</div>' +
+      '<h2 style="color:#ff9500;margin:4px 0;">POLICE CHASE — ' + (chase.encounterName || '') + '</h2>' +
+      '<p style="color:#ccc;font-size:0.85rem;">Round ' + (chase.round + 1) + '/' + chase.maxRounds + ' · ' + pv.name + '</p>' +
+      '<div style="background:#111;border:1px solid #444;border-radius:6px;height:18px;margin:10px 0;overflow:hidden;">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';transition:width 0.3s;"></div>' +
+      '</div>' +
+      '<p style="font-size:0.75rem;color:#888;">Distance: ' + pct + '% — reach 100% to escape, hit 0% and they take you in.</p>' +
+      lastMsg +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;">' +
+        '<button class="btn btn-primary" onclick="doChaseAction(\'floor_it\')">🏎️ Floor It <span style="font-size:0.65rem">(speed)</span></button>' +
+        '<button class="btn btn-primary" onclick="doChaseAction(\'evade\')">🔄 Evade <span style="font-size:0.65rem">(handling)</span></button>' +
+        '<button class="btn btn-secondary" onclick="doChaseAction(\'ram\')">💥 Ram <span style="font-size:0.65rem">(+heat, slows them)</span></button>' +
+        (pv.id !== 'on_foot' ? '<button class="btn btn-secondary" onclick="doChaseAction(\'bail\')">🏃 Bail Out <span style="font-size:0.65rem">(lose vehicle)</span></button>' : '') +
+        '<button class="btn btn-danger" onclick="doChaseAction(\'surrender\')">🏳️ Surrender</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function doChaseAction(action) {
+  if (typeof resolveActiveChase !== 'function') return;
+  var chase = gameState.heatSystem && gameState.heatSystem.activeChase;
+  var result = resolveActiveChase(gameState, action);
+  if (!result) { render(); return; }
+  if (result.escaped || result.caught) {
+    gameState.messageLog.push(result.msg);
+    if (typeof showNotification === 'function') showNotification(result.msg, result.caught ? 'error' : 'success');
+    if (result.goToCourt || (result.caught && gameState.courtCase && !gameState.courtCase.resolved)) currentScreen = 'court';
+    if (typeof playSound === 'function') playSound(result.caught ? 'siren' : 'success');
+  } else if (chase) {
+    chase.lastMsg = result.msg;
+  }
+  render();
 }
 
 // ============================================================

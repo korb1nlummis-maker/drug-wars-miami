@@ -4329,8 +4329,12 @@ function buyDrug(state, drugId, amount) {
     else if (_locPolB && _locPolB.policeIntensity === 'low') buyHeat *= 0.7;
     const _hgmB = getSkillEffect(state, 'heatGainMod');
     if (_hgmB) buyHeat *= Math.max(0.3, 1 + _hgmB);
-    if (buyHeat > 0) state.heat = Math.min(100, (state.heat || 0) + buyHeat);
+    if (buyHeat > 0) {
+      state.heat = Math.min(100, (state.heat || 0) + buyHeat);
+      if (typeof addTieredHeat === 'function') addTieredHeat(state, buyHeat, 'buying');
+    }
   }
+  if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
   state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
@@ -4579,8 +4583,12 @@ function sellDrug(state, drugId, amount) {
     else if (_locPol && _locPol.policeIntensity === 'low') dealHeat *= 0.7;
     const _hgm = getSkillEffect(state, 'heatGainMod');
     if (_hgm) dealHeat *= Math.max(0.3, 1 + _hgm);
-    if (dealHeat > 0) state.heat = Math.min(100, (state.heat || 0) + dealHeat);
+    if (dealHeat > 0) {
+      state.heat = Math.min(100, (state.heat || 0) + dealHeat);
+      if (typeof addTieredHeat === 'function') addTieredHeat(state, dealHeat, 'dealing');
+    }
   }
+  if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Faction standing adjustment from selling in gang territory
   let factionSellMsgs = [];
   if (typeof adjustFactionStandingFromDeal === 'function') {
