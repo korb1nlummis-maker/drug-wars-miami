@@ -1604,11 +1604,14 @@ function processNGPlusDaily(state) {
       // Scale enemy stats by tier
       const scaledEnemyHealth = Math.round(evt.enemyHealth * tierData.enemyStrengthMod);
       const scaledEnemyDamage = Math.round(evt.enemyDamage * tierData.enemyDamageMultiplier);
-      state.pendingEvent = {
+      if (!state.queuedEvents) state.queuedEvents = [];
+      state.queuedEvents.push({
         type: 'combat',
         subtype: 'ng_plus_event',
+        combatType: evt.id === 'ngp_dea_taskforce' ? 'police' : 'rival',
         eventId: evt.id,
         msg: evt.msg,
+        resolved: false,
         enemyName: evt.msg.split('!')[0].replace(/^[^\s]+\s/, ''),
         enemyHealth: scaledEnemyHealth,
         enemyMaxHealth: scaledEnemyHealth,
@@ -1617,7 +1620,7 @@ function processNGPlusDaily(state) {
         reward: evt.reward || 0,
         heatGain: evt.heatGain || 0,
         territoryReward: evt.territoryReward || false,
-      };
+      });
       msgs.push(evt.msg);
       break; // Only one NG+ combat event per day
     }
@@ -1675,16 +1678,18 @@ function processNGPlusDaily(state) {
     }
 
     if (evt.type === 'offer') {
-      state.pendingEvent = {
+      if (!state.queuedEvents) state.queuedEvents = [];
+      state.queuedEvents.push({
         type: 'offer',
         subtype: 'ng_plus_event',
         eventId: evt.id,
         msg: evt.msg,
+        resolved: false,
         offerType: 'ng_plus_special',
         price: evt.price || 0,
         effect: evt.effect || null,
         reward: evt.reward || null,
-      };
+      });
       msgs.push(evt.msg);
     }
 
@@ -1717,9 +1722,12 @@ function processRivalDealerDaily(state) {
     // Ambush!
     const scaledHealth = Math.round(rival.power * 2);
     const scaledDamage = Math.round(rival.power * 0.3);
-    state.pendingEvent = {
+    if (!state.queuedEvents) state.queuedEvents = [];
+    state.queuedEvents.push({
       type: 'combat',
       subtype: 'rival_dealer',
+      combatType: 'rival',
+      resolved: false,
       msg: `${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} strikes! "${rival.encounters === 0 ? 'We meet at last.' : 'You can\'t escape me forever.'}"`,
       enemyName: NG_PLUS_RIVAL.name,
       enemyHealth: scaledHealth,
@@ -1728,7 +1736,7 @@ function processRivalDealerDaily(state) {
       enemyCount: 3 + Math.floor(rival.power / 100),
       reward: Math.round(rival.power * 50),
       isRival: true,
-    };
+    });
     rival.encounters++;
     rival.lastSeenDay = state.day;
     rival.lastSeenLocation = state.currentLocation;
@@ -5873,6 +5881,36 @@ function endGame(state) {
 // ACCEPT OFFERS
 // ============================================================
 function acceptOffer(state, event) {
+  if (event.offerType === 'ng_plus_special') {
+    const price = event.price || 0;
+    if (price > 0 && state.cash < price) return { success: false, msg: `Need $${price.toLocaleString()}.` };
+    state.cash -= price;
+    let msg = '🤝 Deal.';
+    if (event.reward === 'tip') {
+      // Intel: reveal fresh price estimates for two nearby districts
+      if (!state.knownPrices) state.knownPrices = {};
+      const nearby = LOCATIONS.filter(l => (l.region || 'miami') === 'miami' && l.id !== state.currentLocation).slice(0, 2);
+      for (const loc of nearby) {
+        const entry = state.knownPrices[loc.id] || {};
+        for (const d of DRUGS.slice(0, 8)) {
+          if (d.minDay && state.day < d.minDay) continue;
+          entry[d.id] = Math.max(1, Math.round(((d.minPrice + d.maxPrice) / 2) * (loc.priceModifier || 1) * (0.85 + Math.random() * 0.3)));
+        }
+        entry._day = state.day;
+        state.knownPrices[loc.id] = entry;
+      }
+      msg = '🗺️ The intel checks out — fresh prices for ' + nearby.map(l => l.name).join(' and ') + '.';
+    } else if (typeof event.reward === 'number' && event.reward > 0) {
+      state.cash += event.reward;
+      state.dirtyMoney = (state.dirtyMoney || 0) + event.reward;
+      msg = `💵 +$${event.reward.toLocaleString()} (dirty).`;
+    }
+    if (event.effect && typeof event.effect === 'object') {
+      if (event.effect.repGain && typeof adjustRep === 'function') adjustRep(state, 'streetCred', event.effect.repGain);
+      if (event.effect.fearGain && typeof adjustRep === 'function') adjustRep(state, 'fear', event.effect.fearGain);
+    }
+    return { success: true, msg };
+  }
   if (event.offerType === 'weapon') {
     if (state.cash < event.price) return { success: false, msg: 'Can\'t afford it.' };
     const weapon = WEAPONS.find(w => w.id === event.weaponId);

@@ -320,11 +320,20 @@ function resolveChaseRound(state, action, chase) {
     chase.distance += handlingDiff * 0.4 + roll + 10;
     msg = '🔄 Cutting through side streets!';
   } else if (action === 'ram') {
-    // Aggressive - damage but slow
-    chase.distance += 15;
-    chase.policeSpeed -= 10;
+    // Aggressive and risky — cops wise up fast to repeat rammers
+    chase.ramCount = (chase.ramCount || 0) + 1;
+    const wear = (chase.ramCount - 1) * 6;
+    const ramRoll = (Math.random() - 0.5) * 24; // -12..+12
+    const gain = Math.max(-12, 15 - wear + ramRoll);
+    chase.distance += gain;
+    chase.policeSpeed -= 6;
     state.heat = Math.min(100, (state.heat || 0) + 5);
-    msg = '💥 Rammed the cruiser! That\'ll leave a mark!';
+    if (Math.random() < 0.25) {
+      state.health = Math.max(1, (state.health || 100) - (4 + Math.floor(Math.random() * 8)));
+      msg = '💥 Metal on metal — you took some of that hit too!';
+    } else {
+      msg = gain > 0 ? '💥 Rammed the cruiser! That\'ll leave a mark!' : '💥 The ram went wrong — they boxed you in!';
+    }
   } else if (action === 'bail') {
     // Abandon vehicle and flee on foot — lose the ABANDONED vehicle,
     // not the on_foot entry we're about to switch to
@@ -437,8 +446,40 @@ function resolveLEEncounter(state, action) {
   // Comply — submit to the stop/search
   state.pendingEvent = null;
   if (carrying <= 0) {
-    out.msgs.push('👮 They pat you down, run your name, find nothing. "Stay out of trouble." Local heat cools a little.');
-    hs.local = Math.max(0, (hs.local || 0) - 3);
+    // RICO doesn't need your pockets — the case is the enterprise
+    if (ev.severity >= 6 && state.investigation && (state.investigation.level || 0) >= 2) {
+      out.arrested = true;
+      out.goToCourt = true;
+      out.msgs.push(`${ev.emoji} ${ev.encounterName} — "We don't need what's in your pockets. We have EVERYTHING." You're going in.`);
+      if (typeof initCourtCase === 'function') initCourtCase(state);
+      return out;
+    }
+    // A DEA raid tosses your local stash even if you're walking around clean
+    if (ev.severity >= 5 && state.stashes && state.stashes[state.currentLocation]) {
+      const stash = state.stashes[state.currentLocation];
+      let stashSeized = 0;
+      for (const id of Object.keys(stash)) {
+        const take = Math.ceil((stash[id] || 0) * 0.5);
+        if (take > 0) { stash[id] -= take; stashSeized += take; if (stash[id] <= 0) delete stash[id]; }
+      }
+      if (stashSeized > 0) {
+        addTieredHeat(state, 15, 'stash_raid');
+        state.heat = Math.min(100, (state.heat || 0) + 10);
+        out.msgs.push(`${ev.emoji} They hit your stash house — ${stashSeized} units seized. Your pockets were clean; your walls weren't.`);
+        if (stashSeized >= 50 && typeof initCourtCase === 'function') {
+          out.arrested = true; out.goToCourt = true;
+          out.msgs.push('⚖️ That much weight in your name is a case. Cuffs.');
+          initCourtCase(state);
+        }
+        return out;
+      }
+    }
+    if (ev.severity <= 2) {
+      out.msgs.push('👮 They pat you down, run your name, find nothing. "Stay out of trouble." Local heat cools a little.');
+      hs.local = Math.max(0, (hs.local || 0) - 3);
+    } else {
+      out.msgs.push('👮 Clean this time. They log the stop and watch you walk — no heat relief when THEY come looking.');
+    }
     return out;
   }
   if (ev.severity <= 2) {
@@ -569,6 +610,20 @@ function processHeatSystemDaily(state) {
   const hs = state.heatSystem;
   const msgs = [];
 
+  // A stop you ignored doesn't wait around — they close in and it resolves
+  // as compliance (also frees the slot so future encounters can fire)
+  if (state.pendingEvent && state.pendingEvent.type === 'le_encounter' && (state.pendingEvent.day || 0) < state.day) {
+    msgs.push('🚔 You couldn\'t stall them forever — they moved in.');
+    const auto = resolveLEEncounter(state, 'comply');
+    if (auto && auto.msgs) msgs.push(...auto.msgs);
+  }
+  // Old saves: dead NG+ events squatting the slot get requeued for the UI
+  if (state.pendingEvent && state.pendingEvent.subtype === 'ng_plus_event') {
+    if (!state.queuedEvents) state.queuedEvents = [];
+    state.queuedEvents.push(state.pendingEvent);
+    state.pendingEvent = null;
+  }
+
   // Heat decay per tier (local decays fastest, federal slowest)
   const ngMod = typeof getNgPlusMod === 'function' ? getNgPlusMod(state, 'heatDecayRate', 1) : 1;
   hs.local = Math.max(0, (hs.local || 0) - 2 * ngMod);
@@ -621,6 +676,7 @@ function processHeatSystemDaily(state) {
           tier: enc.tier,
           severity: enc.severity,
           escapeDifficulty: enc.escapeDifficulty,
+          day: state.day,
         };
       }
       break; // Only one encounter per day

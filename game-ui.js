@@ -3066,6 +3066,16 @@ function doWait(stance) {
     currentScreen = 'npcstory';
   }
 
+  // NG+ ambushes/offers queued by daily processing enter the event pipeline
+  if (!gameState.gameOver && gameState.queuedEvents && gameState.queuedEvents.length) {
+    pendingEvents = gameState.queuedEvents.slice();
+    gameState.queuedEvents = [];
+    currentEventIndex = 0;
+    MusicEngine.playSfx('click');
+    processNextEvent();
+    return;
+  }
+
   MusicEngine.playSfx('click');
   render();
 }
@@ -3927,6 +3937,11 @@ function doTravel(destId, transportId, isWorldTransport) {
   }
 
   pendingEvents = result.travelEvents || [];
+  // NG+ ambushes/offers queued by daily processing join the pipeline
+  if (gameState.queuedEvents && gameState.queuedEvents.length) {
+    pendingEvents.push(...gameState.queuedEvents);
+    gameState.queuedEvents = [];
+  }
   currentEventIndex = 0;
 
   if (pendingEvents.length > 0) {
