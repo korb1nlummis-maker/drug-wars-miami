@@ -351,7 +351,7 @@ function adjustFactionRelation(state, factionId, amount, reason) {
 }
 
 // Process daily faction events
-function processFactionDaily(state) {
+function processMiamiFactionsDaily(state) {
   if (!state.factions) return [];
   const msgs = [];
 

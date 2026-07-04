@@ -223,7 +223,7 @@ function declareWar(state, factionId, playerInitiated) {
   for (const [fId, alliance] of Object.entries(state.factions.alliances || {})) {
     if (fId !== factionId) {
       const f = FACTIONS.find(ff => ff.id === fId);
-      if (f && f.territory.some(t => faction.territory.includes(t))) {
+      if (f && faction && f.territory.some(t => faction.territory.includes(t))) {
         adjustFactionStanding(state, fId, -15);
       }
     }
@@ -243,17 +243,16 @@ function resolveFactionBattle(state, factionId) {
   if (!war) return null;
 
   const faction = FACTIONS.find(f => f.id === factionId);
-  const factionPower = state.factions.factionPower[factionId] || faction.strength;
+  const factionPower = state.factions.factionPower[factionId] || (faction ? faction.strength : 50);
 
   // Player power: crew + weapons + territory count
   let playerPower = 20;
   if (state.henchmen) {
-    playerPower += state.henchmen.filter(h => !h.injured).length * 10;
-    if (typeof getCrewCombatValue === 'function') {
-      playerPower += getCrewCombatValue(state);
+    for (const h of state.henchmen.filter(h => !h.injured)) {
+      playerPower += (typeof getCrewCombatValue === 'function') ? Math.round(getCrewCombatValue(h)) : 10;
     }
   }
-  const territoryCount = state.territory ? Object.keys(state.territory).length : 0;
+  const territoryCount = state.territory ? Object.keys(state.territory).filter(k => (state.territory[k] || {}).controlled).length : 0;
   playerPower += territoryCount * 5;
 
   // Random factor

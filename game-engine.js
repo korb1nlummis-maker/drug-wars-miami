@@ -3680,6 +3680,10 @@ function waitDay(state) {
     const facMsgs = processFactionDaily(state);
     msgs.push(...facMsgs);
   }
+  if (typeof processMiamiFactionsDaily === 'function') {
+    const miamiFacMsgs = processMiamiFactionsDaily(state);
+    msgs.push(...miamiFacMsgs);
+  }
   if (typeof processHeatSystemDaily === 'function') {
     const heatMsgs = processHeatSystemDaily(state);
     msgs.push(...heatMsgs);
