@@ -2608,7 +2608,7 @@ function renderGame() {
       </div>
       <div class="mobile-nav">
         <button class="mnav-btn" onclick="currentScreen='travel'; render();">✈️<span>Travel</span></button>
-        <button class="mnav-btn" onclick="doWait()">⏳<span>Day</span></button>
+        <button class="mnav-btn" onclick="doWait()">⏳<span>WAIT</span></button>
         <button class="mnav-btn" onclick="currentScreen='game'; mainTab='buysell'; render();">💰<span>Trade</span></button>
         ${loc.hasBank ? `<button class="mnav-btn" onclick="openBank()">🏦<span>Bank</span></button>` : `<button class="mnav-btn" onclick="currentScreen='stash'; render();">📦<span>Stash</span></button>`}
         <button class="mnav-btn" onclick="toggleMobileActions()">☰<span>All</span></button>

@@ -44,6 +44,13 @@ styleEl.textContent = [
   '  position: relative;',
   '  z-index: 9998 !important;',
   '}',
+  '@media (max-width: 768px) {',
+  '  .tutorial-reward-toast {',
+  '    top: 8px !important; left: 10px !important; right: 10px !important;',
+  '    transform: none !important; width: auto; text-align: center;',
+  '    font-size: 0.95rem !important; padding: 0.55rem 0.8rem !important;',
+  '  }',
+  '}',
   '.tutorial-reward-toast {',
   '  position: fixed; top: 18%; left: 50%; transform: translateX(-50%);',
   '  z-index: 10002; padding: 0.8rem 1.6rem; border-radius: 10px;',
@@ -144,6 +151,14 @@ function getStepReward(stepIndex) {
 
 
 // ---- 20 GUIDED TUTORIAL STEPS ----
+function tutIsMobile() {
+  return typeof window !== 'undefined' && window.innerWidth <= 768;
+}
+// On phones the sidebar lives behind the ☰ All button — say so
+function tutWhere(desktopWord) {
+  return tutIsMobile() ? 'the <b>☰ All</b> menu (bottom bar)' : 'the ' + (desktopWord || 'sidebar');
+}
+
 var TUTORIAL_STEPS = [
   // === STEP 0: Welcome ===
   {
@@ -221,7 +236,10 @@ var TUTORIAL_STEPS = [
     id: 'wait_market',
     title: 'LET THE MARKET MOVE',
     getText: function() {
-      return 'Golden rule: <b>never sell where you just bought</b> — dealers lowball their own product back. Click <b>⏳ WAIT</b>. Prices move overnight, and word is your product is about to get hot.';
+      return 'Golden rule: <b>never sell where you just bought</b> — dealers lowball their own product back. ' +
+        (tutIsMobile()
+          ? 'Tap <b>⏳ WAIT</b> in the <b>bottom bar</b>. Prices move overnight, and word is your product is about to get hot.'
+          : 'Click <b>⏳ WAIT</b>. Prices move overnight, and word is your product is about to get hot.');
     },
     action: 'wait',
     interactive: true,
@@ -230,9 +248,9 @@ var TUTORIAL_STEPS = [
       if (tutorialWaitDay === null) { tutorialWaitDay = gameState.day; return false; }
       return gameState.day > tutorialWaitDay;
     },
-    highlightSelector: '.btn-sidebar',
+    highlightSelector: '.btn-sidebar, .mnav-btn',
     highlightMatch: 'WAIT',
-    arrowText: 'Click ⏳ WAIT',
+    arrowText: 'Tap ⏳ WAIT (bottom bar on phone)',
   },
   // === STEP 4c: Selling Drugs (interactive) ===
   {
@@ -254,7 +272,7 @@ var TUTORIAL_STEPS = [
     id: 'travel',
     title: 'TRAVEL',
     getText: function() {
-      return 'Click <b>Travel</b> in the sidebar. Each district has different prices and gangs.';
+      return tutIsMobile() ? 'Tap <b>✈️ Travel</b> in the bottom bar. Each district has different prices and gangs.' : 'Click <b>Travel</b> in the sidebar. Each district has different prices and gangs.';
     },
     action: 'wait',
     interactive: true,
@@ -299,7 +317,7 @@ var TUTORIAL_STEPS = [
     action: 'next',
     highlightSelector: '.btn-sidebar',
     highlightMatch: 'Stash',
-    arrowText: 'Your stash is in the sidebar',
+    arrowText: 'Stash: 📦 bottom bar or ☰ All on phone; sidebar on desktop',
   },
   // === STEP 8: Heat System ===
   {
@@ -320,7 +338,7 @@ var TUTORIAL_STEPS = [
     id: 'crew',
     title: 'HIRING YOUR CREW',
     getText: function() {
-      return 'Every kingpin needs muscle. Open the <b>People & Social</b> group in the sidebar and look for <b>Crew</b>. ' +
+      return 'Every kingpin needs muscle. Open the <b>People & Social</b> group in ' + tutWhere() + ' and look for <b>Crew</b>. ' +
         'Crew members fight alongside you in combat, boost your dealing efficiency, and unlock special abilities. ' +
         'Types include: <b>Enforcers</b> (combat), <b>Dealers</b> (income), <b>Lookouts</b> (heat reduction), and <b>Chemists</b> (processing). ' +
         'As a reward for this step, you get a <b>free crew member</b>!';
@@ -363,7 +381,7 @@ var TUTORIAL_STEPS = [
     title: 'SKILL TREES',
     getText: function() {
       var pts = gameState ? (gameState.skillPoints || 0) : 0;
-      return 'You earn <b>skill points</b> by leveling up (you have <b>' + pts + '</b> now). Open <b>Skills</b> in the CHARACTER section of the sidebar. ' +
+      return 'You earn <b>skill points</b> by leveling up (you have <b>' + pts + '</b> now). Open <b>Skills</b> in the CHARACTER section of ' + tutWhere() + '. ' +
         'Four skill branches: <b>Combat</b> (fighting power), <b>Business</b> (more profits), <b>Stealth</b> (less heat), and <b>Social</b> (better prices, crew bonuses). ' +
         'Each skill has multiple tiers. Choose wisely -- skills define your play style!';
     },
@@ -407,7 +425,7 @@ var TUTORIAL_STEPS = [
     id: 'missions',
     title: 'MISSIONS & SIDE JOBS',
     getText: function() {
-      return 'The <b>Missions</b> button in the sidebar shows available jobs. There are two types: ' +
+      return 'The <b>Missions</b> button in ' + tutWhere() + ' shows available jobs. There are two types: ' +
         '<b>Story missions</b> advance the campaign and unlock new features. <b>Side missions</b> earn cash, reputation, and items. ' +
         'Missions have requirements (level, standing, items) and time limits. Check back often -- new missions appear as you progress!';
     },
@@ -483,7 +501,7 @@ var TUTORIAL_STEPS = [
       return 'The <b>Campaign</b> has multiple acts, each with escalating challenges and story missions. ' +
         'Your choices throughout the game determine which <b>ending</b> you get -- there are multiple paths to victory (or ruin). ' +
         'Will you become a kingpin, go legitimate, get arrested, or burn it all down? ' +
-        'Check the <b>Campaign</b> button in the sidebar to track your progress. Good luck -- Miami is watching.';
+        'Check the <b>Campaign</b> button in ' + tutWhere() + ' to track your progress. Good luck -- Miami is watching.';
     },
     action: 'finish',
     highlightSelector: '.btn-sidebar',
@@ -637,9 +655,10 @@ function applyHighlights(step) {
 
       if (step.highlightMatch) {
         // Only highlight elements whose text content contains the match string
+        var matchLower = step.highlightMatch.toLowerCase();
         for (var i = 0; i < els.length; i++) {
-          var text = els[i].textContent || '';
-          if (text.indexOf(step.highlightMatch) !== -1) {
+          var text = (els[i].textContent || '').toLowerCase();
+          if (text.indexOf(matchLower) !== -1) {
             els[i].classList.add('tutorial-highlight');
           }
         }
