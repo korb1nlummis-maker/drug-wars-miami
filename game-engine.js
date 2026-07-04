@@ -512,6 +512,10 @@ function launderMoney(state, amount) {
   // Skill: laundry king — bigger daily laundering capacity
   const skillLaunderMod = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'launderMod') : 0;
   if (skillLaunderMod > 0) totalCapacity = Math.round(totalCapacity * (1 + skillLaunderMod));
+  // District event: a laundering connection opened up
+  if ((state.activeBuffs || []).some(b => b.effect === 'launder_capacity_x12' && state.day < b.expiresDay)) {
+    totalCapacity = Math.round(totalCapacity * 1.2);
+  }
 
   const actual = Math.min(amount, totalCapacity);
   if (actual <= 0) return { success: false, msg: 'Laundering capacity maxed out for today.' };
@@ -4452,6 +4456,11 @@ function sellDrug(state, drugId, amount) {
       if (nomadBonus > 0) price = Math.round(price * (1 + nomadBonus));
     }
   }
+  // District event: business disruption cuts sale prices here for a few days
+  {
+    const dsp = (state.activeBuffs || []).find(b => b.id === 'district_sales_penalty' && state.day < b.expiresDay && b.locId === state.currentLocation);
+    if (dsp) price = Math.round(price * (1 - Math.min(0.5, (dsp.value || 0.3) * 0.5)));
+  }
   // Processed drug quality bonus: YOUR premium batch sells above street
   // price — applied to the sale, never to the market walk (it would compound)
   if (typeof getProcessedDrugPriceMod === 'function') {
@@ -4734,6 +4743,7 @@ function getAvailableTransport(state, destinationId) {
     const locked = playerLevel < minLvl;
     let cost = Math.round(t.costPerRegion * (sameRegion ? 1 : 2.5) * state.transportCostMultiplier);
     if ((state.activeBuffs || []).some(b => b.effect === 'transport_cost_x2' && state.day < b.expiresDay)) cost *= 2;
+    if ((state.activeBuffs || []).some(b => b.effect === 'transport_cost_x06' && state.day < b.expiresDay)) cost = Math.round(cost * 0.6);
     const carryLimit = cargoBonus > 0 ? Math.round(t.inventoryLimit * (1 + cargoBonus)) : t.inventoryLimit;
     results.push({ id, ...t, inventoryLimit: carryLimit, cost, canAfford: state.cash >= cost && !locked, canCarry: getInventoryCount(state) <= carryLimit, locked, minLevel: minLvl });
   }
