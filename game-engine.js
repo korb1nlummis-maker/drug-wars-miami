@@ -512,6 +512,10 @@ function launderMoney(state, amount) {
   // Skill: laundry king — bigger daily laundering capacity
   const skillLaunderMod = typeof getSkillEffect === 'function' ? getSkillEffect(state, 'launderMod') : 0;
   if (skillLaunderMod > 0) totalCapacity = Math.round(totalCapacity * (1 + skillLaunderMod));
+  // District event: a laundering connection opened up
+  if ((state.activeBuffs || []).some(b => b.effect === 'launder_capacity_x12' && state.day < b.expiresDay)) {
+    totalCapacity = Math.round(totalCapacity * 1.2);
+  }
 
   const actual = Math.min(amount, totalCapacity);
   if (actual <= 0) return { success: false, msg: 'Laundering capacity maxed out for today.' };
@@ -1426,7 +1430,7 @@ function applyNGPlusStartBonus(state) {
 }
 
 // --- Start New Game Plus (transition function) ---
-function startNewGamePlus(oldState) {
+function buildNgPlusCarryover(oldState) {
   if (!oldState) return null;
 
   // Determine new tier
@@ -1600,11 +1604,14 @@ function processNGPlusDaily(state) {
       // Scale enemy stats by tier
       const scaledEnemyHealth = Math.round(evt.enemyHealth * tierData.enemyStrengthMod);
       const scaledEnemyDamage = Math.round(evt.enemyDamage * tierData.enemyDamageMultiplier);
-      state.pendingEvent = {
+      if (!state.queuedEvents) state.queuedEvents = [];
+      state.queuedEvents.push({
         type: 'combat',
         subtype: 'ng_plus_event',
+        combatType: evt.id === 'ngp_dea_taskforce' ? 'police' : 'rival',
         eventId: evt.id,
         msg: evt.msg,
+        resolved: false,
         enemyName: evt.msg.split('!')[0].replace(/^[^\s]+\s/, ''),
         enemyHealth: scaledEnemyHealth,
         enemyMaxHealth: scaledEnemyHealth,
@@ -1613,7 +1620,7 @@ function processNGPlusDaily(state) {
         reward: evt.reward || 0,
         heatGain: evt.heatGain || 0,
         territoryReward: evt.territoryReward || false,
-      };
+      });
       msgs.push(evt.msg);
       break; // Only one NG+ combat event per day
     }
@@ -1671,16 +1678,18 @@ function processNGPlusDaily(state) {
     }
 
     if (evt.type === 'offer') {
-      state.pendingEvent = {
+      if (!state.queuedEvents) state.queuedEvents = [];
+      state.queuedEvents.push({
         type: 'offer',
         subtype: 'ng_plus_event',
         eventId: evt.id,
         msg: evt.msg,
+        resolved: false,
         offerType: 'ng_plus_special',
         price: evt.price || 0,
         effect: evt.effect || null,
         reward: evt.reward || null,
-      };
+      });
       msgs.push(evt.msg);
     }
 
@@ -1713,9 +1722,12 @@ function processRivalDealerDaily(state) {
     // Ambush!
     const scaledHealth = Math.round(rival.power * 2);
     const scaledDamage = Math.round(rival.power * 0.3);
-    state.pendingEvent = {
+    if (!state.queuedEvents) state.queuedEvents = [];
+    state.queuedEvents.push({
       type: 'combat',
       subtype: 'rival_dealer',
+      combatType: 'rival',
+      resolved: false,
       msg: `${NG_PLUS_RIVAL.emoji} ${NG_PLUS_RIVAL.name} strikes! "${rival.encounters === 0 ? 'We meet at last.' : 'You can\'t escape me forever.'}"`,
       enemyName: NG_PLUS_RIVAL.name,
       enemyHealth: scaledHealth,
@@ -1724,7 +1736,7 @@ function processRivalDealerDaily(state) {
       enemyCount: 3 + Math.floor(rival.power / 100),
       reward: Math.round(rival.power * 50),
       isRival: true,
-    };
+    });
     rival.encounters++;
     rival.lastSeenDay = state.day;
     rival.lastSeenLocation = state.currentLocation;
@@ -4257,6 +4269,25 @@ function buyDrug(state, drugId, amount) {
   const locTrades = state.locationTrades[state.currentLocation] || 0;
   if (locTrades >= 20) price = Math.round(price * 0.92);       // 8% discount after 20+ trades
   else if (locTrades >= 5) price = Math.round(price * 0.97);   // 3% discount after 5+ trades
+  // Aggregate discount floor: no stack of skills/perks/rep/buffs buys at
+  // market below 30% of list (and never $0). Suppliers/imports are the
+  // legitimate below-market channels — the corner dealer is not.
+  price = Math.max(1, Math.ceil(state.prices[drugId] * 0.30), price);
+  // Buy-back guard: the dealer knows what he just paid YOU for this — he's
+  // not selling it back cheaper. Kills same-day sell-then-rebuy ping-pong.
+  const sdsBuy = state.sameDaySells;
+  if (sdsBuy && sdsBuy.day === state.day && sdsBuy.loc === state.currentLocation &&
+      sdsBuy.drugs && sdsBuy.drugs[drugId] && sdsBuy.drugs[drugId].qty > 0) {
+    const recB = sdsBuy.drugs[drugId];
+    const avgSold = recB.revenue / recB.qty;
+    const guardQty = Math.min(amount, recB.qty);
+    const guardPrice = Math.max(price, Math.ceil(avgSold * 1.05));
+    if (guardPrice > price) {
+      price = Math.round((guardQty * guardPrice + (amount - guardQty) * price) / amount);
+    }
+    recB.revenue = Math.max(0, recB.revenue - Math.round(avgSold * guardQty));
+    recB.qty -= guardQty;
+  }
   const totalCost = price * amount;
   if (totalCost > state.cash) return { success: false, msg: 'Not enough cash.' };
 
@@ -4342,7 +4373,7 @@ function buyDrug(state, drugId, amount) {
   if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
-  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + Math.min(1, amount / 10);
   // Gang territory heat modifier
   if (typeof getGangTerritoryHeatMod === 'function') {
     const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);
@@ -4452,6 +4483,11 @@ function sellDrug(state, drugId, amount) {
       if (nomadBonus > 0) price = Math.round(price * (1 + nomadBonus));
     }
   }
+  // District event: business disruption cuts sale prices here for a few days
+  {
+    const dsp = (state.activeBuffs || []).find(b => b.id === 'district_sales_penalty' && state.day < b.expiresDay && b.locId === state.currentLocation);
+    if (dsp) price = Math.round(price * (1 - Math.min(0.5, (dsp.value || 0.3) * 0.5)));
+  }
   // Processed drug quality bonus: YOUR premium batch sells above street
   // price — applied to the sale, never to the market walk (it would compound)
   if (typeof getProcessedDrugPriceMod === 'function') {
@@ -4506,6 +4542,9 @@ function sellDrug(state, drugId, amount) {
   // Wash-trade guard: dealers recognize product you bought from them today and
   // won't pay more than 95% of what you paid for it. No bonus stack can turn a
   // same-day, same-district buy-then-sell into profit.
+  // Aggregate bonus cap: no stack of skills/perks/rep/buffs sells at
+  // market above 130% of list — the four-digit spread multiples are gone
+  price = Math.min(price, Math.max(1, Math.round(state.prices[drugId] * 1.30)));
   let washMsg = '';
   const sdbSell = state.sameDayBuys;
   if (sdbSell && sdbSell.day === state.day && sdbSell.loc === state.currentLocation &&
@@ -4527,6 +4566,14 @@ function sellDrug(state, drugId, amount) {
     rec.qty -= washQty;
   }
   const totalRevenue = price * amount;
+  // Record for the buy-back guard (sell-then-rebuy same day, same district)
+  if (!state.sameDaySells || state.sameDaySells.day !== state.day || state.sameDaySells.loc !== state.currentLocation) {
+    state.sameDaySells = { day: state.day, loc: state.currentLocation, drugs: {} };
+  }
+  const _sds = state.sameDaySells.drugs[drugId] || { qty: 0, revenue: 0 };
+  _sds.qty += amount;
+  _sds.revenue += totalRevenue;
+  state.sameDaySells.drugs[drugId] = _sds;
   state.cash += totalRevenue;
   // Drug sales produce DIRTY money
   state.dirtyMoney = (state.dirtyMoney || 0) + totalRevenue;
@@ -4558,7 +4605,10 @@ function sellDrug(state, drugId, amount) {
   }
   // Reputation: drug sale
   if (typeof adjustRepFromAction === 'function') {
-    adjustRepFromAction(state, totalRevenue >= 50000 ? 'large_drug_sale' : 'drug_sale');
+    // Pocket sales don't build a name — rep needs real volume
+    if (amount >= 5 || totalRevenue >= 2500 || Math.random() < 0.2) {
+      adjustRepFromAction(state, totalRevenue >= 50000 ? 'large_drug_sale' : 'drug_sale');
+    }
   }
   // Wiretap evidence from deal
   let tapMsg = '';
@@ -4571,7 +4621,7 @@ function sellDrug(state, drugId, amount) {
   }
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
-  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + Math.min(1, amount / 10);
   // Gang territory heat modifier on sell (selling is riskier than buying)
   if (typeof getGangTerritoryHeatMod === 'function') {
     const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);
@@ -4734,6 +4784,7 @@ function getAvailableTransport(state, destinationId) {
     const locked = playerLevel < minLvl;
     let cost = Math.round(t.costPerRegion * (sameRegion ? 1 : 2.5) * state.transportCostMultiplier);
     if ((state.activeBuffs || []).some(b => b.effect === 'transport_cost_x2' && state.day < b.expiresDay)) cost *= 2;
+    if ((state.activeBuffs || []).some(b => b.effect === 'transport_cost_x06' && state.day < b.expiresDay)) cost = Math.round(cost * 0.6);
     const carryLimit = cargoBonus > 0 ? Math.round(t.inventoryLimit * (1 + cargoBonus)) : t.inventoryLimit;
     results.push({ id, ...t, inventoryLimit: carryLimit, cost, canAfford: state.cash >= cost && !locked, canCarry: getInventoryCount(state) <= carryLimit, locked, minLevel: minLvl });
   }
@@ -5555,6 +5606,10 @@ function resolveCombatRound(state, action, event) {
     }
 
     // Post-combat consequences: hospital bills, scars
+    if (results.playerDamage > 0 && typeof addStress === 'function') {
+      const stressMsg = addStress(state, 'combat');
+      if (stressMsg) results.msg += ' ' + stressMsg;
+    }
     if (results.playerDamage > 0 && state.health > 0 && state.health < 100) {
       // Hospital bill if health drops below 50
       if (state.health < 50) {
@@ -5859,6 +5914,36 @@ function endGame(state) {
 // ACCEPT OFFERS
 // ============================================================
 function acceptOffer(state, event) {
+  if (event.offerType === 'ng_plus_special') {
+    const price = event.price || 0;
+    if (price > 0 && state.cash < price) return { success: false, msg: `Need $${price.toLocaleString()}.` };
+    state.cash -= price;
+    let msg = '🤝 Deal.';
+    if (event.reward === 'tip') {
+      // Intel: reveal fresh price estimates for two nearby districts
+      if (!state.knownPrices) state.knownPrices = {};
+      const nearby = LOCATIONS.filter(l => (l.region || 'miami') === 'miami' && l.id !== state.currentLocation).slice(0, 2);
+      for (const loc of nearby) {
+        const entry = state.knownPrices[loc.id] || {};
+        for (const d of DRUGS.slice(0, 8)) {
+          if (d.minDay && state.day < d.minDay) continue;
+          entry[d.id] = Math.max(1, Math.round(((d.minPrice + d.maxPrice) / 2) * (loc.priceModifier || 1) * (0.85 + Math.random() * 0.3)));
+        }
+        entry._day = state.day;
+        state.knownPrices[loc.id] = entry;
+      }
+      msg = '🗺️ The intel checks out — fresh prices for ' + nearby.map(l => l.name).join(' and ') + '.';
+    } else if (typeof event.reward === 'number' && event.reward > 0) {
+      state.cash += event.reward;
+      state.dirtyMoney = (state.dirtyMoney || 0) + event.reward;
+      msg = `💵 +$${event.reward.toLocaleString()} (dirty).`;
+    }
+    if (event.effect && typeof event.effect === 'object') {
+      if (event.effect.repGain && typeof adjustRep === 'function') adjustRep(state, 'streetCred', event.effect.repGain);
+      if (event.effect.fearGain && typeof adjustRep === 'function') adjustRep(state, 'fear', event.effect.fearGain);
+    }
+    return { success: true, msg };
+  }
   if (event.offerType === 'weapon') {
     if (state.cash < event.price) return { success: false, msg: 'Can\'t afford it.' };
     const weapon = WEAPONS.find(w => w.id === event.weaponId);
@@ -6011,6 +6096,10 @@ function updateInvestigation(state, trigger, amount) {
   if (state.investigation.level > oldLevel) {
     const info = INVESTIGATION_LEVELS[state.investigation.level];
     messages.push(`🔍 Investigation escalated: ${info.emoji} ${info.name} — ${info.desc}`);
+    if (typeof addStress === 'function') {
+      const stressMsg = addStress(state, 'investigation_escalation');
+      if (stressMsg) messages.push(stressMsg);
+    }
   }
 
   return messages;
@@ -6083,6 +6172,10 @@ function createDEARaidEvent(state) {
 // ============================================================
 function initCourtCase(state, context) {
   context = context || {}; // { resisted: true } = arrest after failed escape, { fought: true } = arrest after losing a fight with police
+  if (typeof addStress === 'function') {
+    const stressMsg = addStress(state, 'arrest');
+    if (stressMsg) state.messageLog.push(stressMsg);
+  }
   // An arrest is news — corners go quiet, prices react
   if (typeof reportPlayerEvent === 'function') {
     reportPlayerEvent(state, 'busted', { locId: state.currentLocation });

@@ -108,6 +108,23 @@ function generateDailyNews(state) {
   if (template.effect.heat && city && city.id === state.currentLocation) {
     state.heat = Math.max(0, Math.min(100, state.heat + template.effect.heat));
   }
+  // Market effects: one-shot move on the named drug's live price (the walk's
+  // mean reversion unwinds it over the following days — headlines stop lying)
+  if (drug && state.prices && state.prices[drug.id]) {
+    let mult = 1;
+    if (template.effect.priceBoost) mult *= Math.max(0.5, Math.min(1.5, template.effect.priceBoost));
+    if (template.effect.demandBoost) mult *= Math.max(0.5, Math.min(1.4, 1 + (template.effect.demandBoost - 1) * 0.5));
+    if (mult !== 1) {
+      const cap = drug.maxPrice * 2.5;
+      state.prices[drug.id] = Math.max(Math.round(drug.minPrice * 0.5), Math.min(cap, Math.round(state.prices[drug.id] * mult)));
+    }
+  }
+  // Danger news: streets run hotter for a couple of days
+  if (template.effect.danger && template.effect.danger > 1 && city && city.id === state.currentLocation) {
+    if (!state.activeBuffs) state.activeBuffs = [];
+    state.activeBuffs.push({ id: 'district_danger', name: 'Streets On Edge', emoji: '⚠️',
+      expiresDay: (state.day || 1) + 2, locId: state.currentLocation });
+  }
 
   // Store in news feed
   if (!state.lifestyle.newsFeed) state.lifestyle.newsFeed = [];

@@ -79,7 +79,7 @@ function sdMakeBuyerOffer(state, regular) {
     name: regular ? regular.name : sdPick(STREET_BUYER_NAMES),
     line: regular ? 'is back for the usual — and word is you treat people right' : sdPick(STREET_BUYER_LINES),
     drugId: drug.id, qty,
-    price: Math.max(1, Math.round(list * premium)),
+    price: Math.max(1, Math.min(Math.floor(list * 1.40), Math.round(list * premium))),
     listAt: list,
     regularId: regular ? regular.id : null,
     countered: false,

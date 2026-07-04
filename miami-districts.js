@@ -478,7 +478,106 @@ function generateDistrictEvent(state) {
     else state.reputation = Math.min(100, (state.reputation || 0) + event.repBoost);
   }
 
-  return { type: eventType, ...event };
+  let extraMsg = '';
+  if (!state.activeBuffs) state.activeBuffs = [];
+
+  // Demand/price surges multiply ONCE into the live price walk (mean
+  // reversion pulls them back over the next days — same pattern as
+  // PRICE_EVENTS; never a persistent daily multiplier, that compounds)
+  if ((event.demandBoost || event.priceBoost) && state.prices) {
+    const targets = event.demandBoost || Object.keys(state.prices);
+    const mult = Math.min(1.5, event.priceBoost || 1.25);
+    for (const dId of targets) {
+      if (!state.prices[dId]) continue;
+      const dDef = typeof DRUGS !== 'undefined' ? DRUGS.find(dd => dd.id === dId) : null;
+      const cap = dDef ? dDef.maxPrice * 2.5 : state.prices[dId] * 2;
+      state.prices[dId] = Math.min(cap, Math.round(state.prices[dId] * mult));
+    }
+    extraMsg = ' 📈 Local prices are moving.';
+  }
+
+  // Business disruption: selling here is penalized while it lasts
+  if (event.salesPenalty) {
+    state.activeBuffs.push({ id: 'district_sales_penalty', name: 'Business Disrupted', emoji: '📉',
+      expiresDay: (state.day || 1) + 2, value: event.salesPenalty, locId: state.currentLocation });
+    extraMsg = ' 📉 Moving product here will be hard for a couple days.';
+  }
+
+  // Danger: streets run hot — more encounters while it lasts
+  if (event.danger) {
+    state.activeBuffs.push({ id: 'district_danger', name: 'Streets Running Hot', emoji: '💥',
+      expiresDay: (state.day || 1) + 2, locId: state.currentLocation });
+  }
+
+  // Back-alley gamble: bounded double-or-nothing, house has the edge
+  if (event.gamble && state.cash >= 1000) {
+    const stake = Math.min(2000, Math.floor(state.cash * 0.10));
+    if (Math.random() < 0.47) {
+      state.cash += stake;
+      state.dirtyMoney = (state.dirtyMoney || 0) + stake;
+      extraMsg = ' 🎲 You walked away up $' + stake.toLocaleString() + '.';
+    } else {
+      state.cash -= stake;
+      state.dirtyMoney = Math.max(0, (state.dirtyMoney || 0) - Math.min(stake, state.dirtyMoney || 0));
+      extraMsg = ' 🎲 The dice were cold — you dropped $' + stake.toLocaleString() + '.';
+    }
+    if (typeof normalizeMoneyLedger === 'function') normalizeMoneyLedger(state);
+  }
+
+  // Faction stir: the named gang takes notice, for better or worse
+  if (event.factionEvent && typeof adjustFactionRelation === 'function' && state.factions && state.factions[event.factionEvent]) {
+    const rel = state.factions[event.factionEvent].relation || 0;
+    const drift = rel >= 0 ? (Math.random() < 0.6 ? 2 : -1) : (Math.random() < 0.6 ? -2 : 1);
+    adjustFactionRelation(state, event.factionEvent, drift, 'district event');
+    extraMsg = drift > 0 ? ' 🤝 Word is they liked what they heard about you.' : ' 👀 Word is they did NOT like what they heard.';
+  }
+
+  // Import opening: progress toward an overseas connection
+  if (event.importEvent && state.importExport && typeof INTERNATIONAL_SOURCES !== 'undefined') {
+    const locked = INTERNATIONAL_SOURCES.filter(src => !src.ngPlusOnly && !state.importExport.unlockedSources.includes(src.id));
+    if (locked.length > 0) {
+      const src = locked[Math.floor(Math.random() * locked.length)];
+      if (!state.importExport.contactProgress) state.importExport.contactProgress = {};
+      const cur = state.importExport.contactProgress[src.id] || 0;
+      state.importExport.contactProgress[src.id] = Math.min(99, cur + 15);
+      extraMsg = ' 🌍 A contact from ' + src.name + ' left word (+15% connection).';
+    }
+  }
+
+  // Port shutdown: everything in transit slips a day
+  if (event.portClosed && state.importExport && (state.importExport.activeShipments || []).length > 0) {
+    for (const sh of state.importExport.activeShipments) sh.arrivalDay += 1;
+    extraMsg = ' 🚢 Your shipments slip a day.';
+  }
+
+  // Political opening
+  if (event.politicsEvent && state.politics) {
+    state.politics.politicalInfluence = (state.politics.politicalInfluence || 0) + 1;
+    extraMsg = ' 🏛️ +1 political influence.';
+  }
+
+  // Trucking deal: cheap transport for a few days
+  if (event.transportEvent) {
+    state.activeBuffs.push({ id: 'trucking_deal', name: 'Trucking Deal', emoji: '🚛',
+      expiresDay: (state.day || 1) + 3, effect: 'transport_cost_x06' });
+    extraMsg = ' 🚛 Transport runs 40% off for 3 days.';
+  }
+
+  // Laundering opening: fronts can push more through briefly
+  if (event.launderBoost) {
+    state.activeBuffs.push({ id: 'launder_boost', name: 'Laundering Connection', emoji: '🧺',
+      expiresDay: (state.day || 1) + 2, effect: 'launder_capacity_x12' });
+    extraMsg = ' 🧺 Laundering capacity +20% for 2 days.';
+  }
+
+  // Property market softens: 15% off buys and tier upgrades briefly
+  if (event.propertyBoost) {
+    state.activeBuffs.push({ id: 'estate_deal', name: 'Soft Property Market', emoji: '🏡',
+      expiresDay: (state.day || 1) + 2, effect: 'property_discount_15' });
+    extraMsg = ' 🏡 Property deals run 15% off for 2 days.';
+  }
+
+  return { type: eventType, ...event, msg: event.msg + extraMsg };
 }
 
 // ============================================================

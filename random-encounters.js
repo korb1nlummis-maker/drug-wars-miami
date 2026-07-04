@@ -42,6 +42,10 @@ function processEncountersDaily(state) {
   // Check if encounter triggers (35% base chance, modified by weather/lookouts)
   if (enc.activeEncounter) return msgs;
   var encounterChance = 0.35;
+  // District event: streets running hot after a shootout/drive-by
+  if ((state.activeBuffs || []).some(function(b) { return b.id === 'district_danger' && state.day < b.expiresDay && b.locId === state.currentLocation; })) {
+    encounterChance *= 1.5;
+  }
   // Reputation: fear keeps street trouble away (capped -30%)
   if (typeof getRepEffects === 'function') {
     var repFxE = getRepEffects(state);

@@ -174,7 +174,11 @@ function buyProperty(state, propertyTypeId, tier) {
   if (!ptype.tiers[tier]) return { success: false, msg: 'Invalid tier' };
 
   const tierData = ptype.tiers[tier];
-  if (state.cash < tierData.cost) return { success: false, msg: 'Not enough cash. Need $' + tierData.cost.toLocaleString() };
+  let buyCost = tierData.cost;
+  if ((state.activeBuffs || []).some(b => b.effect === 'property_discount_15' && state.day < b.expiresDay)) {
+    buyCost = Math.round(buyCost * 0.85);
+  }
+  if (state.cash < buyCost) return { success: false, msg: 'Not enough cash. Need $' + buyCost.toLocaleString() };
 
   const locId = state.currentLocation;
   if (!state.properties) state.properties = {};
@@ -184,7 +188,7 @@ function buyProperty(state, propertyTypeId, tier) {
   const existing = state.properties[locId].find(p => p.type === propertyTypeId);
   if (existing) return { success: false, msg: 'Already own a ' + ptype.name + ' here. Upgrade instead.' };
 
-  state.cash -= tierData.cost;
+  state.cash -= buyCost;
   state.properties[locId].push({
     type: propertyTypeId,
     tier: tier,
@@ -214,7 +218,10 @@ function upgradeProperty(state, locationId, propertyIndex) {
   const nextTier = prop.tier + 1;
   if (!ptype.tiers[nextTier]) return { success: false, msg: 'Already max tier' };
 
-  const upgradeCost = ptype.tiers[nextTier].cost - ptype.tiers[prop.tier].cost;
+  let upgradeCost = ptype.tiers[nextTier].cost - ptype.tiers[prop.tier].cost;
+  if ((state.activeBuffs || []).some(b => b.effect === 'property_discount_15' && state.day < b.expiresDay)) {
+    upgradeCost = Math.round(upgradeCost * 0.85);
+  }
   if (state.cash < upgradeCost) return { success: false, msg: 'Need $' + upgradeCost.toLocaleString() + ' to upgrade' };
 
   state.cash -= upgradeCost;
