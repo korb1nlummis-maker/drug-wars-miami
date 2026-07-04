@@ -3,7 +3,7 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-const SUITES = ['exploit-invariants.cjs', 'fairness.cjs'];
+const SUITES = ['exploit-invariants.cjs', 'fairness.cjs', 'integrity.cjs'];
 let failed = 0;
 
 for (const suite of SUITES) {

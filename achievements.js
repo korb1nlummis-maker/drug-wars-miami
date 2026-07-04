@@ -507,7 +507,7 @@ const ACHIEVEMENTS = [
   { id: 'smuggler', name: 'International Smuggler', desc: 'Connect with 3 international sources', emoji: '🌍', category: 'import', xp: 30 },
   { id: 'global_network', name: 'Global Network', desc: 'Connect with all available sources', emoji: '🌐', category: 'import', xp: 60, hidden: true },
   { id: 'seized_survivor', name: 'Cost of Business', desc: 'Have a shipment seized', emoji: '🚨', category: 'import', xp: 10 },
-  { id: 'narco_sub', name: 'Narco Sub Captain', desc: 'Complete a shipment via Narco Sub', emoji: '🔻', category: 'import', xp: 40, hidden: true },
+  { id: 'narco_sub_shipment', name: 'Narco Sub Captain', desc: 'Complete a shipment via Narco Sub', emoji: '🔻', category: 'import', xp: 40, hidden: true },
   { id: 'import_baron', name: 'Import Baron', desc: 'Complete 10 international imports', emoji: '📬', category: 'import', xp: 50 },
 
   // === FACTIONS (8) ===
@@ -667,7 +667,7 @@ const ACHIEVEMENTS = [
   // ============================================================
   // V6 — BUSINESS ACHIEVEMENTS (10)
   // ============================================================
-  { id: 'first_business', name: 'Entrepreneur', desc: 'Purchase your first business', emoji: '🏢', category: 'business_v2', xp: 25 },
+  { id: 'first_business_v2', name: 'Entrepreneur', desc: 'Purchase your first business', emoji: '🏢', category: 'business_v2', xp: 25 },
   { id: 'business_empire', name: 'Business Empire', desc: 'Own 5 different businesses', emoji: '🏙️', category: 'business_v2', xp: 75 },
   { id: 'business_mogul', name: 'Mogul', desc: 'Own 10 different businesses', emoji: '👑', category: 'business_v2', xp: 150 },
   { id: 'music_mogul', name: 'Music Mogul', desc: 'Have a signed artist blow up', emoji: '🎵', category: 'business_v2', xp: 75 },
@@ -770,7 +770,7 @@ function checkAchievements(state) {
       case 'specialist_cocaine': unlocked = (stats.drugsSoldById?.cocaine || 0) >= 100; break;
       case 'specialist_heroin': unlocked = (stats.drugsSoldById?.heroin || 0) >= 100; break;
       case 'specialist_weed': unlocked = (stats.drugsSoldById?.weed || 0) >= 200; break;
-      case 'specialist_meth': unlocked = (stats.drugsSoldById?.meth || 0) >= 100; break;
+      case 'specialist_meth': unlocked = (stats.drugsSoldById?.methamphetamine || 0) >= 100; break;
       case 'specialist_crack': unlocked = (stats.drugsSoldById?.crack || 0) >= 100; break;
       case 'specialist_ecstasy': unlocked = (stats.drugsSoldById?.ecstasy || 0) >= 100; break;
       case 'total_100_sold': unlocked = state.drugsSold >= 100; break;
@@ -1175,7 +1175,7 @@ function checkAchievements(state) {
         break;
       }
       case 'seized_survivor': unlocked = state.importExport && (state.importExport.totalSeized || 0) > 0; break;
-      case 'narco_sub': unlocked = (stats.narcoSubShipments || 0) >= 1; break;
+      case 'narco_sub_shipment': unlocked = (stats.narcoSubShipments || 0) >= 1; break;
       case 'import_baron': unlocked = state.importExport && (state.importExport.totalImports || 0) >= 10; break;
 
       // Factions
@@ -1356,6 +1356,7 @@ function checkAchievements(state) {
       case 'npc_betrayed': unlocked = Object.values((state.npcStories && state.npcStories.metNPCs) || {}).some(n => n.outcome === 'betrayed' || (n.relationship || 0) <= -50); break;
 
       // === BUSINESSES V2 ===
+      case 'first_business_v2': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 1; break;
       case 'business_empire': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 3; break;
       case 'business_mogul': unlocked = ((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).length >= 6; break;
       case 'music_mogul': unlocked = (((state.businessesV2 && state.businessesV2.owned) || state.ownedBusinesses || []).some(b => /record|studio|music/i.test(b.id || b.businessId || ''))); break;

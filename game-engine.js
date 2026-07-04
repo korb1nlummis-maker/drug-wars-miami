@@ -462,7 +462,7 @@ const DRUG_CHARGE_THRESHOLDS = {
   premium: { intent: 5, trafficking: 20 },
 };
 
-const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'meth'];
+const PREMIUM_DRUGS = ['cocaine', 'heroin', 'crack', 'methamphetamine'];
 
 // ============================================================
 // MONEY LAUNDERING / FRONT COMPANIES

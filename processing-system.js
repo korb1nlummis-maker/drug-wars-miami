@@ -18,7 +18,7 @@ const PROCESSING_RECIPES = [
     supplies: { chemicals: 2 }, heatGen: 3,
     desc: 'Purify raw cocaine into premium product' },
   { id: 'cook_meth', name: 'Cook Meth', emoji: '🧪',
-    input: { meth: 5 }, output: { meth: 7 }, // higher yield
+    input: { methamphetamine: 5 }, output: { methamphetamine: 7 }, // higher yield
     qualityBoost: 1.6, skillReq: 3, timeHours: 8, labTier: 1,
     supplies: { chemicals: 3, equipment: 1 }, heatGen: 5,
     desc: 'Synthesize methamphetamine from precursors' },
