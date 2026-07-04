@@ -229,16 +229,19 @@ function doStressRelief(state, activityId) {
   if (activity.healthRisk && Math.random() < 0.2) state.health = Math.max(1, state.health - activity.healthRisk);
 
   // Time cost
-  if (activity.timeCost) {
-    for (let i = 0; i < activity.timeCost; i++) {
-      state.day++;
-    }
-    return { success: true, msg: `${activity.emoji} ${activity.name}! Stress -${activity.stressRelief}. ${activity.timeCost} days passed.`, timeCost: activity.timeCost };
-  }
-
-  // Flash spending adds heat
+  // Flash spending adds heat (counted BEFORE any early return — the $10k
+  // vacation is exactly the kind of spending investigators notice)
   if (activity.cost >= 5000) {
     state.lifestyle.flashSpending = (state.lifestyle.flashSpending || 0) + activity.cost;
+  }
+
+  if (activity.timeCost) {
+    for (let i = 0; i < activity.timeCost; i++) {
+      // Real days pass: loans accrue, crew gets paid, the world moves on
+      if (typeof waitDay === 'function') waitDay(state);
+      else state.day++;
+    }
+    return { success: true, msg: `${activity.emoji} ${activity.name}! Stress -${activity.stressRelief}. ${activity.timeCost} days passed.`, timeCost: activity.timeCost };
   }
 
   return { success: true, msg: `${activity.emoji} ${activity.name}! Stress -${activity.stressRelief}.${activity.healthBonus ? ` HP +${activity.healthBonus}.` : ''}` };

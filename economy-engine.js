@@ -101,7 +101,7 @@ function updateMarketOnSell(state, drugId, amount, locationId) {
     for (var loc of LOCATIONS) {
       if (loc.id !== locationId) {
         if (!mm.supply[loc.id]) mm.supply[loc.id] = {};
-        mm.supply[loc.id][drugId] = Math.min(200, (mm.supply[loc.id][drugId] || 100) + Math.floor(supplyImpact * 0.2));
+        mm.supply[loc.id][drugId] = Math.min(200, (mm.supply[loc.id][drugId] || 100) + Math.min(30, Math.floor(supplyImpact * 0.2)));
       }
     }
   }

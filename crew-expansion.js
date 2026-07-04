@@ -236,7 +236,7 @@ function getTraitById(traitId) {
 // Calculate effective combat value for a crew member (with rank multiplier)
 function getCrewCombatValue(member) {
   const base = member.combat || 10;
-  const rankData = CREW_RANKS[member.rank || 0];
+  const rankData = CREW_RANKS[_resolveRankIndex(member.rank)];
   let mult = rankData ? rankData.combatMult : 1.0;
 
   // Trait modifiers
@@ -483,7 +483,7 @@ function generateCrewTraits(typeId) {
 
 // Get rank data for a crew member
 function getCrewRankData(member) {
-  return CREW_RANKS[member.rank || 0] || CREW_RANKS[0];
+  return CREW_RANKS[_resolveRankIndex(member.rank)] || CREW_RANKS[0];
 }
 
 // Get crew member daily pay with rank bonus

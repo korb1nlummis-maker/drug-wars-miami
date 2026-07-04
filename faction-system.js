@@ -629,8 +629,8 @@ function checkGangAmbush(state, locationId) {
     const factionId = f.faction.id;
     const standingVal = state.factions.standings[factionId] || 0;
 
-    // Allied territory — safe
-    if (state.factions.alliances[factionId]) return null;
+    // Allied faction won't ambush — but others at this location still might
+    if (state.factions.alliances[factionId]) continue;
     if (standingVal >= 15) continue; // Cordial or better — no ambush
 
     let ambushChance = 0;
@@ -734,6 +734,24 @@ function adjustFactionStandingFromDeal(state, locationId, isSelling, totalValue)
   if (!gang || !gang.factionId) return msgs;
 
   const factionId = gang.factionId;
+  // Territory gangs are MIAMI factions — use the live relation system
+  if (typeof MIAMI_FACTIONS !== 'undefined' && typeof adjustFactionRelation === 'function') {
+    const miami = MIAMI_FACTIONS.find(f => f.id === factionId);
+    if (miami) {
+      const fs2 = state.factions[factionId];
+      const rel = fs2 ? (fs2.relation || 0) : 0;
+      if (isSelling && totalValue >= 3000) {
+        if (rel >= 20 && Math.random() < 0.25) {
+          adjustFactionRelation(state, factionId, 1, 'business on friendly turf');
+          msgs.push(`🤝 ${miami.name} appreciates the business on their turf. (+1 relation)`);
+        } else if (rel < -20 && Math.random() < 0.35) {
+          adjustFactionRelation(state, factionId, -2, 'dealing on hostile turf');
+          msgs.push(`⚠️ ${miami.name} noticed you moving weight on THEIR corners. (-2 relation)`);
+        }
+      }
+      return msgs;
+    }
+  }
   const faction = FACTIONS.find(f => f.id === factionId);
   if (!faction) return msgs;
   if (state.factions.absorptions && state.factions.absorptions.includes(factionId)) return msgs;
