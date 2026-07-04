@@ -87,7 +87,7 @@ function initProcessingState() {
     activeJobs: [], // { recipeId, startDay, completionDay, locationId, quality }
     completedBatches: [], // ready for pickup
     totalBatchesCooked: 0,
-    chemistryXp: 0, // 0-100, increases with successful processing
+    chemistryXp: 0, // 0-1000, increases with successful processing (level caps at 10)
   };
 }
 
@@ -106,7 +106,7 @@ function getChemistryLevel(state) {
 
 function gainChemistryXp(state, amount) {
   if (!state.processing) state.processing = initProcessingState();
-  state.processing.chemistryXp = Math.min(100, (state.processing.chemistryXp || 0) + amount);
+  state.processing.chemistryXp = Math.min(1000, (state.processing.chemistryXp || 0) + amount);
 }
 
 // ============================================================

@@ -6437,6 +6437,12 @@ function acceptPleaDeal(state) {
     if (typeof processLoansDaily === 'function') processLoansDaily(state); else state.debt = Math.round(state.debt * (1 + GAME_CONFIG.debtInterestRate));
   }
 
+  // Story flags: this IS cooperating with the feds (Informant / The Deal endings)
+  if (typeof setCampaignFlag === 'function') {
+    setCampaignFlag(state, 'cooperated', true);
+    setCampaignFlag(state, 'negotiatedDeal', true);
+  }
+
   // Mark as snitch if faction intel given
   if (typeof applyConsequences === 'function') {
     applyConsequences(state, {

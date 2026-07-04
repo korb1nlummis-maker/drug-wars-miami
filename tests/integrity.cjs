@@ -90,6 +90,20 @@ check('tutorial reward granting has a one-shot guard', () => {
   return 'rewardsGiven guard present';
 });
 
+// ---------- 7b. Every campaign flag an ending reads must have a setter ----------
+check('every campaign flag read by an ending check has a setter', () => {
+  const allSrc = fs.readdirSync(ROOT).filter(f => f.endsWith('.js'))
+    .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const reads = new Set();
+  for (const m of allSrc.matchAll(/\.flags\s*&&\s*[\w.]+\.flags\.(\w+)/g)) reads.add(m[1]);
+  for (const m of allSrc.matchAll(/hasCampaignFlag\([^,]+,\s*'(\w+)'/g)) reads.add(m[1]);
+  const orphans = [...reads].filter(flag =>
+    !new RegExp(`setCampaignFlag\\([^,]+,\\s*'${flag}'`).test(allSrc) &&
+    !new RegExp(`flags\\.${flag}\\s*=`).test(allSrc));
+  assert(orphans.length === 0, 'flags read but never set (endings unreachable): ' + orphans.join(', '));
+  return `${reads.size} flags, all settable`;
+});
+
 // ---------- 7. Drug ids in DRUGS are themselves unique ----------
 check('drug ids are unique', () => {
   const dupes = run(`(() => {

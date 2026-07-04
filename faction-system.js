@@ -165,6 +165,7 @@ function formAlliance(state, factionId, allianceType) {
 
   state.cash -= alliance.cost;
   state.factions.alliances[factionId] = allianceType;
+  if (typeof setCampaignFlag === 'function') setCampaignFlag(state, 'allianceForged', true);
   adjustFactionStanding(state, factionId, 15);
 
   // Rival factions lose standing
