@@ -4269,6 +4269,25 @@ function buyDrug(state, drugId, amount) {
   const locTrades = state.locationTrades[state.currentLocation] || 0;
   if (locTrades >= 20) price = Math.round(price * 0.92);       // 8% discount after 20+ trades
   else if (locTrades >= 5) price = Math.round(price * 0.97);   // 3% discount after 5+ trades
+  // Aggregate discount floor: no stack of skills/perks/rep/buffs buys at
+  // market below 30% of list (and never $0). Suppliers/imports are the
+  // legitimate below-market channels — the corner dealer is not.
+  price = Math.max(1, Math.ceil(state.prices[drugId] * 0.30), price);
+  // Buy-back guard: the dealer knows what he just paid YOU for this — he's
+  // not selling it back cheaper. Kills same-day sell-then-rebuy ping-pong.
+  const sdsBuy = state.sameDaySells;
+  if (sdsBuy && sdsBuy.day === state.day && sdsBuy.loc === state.currentLocation &&
+      sdsBuy.drugs && sdsBuy.drugs[drugId] && sdsBuy.drugs[drugId].qty > 0) {
+    const recB = sdsBuy.drugs[drugId];
+    const avgSold = recB.revenue / recB.qty;
+    const guardQty = Math.min(amount, recB.qty);
+    const guardPrice = Math.max(price, Math.ceil(avgSold * 1.05));
+    if (guardPrice > price) {
+      price = Math.round((guardQty * guardPrice + (amount - guardQty) * price) / amount);
+    }
+    recB.revenue = Math.max(0, recB.revenue - Math.round(avgSold * guardQty));
+    recB.qty -= guardQty;
+  }
   const totalCost = price * amount;
   if (totalCost > state.cash) return { success: false, msg: 'Not enough cash.' };
 
@@ -4354,7 +4373,7 @@ function buyDrug(state, drugId, amount) {
   if (state.heatSystem) state.heatSystem.dealtToday = true;
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
-  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + Math.min(1, amount / 10);
   // Gang territory heat modifier
   if (typeof getGangTerritoryHeatMod === 'function') {
     const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);
@@ -4523,6 +4542,9 @@ function sellDrug(state, drugId, amount) {
   // Wash-trade guard: dealers recognize product you bought from them today and
   // won't pay more than 95% of what you paid for it. No bonus stack can turn a
   // same-day, same-district buy-then-sell into profit.
+  // Aggregate bonus cap: no stack of skills/perks/rep/buffs sells at
+  // market above 130% of list — the four-digit spread multiples are gone
+  price = Math.min(price, Math.max(1, Math.round(state.prices[drugId] * 1.30)));
   let washMsg = '';
   const sdbSell = state.sameDayBuys;
   if (sdbSell && sdbSell.day === state.day && sdbSell.loc === state.currentLocation &&
@@ -4544,6 +4566,14 @@ function sellDrug(state, drugId, amount) {
     rec.qty -= washQty;
   }
   const totalRevenue = price * amount;
+  // Record for the buy-back guard (sell-then-rebuy same day, same district)
+  if (!state.sameDaySells || state.sameDaySells.day !== state.day || state.sameDaySells.loc !== state.currentLocation) {
+    state.sameDaySells = { day: state.day, loc: state.currentLocation, drugs: {} };
+  }
+  const _sds = state.sameDaySells.drugs[drugId] || { qty: 0, revenue: 0 };
+  _sds.qty += amount;
+  _sds.revenue += totalRevenue;
+  state.sameDaySells.drugs[drugId] = _sds;
   state.cash += totalRevenue;
   // Drug sales produce DIRTY money
   state.dirtyMoney = (state.dirtyMoney || 0) + totalRevenue;
@@ -4575,7 +4605,10 @@ function sellDrug(state, drugId, amount) {
   }
   // Reputation: drug sale
   if (typeof adjustRepFromAction === 'function') {
-    adjustRepFromAction(state, totalRevenue >= 50000 ? 'large_drug_sale' : 'drug_sale');
+    // Pocket sales don't build a name — rep needs real volume
+    if (amount >= 5 || totalRevenue >= 2500 || Math.random() < 0.2) {
+      adjustRepFromAction(state, totalRevenue >= 50000 ? 'large_drug_sale' : 'drug_sale');
+    }
   }
   // Wiretap evidence from deal
   let tapMsg = '';
@@ -4588,7 +4621,7 @@ function sellDrug(state, drugId, amount) {
   }
   // Track location trades for market reputation system
   if (!state.locationTrades) state.locationTrades = {};
-  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + 1;
+  state.locationTrades[state.currentLocation] = (state.locationTrades[state.currentLocation] || 0) + Math.min(1, amount / 10);
   // Gang territory heat modifier on sell (selling is riskier than buying)
   if (typeof getGangTerritoryHeatMod === 'function') {
     const gangHeat = getGangTerritoryHeatMod(state, state.currentLocation);

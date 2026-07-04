@@ -133,6 +133,11 @@ function promoteCrew(state, crewIndex) {
   const nextRank = _resolveRankIndex(member.rank) + 1;
   const nextRankData = CREW_RANKS[nextRank];
 
+  // One ceremony at a time — settle the last one before making new rank
+  if (nextRank >= 2 && state.pendingCeremony) {
+    return { success: false, msg: 'The crew is still waiting on ' + state.pendingCeremony.memberName + '\'s ceremony. Settle that first.' };
+  }
+
   state.cash -= nextRankData.promotionCost;
   member.rank = nextRank;
 
@@ -191,8 +196,14 @@ function resolveCeremony(state, choice) {
   if (!pc) return { success: false, msg: 'No ceremony pending' };
   const cer = CREW_CEREMONIES.find(c => c.id === choice);
   if (!cer) return { success: false, msg: 'Unknown ceremony' };
-  const member = (state.henchmen || []).find(h => h.uniqueId === pc.crewId) || (state.henchmen || [])[pc.crewIndex];
-  const rankIdx = member ? _resolveRankIndex(member.rank) : 1;
+  // Strictly by uniqueId — an index fallback used to hit whoever slid into
+  // that slot after the promoted member left
+  const member = (state.henchmen || []).find(h => h.uniqueId === pc.crewId);
+  if (!member) {
+    state.pendingCeremony = null;
+    return { success: true, msg: '💨 ' + pc.memberName + ' is gone — the ceremony never happened.' };
+  }
+  const rankIdx = _resolveRankIndex(member.rank);
   const cost = cer.costPerRank * Math.max(1, rankIdx);
   if (cost > 0 && state.cash < cost) return { success: false, msg: 'The ' + cer.name + ' runs $' + cost.toLocaleString() + ' — you can\'t cover it.' };
 
