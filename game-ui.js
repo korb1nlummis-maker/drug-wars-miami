@@ -2676,7 +2676,8 @@ function renderTradeModal() {
   return `
     <div class="trade-modal">
       <div class="trade-content">
-        <h3>${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
+        <button class="btn btn-sm btn-secondary" onclick="closeTrade()" style="position:absolute;top:8px;right:8px;z-index:5;min-width:40px;min-height:40px;font-size:1rem" aria-label="Close">✕</button>
+        <h3 style="padding-right:48px">${tradeMode === 'buy' ? '💰 BUY' : '💵 SELL'} ${drug.emoji} ${drug.name}</h3>
         ${tradeMode === 'sell'
           ? `<p>Dealers pay: <span class="neon-green">$${streetPrice.toLocaleString()}</span> per unit <span style="font-size:0.7rem;color:var(--text-dim)">(market $${price.toLocaleString()} — street buyers take a cut)</span></p>`
           : `<p>Price: <span class="neon-green">$${price.toLocaleString()}</span> per unit</p>`}

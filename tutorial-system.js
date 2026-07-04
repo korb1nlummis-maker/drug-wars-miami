@@ -36,13 +36,13 @@ styleEl.textContent = [
   '  animation: tutorialPulse 1.5s ease-in-out infinite !important;',
   '  border-color: var(--neon-cyan, #00f0ff) !important;',
   '  position: relative;',
-  '  z-index: 9998 !important;',
+  '  z-index: 300 !important;',
   '}',
   '.tutorial-highlight-pink {',
   '  animation: tutorialPulsePink 1.5s ease-in-out infinite !important;',
   '  border-color: var(--neon-pink, #ff2d95) !important;',
   '  position: relative;',
-  '  z-index: 9998 !important;',
+  '  z-index: 300 !important;',
   '}',
   '@media (max-width: 768px) {',
   '  .tutorial-reward-toast {',
@@ -117,6 +117,7 @@ function getTutorialDrugName() {
 
 var tutorialBoughtDrug = null;
 var tutorialWaitDay = null;
+var tutorialSellBaseline = null;
 
 
 // ---- STEP REWARD DEFINITIONS ----
@@ -263,9 +264,13 @@ var TUTORIAL_STEPS = [
     },
     action: 'wait',
     interactive: true,
-    waitFor: function() { return typeof selectedDrug !== 'undefined' && selectedDrug && tradeMode === 'sell'; },
+    waitFor: function() {
+      if (!gameState) return false;
+      if (tutorialSellBaseline === null) { tutorialSellBaseline = gameState.drugsSold || 0; return false; }
+      return (gameState.drugsSold || 0) > tutorialSellBaseline;
+    },
     highlightSelector: '.btn-sell',
-    arrowText: 'Click SELL',
+    arrowText: 'Click SELL, then confirm the amount',
   },
   // === STEP 5: Travel (interactive) ===
   {
@@ -644,11 +649,14 @@ function showRewardToast(label) {
 
 
 // ---- HIGHLIGHT SYSTEM ----
+var _highlightToken = 0;
 function applyHighlights(step) {
   clearHighlights();
   if (!step || !step.highlightSelector) return;
+  var myToken = ++_highlightToken;
 
   setTimeout(function() {
+    if (myToken !== _highlightToken) return; // step moved on — stale timer
     try {
       var els = document.querySelectorAll(step.highlightSelector);
       if (!els || els.length === 0) return;
@@ -704,6 +712,7 @@ function applyHighlights(step) {
 }
 
 function clearHighlights() {
+  _highlightToken++; // invalidate any pending highlight timers
   try {
     var highlighted = document.querySelectorAll('.tutorial-highlight, .tutorial-highlight-pink');
     for (var i = 0; i < highlighted.length; i++) {
@@ -724,6 +733,17 @@ window.renderTutorialOverlay = function() {
       (gameState.heatSystem && gameState.heatSystem.activeChase && !gameState.heatSystem.activeChase.resolved) ||
       gameState.pendingCeremony;
     if (modalOpen) return '';
+  }
+  // Trade view open but the current step isn't about trading? Collapse to
+  // the pill so the SELL/CANCEL buttons stay reachable.
+  if (typeof selectedDrug !== 'undefined' && selectedDrug) {
+    var tHere = getTutorial();
+    var stepHere = tHere && tHere.active ? TUTORIAL_STEPS[tHere.step] : null;
+    var tradeStep = stepHere && (stepHere.id === 'confirm_buy' || stepHere.id === 'sell_drug' || stepHere.id === 'buy_drug');
+    if (stepHere && !tradeStep && !tHere.collapsed) {
+      return '<div class="tutorial-pill" onclick="toggleTutorialCollapse()">' +
+        '📖 ' + (tHere.step + 1) + '/' + TUTORIAL_STEPS.length + ' · ' + (stepHere.title || '') + ' ▲</div>';
+    }
   }
   var t = getTutorial();
   if (!t) return '';
@@ -908,6 +928,7 @@ window.startTutorial = function() {
   }
   tutorialBoughtDrug = null;
   tutorialWaitDay = null;
+  tutorialSellBaseline = null;
   render();
 };
 
