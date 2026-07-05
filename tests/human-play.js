@@ -128,8 +128,24 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
     }
     else if (st.id === 'travel') { await tap(/Travel/, 'Travel', {mustBeVisible:true}); }
     else if (st.id === 'travel_screen' || /choose.*destination|pick.*district/.test(txt)) {
-      await tap(/Overtown|Wynwood|Little Havana|Downtown|Liberty/, 'a destination');
-      await tap(/CONFIRM|TRAVEL|GO/, 'confirm travel');
+      // switch to LIST view (map nodes are canvas-ish), pick a district, then a taxi
+      await tap(/List/, 'List view', {optional: true});
+      await page.waitForTimeout(300);
+      const picked = await page.evaluate(() => {
+        const card = [...document.querySelectorAll('.travel-card')].find(c => c.offsetParent !== null);
+        if (card) { card.click(); return true; }
+        return false;
+      });
+      if (!picked) note('BLOCK', 'no travel destination card found');
+      await page.waitForTimeout(400);
+      // pick the first enabled transport (taxi)
+      const went = await page.evaluate(() => {
+        const t = [...document.querySelectorAll('.transport-card')].find(x => !x.className.includes('disabled') && x.getAttribute('onclick'));
+        if (t) { t.click(); return true; }
+        return false;
+      });
+      if (!went) note('BLOCK', 'no affordable transport option to travel');
+      await page.waitForTimeout(500);
     }
     else {
       // informational step — advance

@@ -2120,6 +2120,14 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   body:has(.tutorial-banner) .screen-container,
   body:has(.tutorial-banner) .game-layout { padding-bottom: 220px !important; }
 
+  /* Travel screen: banner at the TOP, compact, above the map — never hides
+     districts and never looks like it vanished */
+  .tutorial-banner-travel {
+    top: 4px !important; bottom: auto !important;
+    max-height: 30vh; overflow-y: auto; font-size: 0.8rem;
+  }
+  .tutorial-banner-travel .tutorial-banner-text { font-size: 0.78rem; }
+
   .tutorial-banner {
     top: auto; bottom: 64px;
     border: 2px solid var(--neon-cyan, #00f0ff);
