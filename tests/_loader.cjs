@@ -23,7 +23,8 @@ function makeSandbox() {
 
 function loadGame(sandbox) {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+  // Strip ?v= cache-busters — they're for browsers, the files on disk have no query string
+  const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1].split('?')[0]);
   const errors = [];
   for (const f of scripts) {
     try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f }); }

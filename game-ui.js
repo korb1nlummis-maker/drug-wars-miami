@@ -912,6 +912,7 @@ function render() {
     setTimeout(_maybeShowUnlockCard, 0);
   }
   const _screenBeforeSwitch = currentScreen;
+  try {
   switch (currentScreen) {
     case 'title': app.innerHTML = renderTitle(); break;
     case 'charselect': app.innerHTML = renderCharacterSelect(); break;
@@ -970,6 +971,18 @@ function render() {
     case 'intimidation': app.innerHTML = typeof renderIntimidation === 'function' ? renderIntimidation() : renderGame(); break;
     case 'contracts': app.innerHTML = typeof renderContracts === 'function' ? renderContracts() : renderGame(); break;
     case 'sidechains': app.innerHTML = typeof renderSideChains === 'function' ? renderSideChains() : renderGame(); break;
+  }
+  } catch (renderErr) {
+    // A screen renderer crashed. NEVER leave the old screen silently in place
+    // ("I tapped the tab and nothing happened") — show what broke and a way out.
+    console.error('render failed for screen "' + currentScreen + '":', renderErr);
+    app.innerHTML = `
+      <div class="screen-container" style="padding:1rem">
+        <h2 class="section-title" style="color:var(--neon-red)">⚠️ SCREEN ERROR</h2>
+        <p class="text-dim">This screen (<b>${currentScreen}</b>) hit a bug and couldn't draw${typeof GAME_BUILD !== 'undefined' ? ' (build ' + GAME_BUILD + ')' : ''}.</p>
+        <p style="font-size:0.75rem;color:var(--text-dim);word-break:break-all;background:rgba(255,0,0,0.08);border:1px solid rgba(255,0,0,0.3);border-radius:6px;padding:0.5rem">${String(renderErr && renderErr.message || renderErr).slice(0, 200)}</p>
+        <button class="btn btn-primary" onclick="currentScreen='game'; render();">← Back to the Streets</button>
+      </div>`;
   }
   // Keep the tutorial visible on every in-game screen — navigating to
   // Travel (or anywhere else) must not make the guide vanish.
@@ -1059,7 +1072,7 @@ function renderTitle() {
         <h2 class="title-sub">M I A M I &nbsp; V I C E &nbsp; E D I T I O N</h2>
         <div class="title-divider"></div>
         <p class="title-tagline">The Miami underground drug trade awaits.<br>14 districts. Infinite ambition. One shot at the top.</p>
-        <div class="title-year">&copy; 2026 — Based on the 1984 classic by John E. Dell</div>
+        <div class="title-year">&copy; 2026 — Based on the 1984 classic by John E. Dell${typeof GAME_BUILD !== 'undefined' ? ' · build ' + GAME_BUILD : ''}</div>
         <button class="btn btn-primary btn-glow" onclick="startNewGame(false)">
           ▶ START NEW GAME
         </button>
@@ -1594,7 +1607,15 @@ function renderRivalsScreen() {
         </div>
       </div>
     `;
-  }).join('') || '<p class="text-dim">No known rival operations in Miami.</p>';
+  }).join('') || `
+    <div class="card" style="border-style:dashed;opacity:0.85">
+      <p class="text-dim" style="margin-bottom:0.4rem">No rival crews on your radar yet — you're still too small to be worth muscling.</p>
+      <p style="font-size:0.8rem;color:var(--text-mid)">
+        🗓️ Rival dealers start moving into Miami after your <b>first ~10 days</b> on the street.<br>
+        📈 They grow over time, poach your corners, and can be raided, sabotaged, or wiped out.<br>
+        💡 Keep dealing and check back — intel about new players shows up in your 📺 News and message log.
+      </p>
+    </div>`;
 
   return `
     <div class="screen-container">
@@ -2629,6 +2650,7 @@ function renderGame() {
       <div id="mobile-actions-sheet" class="mobile-actions-sheet" style="display:none;">
         <div class="mobile-actions-head">
           <b class="neon-cyan">☰ ALL ACTIONS</b>
+          <span style="font-size:0.6rem;color:var(--text-dim)">${typeof GAME_BUILD !== 'undefined' ? 'build ' + GAME_BUILD : ''}</span>
           <button class="btn btn-sm btn-secondary" onclick="toggleMobileActions()">✕ CLOSE</button>
         </div>
         ${sidebar}
@@ -3114,6 +3136,9 @@ function doChallenge() {
   const result = challengeTerritory(gameState);
   if (!result.success) {
     gameState.messageLog.push(result.msg);
+    // The message log can be below the fold on phones — the player must SEE
+    // why the challenge didn't start, or the button feels dead.
+    if (typeof showNotification === 'function') showNotification('🏴 ' + result.msg, 'warning');
     render();
     return;
   }
@@ -8373,7 +8398,7 @@ function renderHeist() {
         '<td>🌡️' + ht.heatGenerated + '</td>' +
         '<td style="font-size:0.65rem;color:var(--text-dim);max-width:180px;">' + ht.desc + '</td>' +
         '<td>' +
-          (avail ? '<button class="btn btn-sm btn-buy" onclick="doStartHeist(\'' + ht.id + '\')">PLAN</button>' : '<span style="font-size:0.65rem;color:var(--text-dim)">Unavailable</span>') +
+          (avail ? '<button class="btn btn-sm btn-buy" onclick="doStartHeist(\'' + ht.id + '\')">PLAN</button>' : '<span style="font-size:0.65rem;color:var(--text-dim)" title="Jobs rotate — check back in a few days">⏳ Not on offer</span>') +
         '</td>' +
       '</tr>';
     }).join('');
@@ -8469,7 +8494,22 @@ function renderNightlife() {
   }).join('');
 
   if (available.length === 0) {
-    eventCards = '<p style="color:var(--text-dim);">No events available right now. Level up or wait for cooldowns.</p>';
+    eventCards = '<p style="color:var(--text-dim);">No events open right now — the doormen don\'t know your face yet.</p>';
+  }
+
+  // Show what's ahead: locked events as a dimmed roadmap so this screen is
+  // never an empty void for a low-level player.
+  var lockedEvents = SOCIAL_EVENTS.filter(function(e) { return (e.unlockLevel || 1) > playerLevel; })
+    .sort(function(a, b) { return (a.unlockLevel || 1) - (b.unlockLevel || 1); }).slice(0, 6);
+  if (lockedEvents.length > 0) {
+    eventCards += '<h3 style="color:var(--text-dim);margin-top:0.8rem;">🔒 Coming Up (level up to unlock)</h3>' +
+      lockedEvents.map(function(ev) {
+        return '<div style="padding:8px 10px;border:1px dashed var(--border-color);border-radius:6px;margin-bottom:6px;opacity:0.65;">' +
+          '<strong>' + ev.emoji + ' ' + ev.name + '</strong>' +
+          ' <span class="neon-yellow" style="font-size:0.75rem;">Unlocks at Level ' + (ev.unlockLevel || 1) + '</span>' +
+          '<div style="font-size:0.7rem;color:var(--text-dim);">' + ev.description + '</div>' +
+        '</div>';
+      }).join('');
   }
 
   // Connections

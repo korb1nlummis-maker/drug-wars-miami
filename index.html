@@ -2070,7 +2070,9 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   .status-bar { padding: 0.2rem 0.3rem; margin-bottom: 0.2rem; }
   .status-row { gap: 0.2rem; }
   .stat { padding: 0.1rem 0.2rem; font-size: 0.75rem; }
-  .stat-label { display: none; }
+  /* Hide labels only in the cramped top status bar — screen stat cards
+     (Rivals, Stats, etc.) NEED their labels or they're just bare numbers. */
+  .status-bar .stat-label { display: none; }
   .stat-value { font-size: 0.8rem; font-weight: bold; }
   .heat-bar { width: 40px; height: 5px; }
   .mnav-btn { min-height: 52px; font-size: 1.1rem; }
@@ -2161,78 +2163,83 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
 <div id="app"></div>
 <div id="modal-container"></div>
 
-<script src="miami-districts.js"></script>
-<script src="game-engine.js"></script>
-<script src="achievements.js"></script>
-<script src="character-system.js"></script>
-<script src="economy-engine.js"></script>
-<script src="reputation-system.js"></script>
-<script src="property-system.js"></script>
-<script src="crew-expansion.js"></script>
-<script src="campaign-system.js"></script>
-<script src="processing-system.js"></script>
-<script src="import-export-system.js"></script>
-<script src="faction-system.js"></script>
-<script src="heat-system.js"></script>
-<script src="lifestyle-system.js"></script>
-<script src="politics-system.js"></script>
-<script src="side-missions.js"></script>
-<script src="futures-trading.js"></script>
-<script src="safe-house-system.js"></script>
-<script src="body-disposal-system.js"></script>
-<script src="turf-war-system.js"></script>
+<script>
+// Build stamp — bump together with the ?v= cache-busters below on every deploy
+// so phones stop serving stale JS. Shown on the title screen and All menu.
+window.GAME_BUILD = '20260705a';
+</script>
+<script src="miami-districts.js?v=20260705a"></script>
+<script src="game-engine.js?v=20260705a"></script>
+<script src="achievements.js?v=20260705a"></script>
+<script src="character-system.js?v=20260705a"></script>
+<script src="economy-engine.js?v=20260705a"></script>
+<script src="reputation-system.js?v=20260705a"></script>
+<script src="property-system.js?v=20260705a"></script>
+<script src="crew-expansion.js?v=20260705a"></script>
+<script src="campaign-system.js?v=20260705a"></script>
+<script src="processing-system.js?v=20260705a"></script>
+<script src="import-export-system.js?v=20260705a"></script>
+<script src="faction-system.js?v=20260705a"></script>
+<script src="heat-system.js?v=20260705a"></script>
+<script src="lifestyle-system.js?v=20260705a"></script>
+<script src="politics-system.js?v=20260705a"></script>
+<script src="side-missions.js?v=20260705a"></script>
+<script src="futures-trading.js?v=20260705a"></script>
+<script src="safe-house-system.js?v=20260705a"></script>
+<script src="body-disposal-system.js?v=20260705a"></script>
+<script src="turf-war-system.js?v=20260705a"></script>
 <!-- === MASSIVE EXPANSION SYSTEMS === -->
-<script src="factions-expanded.js"></script>
-<script src="characters-expanded.js"></script>
-<script src="skill-system-expanded.js"></script>
-<script src="consequence-engine.js"></script>
-<script src="campaign-missions.js"></script>
-<script src="weapon-upgrades.js"></script>
-<script src="shipping-tiers.js"></script>
-<script src="endings-system.js"></script>
-<script src="heat-system-expanded.js"></script>
-<script src="rival-dealers.js"></script>
-<script src="raid-system.js"></script>
-<script src="perk-effects.js"></script>
-<script src="world-regions.js"></script>
-<script src="world-districts.js"></script>
-<script src="world-factions.js"></script>
-<script src="world-events.js"></script>
-<script src="world-travel.js"></script>
-<script src="world-map-system.js"></script>
-<script src="world-progression.js"></script>
-<script src="music-engine.js"></script>
-<script src="weather-system.js"></script>
-<script src="intimidation-system.js"></script>
-<script src="regional-bosses.js"></script>
-<script src="mafia-operations.js"></script>
-<script src="vehicle-system.js"></script>
-<script src="prison-system.js"></script>
-<script src="heist-system.js"></script>
-<script src="territory-defense.js"></script>
-<script src="nightlife-system.js"></script>
-<script src="romance-system.js"></script>
-<script src="reputation-hits.js"></script>
-<script src="random-encounters.js"></script>
-<script src="named-npcs.js"></script>
-<script src="businesses-system.js"></script>
-<script src="side-missions-v2.js"></script>
-<script src="procedural-missions.js"></script>
-<script src="phone-system.js"></script>
-<script src="early-game-script.js"></script>
-<script src="street-deals.js"></script>
-<script src="lenders.js"></script>
-<script src="supplier-system.js"></script>
-<script src="news-market-system.js"></script>
-<script src="district-ecology.js"></script>
-<script src="transport-depth.js"></script>
-<script src="offshore-banking.js"></script>
-<script src="game-ui.js"></script>
-<script src="regional-bosses-ui.js"></script>
-<script src="procedural-missions-ui.js"></script>
-<script src="side-missions-v2-ui.js"></script>
-<script src="intimidation-ui.js"></script>
-<script src="tutorial-system.js"></script>
+<script src="factions-expanded.js?v=20260705a"></script>
+<script src="characters-expanded.js?v=20260705a"></script>
+<script src="skill-system-expanded.js?v=20260705a"></script>
+<script src="consequence-engine.js?v=20260705a"></script>
+<script src="campaign-missions.js?v=20260705a"></script>
+<script src="weapon-upgrades.js?v=20260705a"></script>
+<script src="shipping-tiers.js?v=20260705a"></script>
+<script src="endings-system.js?v=20260705a"></script>
+<script src="heat-system-expanded.js?v=20260705a"></script>
+<script src="rival-dealers.js?v=20260705a"></script>
+<script src="raid-system.js?v=20260705a"></script>
+<script src="perk-effects.js?v=20260705a"></script>
+<script src="world-regions.js?v=20260705a"></script>
+<script src="world-districts.js?v=20260705a"></script>
+<script src="world-factions.js?v=20260705a"></script>
+<script src="world-events.js?v=20260705a"></script>
+<script src="world-travel.js?v=20260705a"></script>
+<script src="world-map-system.js?v=20260705a"></script>
+<script src="world-progression.js?v=20260705a"></script>
+<script src="music-engine.js?v=20260705a"></script>
+<script src="weather-system.js?v=20260705a"></script>
+<script src="intimidation-system.js?v=20260705a"></script>
+<script src="regional-bosses.js?v=20260705a"></script>
+<script src="mafia-operations.js?v=20260705a"></script>
+<script src="vehicle-system.js?v=20260705a"></script>
+<script src="prison-system.js?v=20260705a"></script>
+<script src="heist-system.js?v=20260705a"></script>
+<script src="territory-defense.js?v=20260705a"></script>
+<script src="nightlife-system.js?v=20260705a"></script>
+<script src="romance-system.js?v=20260705a"></script>
+<script src="reputation-hits.js?v=20260705a"></script>
+<script src="random-encounters.js?v=20260705a"></script>
+<script src="named-npcs.js?v=20260705a"></script>
+<script src="businesses-system.js?v=20260705a"></script>
+<script src="side-missions-v2.js?v=20260705a"></script>
+<script src="procedural-missions.js?v=20260705a"></script>
+<script src="phone-system.js?v=20260705a"></script>
+<script src="early-game-script.js?v=20260705a"></script>
+<script src="street-deals.js?v=20260705a"></script>
+<script src="lenders.js?v=20260705a"></script>
+<script src="supplier-system.js?v=20260705a"></script>
+<script src="news-market-system.js?v=20260705a"></script>
+<script src="district-ecology.js?v=20260705a"></script>
+<script src="transport-depth.js?v=20260705a"></script>
+<script src="offshore-banking.js?v=20260705a"></script>
+<script src="game-ui.js?v=20260705a"></script>
+<script src="regional-bosses-ui.js?v=20260705a"></script>
+<script src="procedural-missions-ui.js?v=20260705a"></script>
+<script src="side-missions-v2-ui.js?v=20260705a"></script>
+<script src="intimidation-ui.js?v=20260705a"></script>
+<script src="tutorial-system.js?v=20260705a"></script>
 <script>
   // Initialize on load
   document.addEventListener('DOMContentLoaded', () => {
