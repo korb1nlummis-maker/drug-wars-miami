@@ -37,7 +37,9 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
     if (!marked) { if (!opts.optional) note('BLOCK', `can't find button "${label}"`); return false; }
     const el = await page.$('[data-human-target]');
     const before = await el.boundingBox();
-    const neededScroll = !before || before.y < 0 || before.y + before.height > 844;
+    // 2px tolerance so a control flush against the viewport edge (e.g. the fixed
+    // bottom nav, bottom === 844) isn't reported as needing a scroll.
+    const neededScroll = !before || before.y < -2 || before.y + before.height > 846;
     if (neededScroll && opts.mustBeVisible) note('OFFSCREEN', `"${label}" needed scrolling — a tutorial target should be immediately reachable`);
     await el.scrollIntoViewIfNeeded().catch(() => {});
     await page.waitForTimeout(120);
@@ -51,10 +53,18 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
       }, [cx, cy]);
       if (cover) note('COVER', `"${label}" is COVERED by ${cover} — a real tap hits the wrong thing`);
     }
-    if (box) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); }
+    // Real trusted click with Playwright actionability checks (auto-scroll, waits
+    // for stable + hit-testable). The COVER note above is our own reporting; the
+    // click itself will also throw if the element is genuinely obscured.
+    let clicked = false;
+    try { await el.click({ timeout: 3000 }); clicked = true; }
+    catch (e) {
+      // fall back to a coordinate tap so we still exercise the button if possible
+      if (box) { await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); clicked = true; }
+    }
     await page.evaluate(() => { const b = document.querySelector('[data-human-target]'); if (b) b.removeAttribute('data-human-target'); });
     await page.waitForTimeout(450);
-    return true;
+    return clicked;
   }
 
   // --- read the current tutorial instruction, if any ---
@@ -114,7 +124,7 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
     const txt = (st.cardText || '').toLowerCase();
     if (st.id === 'welcome') { await tap(/Got it|Next|Start/, 'welcome next', {mustBeVisible:true}); }
     else if (st.id === 'read_market' || /buy \/ sell/.test(txt)) { await tap(/Buy \/ Sell/, 'Buy/Sell tab'); }
-    else if (st.id === 'buy_drug') { await tap(/^BUY$/, 'BUY on a drug'); }
+    else if (st.id === 'buy_drug') { await tap(/^BUY$/, 'BUY on a drug'); await page.waitForSelector('.trade-modal', {timeout: 3000}).catch(()=>{}); }
     else if (st.id === 'confirm_buy') {
       await tap(/HALF/, 'HALF', {scope: '.trade-modal'});
       await tap(/BUY/, 'confirm BUY', {scope: '.trade-modal', mustBeVisible: true});
@@ -122,7 +132,7 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
     else if (st.id === 'wait_market') { await tap(/WAIT/, 'WAIT', {mustBeVisible:true}); }
     else if (st.id === 'sell_drug') {
       await tap(/^SELL$/, 'SELL on a drug');
-      await page.waitForTimeout(300);
+      await page.waitForSelector('.trade-modal', {timeout: 3000}).catch(()=>{});
       await tap(/MAX/, 'MAX', {scope: '.trade-modal'});
       await tap(/SELL/, 'confirm SELL', {scope: '.trade-modal', mustBeVisible: true});
     }
@@ -136,7 +146,10 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
         if (card) { card.click(); return true; }
         return false;
       });
-      if (!picked) note('BLOCK', 'no travel destination card found');
+      if (!picked) {
+        const st2 = await page.evaluate(() => ({ screen: typeof currentScreen!=='undefined'?currentScreen:'?', view: typeof travelViewMode!=='undefined'?travelViewMode:'?', cards: document.querySelectorAll('.travel-card').length, listBtn: [...document.querySelectorAll('button')].some(b=>/List/.test(b.textContent)&&b.offsetParent!==null) }));
+        note('BLOCK', 'no travel destination card found ' + JSON.stringify(st2));
+      }
       await page.waitForTimeout(400);
       // pick the first enabled transport (taxi)
       const went = await page.evaluate(() => {
@@ -161,8 +174,25 @@ const note = (sev, msg) => { findings.push({ sev, msg }); console.log(`  [${sev}
 
   console.log('\n=== 3 MINUTES OF FREE PLAY (tap around like a curious player) ===');
   const screensToVisit = ['Travel', 'WAIT', 'Trade', 'Bank', 'All'];
+  // dismiss any modal/overlay so bottom-bar taps aren't (correctly) blocked by an
+  // open dialog — that's expected, not a bug, and would drown out real findings.
+  async function dismissModals() {
+    for (let k = 0; k < 3; k++) {
+      const closed = await page.evaluate(() => {
+        const o = [...document.querySelectorAll('.modal-overlay, .trade-modal, .modal, [class*="modal"], .security-alert-overlay')]
+          .find(el => el.offsetParent !== null && el.getBoundingClientRect().width > 200);
+        if (!o) return false;
+        const btn = [...o.querySelectorAll('button')].find(b => /✕|✖|×|CANCEL|CLOSE|Never mind|Dismiss/i.test(b.textContent) && b.offsetParent !== null);
+        if (btn) { btn.click(); return true; }
+        return false;
+      });
+      if (!closed) break;
+      await page.waitForTimeout(200);
+    }
+  }
   for (let round = 0; round < 3; round++) {
     for (const scr of ['💰|Trade', 'All|☰', 'WAIT']) {
+      await dismissModals();
       await tap(new RegExp(scr), scr, {optional:true});
       // whatever opened, try to close it and check nothing is stuck
       const stuck = await page.evaluate(() => {
