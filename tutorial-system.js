@@ -777,16 +777,6 @@ window.renderTutorialOverlay = function() {
   var step = TUTORIAL_STEPS[t.step];
   if (!step) return '';
 
-  // On phones, the travel map needs the whole screen — auto-collapse to
-  // the pill once per step so districts are never covered. Tapping the
-  // pill re-opens the instructions.
-  if (typeof window !== 'undefined' && window.innerWidth <= 768 &&
-      typeof currentScreen !== 'undefined' && currentScreen === 'travel' &&
-      t._autoCollapsedStep !== t.step) {
-    t._collapsed = true;
-    t._autoCollapsedStep = t.step;
-  }
-
   // Collapsed: a small pill that never blocks anything — tap to re-open
   if (t._collapsed) {
     return '<div class="tutorial-pill" onclick="toggleTutorialCollapse()">' +
@@ -836,7 +826,12 @@ window.renderTutorialOverlay = function() {
 
   // For wait steps: non-blocking banner so player can interact with the game
   if (!isBlocking) {
-    return '<div class="tutorial-banner">' +
+    // On the travel screen the map fills the middle — anchor the banner to
+    // the TOP and keep it compact so districts stay tappable and the guide
+    // never appears to "vanish"
+    var onTravel = typeof currentScreen !== 'undefined' && currentScreen === 'travel';
+    var bannerClass = onTravel ? 'tutorial-banner tutorial-banner-travel' : 'tutorial-banner';
+    return '<div class="' + bannerClass + '">' +
       '<div class="tutorial-banner-content">' +
         '<div class="tutorial-banner-step">' + stepBadge + interactiveBadge + '</div>' +
         '<div class="tutorial-banner-title">' + step.title + '</div>' +

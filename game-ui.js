@@ -2181,7 +2181,7 @@ function renderGame() {
       </div>
       <div class="inv-sub" style="margin-top:0.3rem;">
         <strong>Armed:</strong> ${weaponList.length > 0 ? weaponList.map(w => w.name).join(', ') : 'Bare Fists'}
-        ${crewCount > 0 ? `<br><strong>Crew:</strong> ${gameState.henchmen.map(h => { const type = HENCHMEN_TYPES.find(t => t.id === h.type); return h.name + ' (' + type.name + ')'; }).join(', ')}` : ''}
+        ${crewCount > 0 ? `<br><strong>Crew:</strong> ${gameState.henchmen.map(h => { const type = HENCHMEN_TYPES.find(t => t.id === h.type); return h.name + ' (' + (type ? type.name : (h.type || 'Crew')) + ')'; }).join(', ')}` : ''}
         ${gameState.items && gameState.items.length > 0 ? `<br><strong>Items:</strong> ${[...new Set(gameState.items)].map(id => { const count = gameState.items.filter(i => i === id).length; return id.replace(/_/g, ' ') + (count > 1 ? ' x' + count : ''); }).join(', ')}` : ''}
       </div>
       ${territories > 0 && gameState.turfWars ? `
@@ -3677,6 +3677,12 @@ function renderTravel() {
   const currentLoc = LOCATIONS.find(l => l.id === gameState.currentLocation);
   const daysLeft = GAME_CONFIG.totalDays - gameState.day + 1;
 
+  // During the tutorial, force the simple LIST view so "click a district" is a
+  // single tap — the world map's zoom levels (world → region → district) are too
+  // many steps for a first-time player being told to pick a destination.
+  const _tutActiveTravel = gameState.tutorial && gameState.tutorial.active && !gameState.tutorial.completed;
+  if (_tutActiveTravel) travelViewMode = 'list';
+
   // Build region groups (hide generic 'miami' hub when districts exist)
   const regions = {};
   var hasMiamiDistricts = typeof MIAMI_DISTRICTS !== 'undefined' && MIAMI_DISTRICTS.length > 0;
@@ -4508,6 +4514,8 @@ function renderCrewPanel() {
 
     // Ensure new fields exist
     if (h.loyalty === undefined || h.loyalty === null || isNaN(h.loyalty)) { h.loyalty = 100; h.health = 100; h.maxHealth = 100; h.injured = false; h.daysSincePaid = 0; }
+    if (h.health === undefined || h.health === null || isNaN(h.health)) { h.health = 100; }
+    if (h.maxHealth === undefined || h.maxHealth === null || isNaN(h.maxHealth)) { h.maxHealth = 100; }
     if (h.daysSincePaid === undefined || h.daysSincePaid === null || isNaN(h.daysSincePaid)) { h.daysSincePaid = 0; }
 
     const loyaltyColor = h.loyalty > 60 ? 'var(--neon-green)' : h.loyalty > 30 ? 'var(--neon-yellow)' : 'var(--neon-red)';
