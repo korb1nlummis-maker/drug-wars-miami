@@ -1831,7 +1831,7 @@ function renderSafehouse() {
 function doBuySafehouse(tierIndex) {
   if (typeof SAFEHOUSE_TIERS === 'undefined') return;
   const tier = SAFEHOUSE_TIERS[tierIndex];
-  if (!tier || gameState.cash < tier.cost) { playSound('error'); return; }
+  if (!tier || gameState.cash < tier.cost) { playSound('error'); if (tier) showNotification('Not enough cash — ' + tier.name + ' costs $' + tier.cost.toLocaleString(), 'warning'); return; }
 
   if (!gameState.safehouse) gameState.safehouse = { current: null, tier: -1, upgrades: [] };
 
@@ -1839,6 +1839,7 @@ function doBuySafehouse(tierIndex) {
   gameState.safehouse.current = tier.id;
   gameState.safehouse.tier = tierIndex;
   gameState.messageLog.push('🏠 ' + (gameState.safehouse.tier >= 0 ? 'Upgraded to' : 'Purchased') + ' ' + tier.name + '!');
+  showNotification('🏠 ' + tier.name + ' is yours!', 'success');
   playSound('click');
   render();
 }
@@ -1854,6 +1855,7 @@ function doBuySafehouseUpgrade(upgradeId) {
   gameState.cash -= upgrade.cost;
   gameState.safehouse.upgrades.push(upgradeId);
   gameState.messageLog.push('🔧 Installed ' + upgrade.name + ' in safe house!');
+  showNotification('🔧 Installed ' + upgrade.name + '!', 'success');
   playSound('click');
   render();
 }
@@ -3536,6 +3538,7 @@ function doBuyItem(itemId) {
   if (result.success) {
     playSound('buy');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     playSound('error');
     gameState.messageLog.push(result.msg);
@@ -3549,6 +3552,7 @@ function doUseItem(itemId) {
   if (result.success) {
     playSound('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     playSound('error');
     gameState.messageLog.push(result.msg);
@@ -3561,6 +3565,7 @@ function doHire(typeId) {
   if (result.success) {
     playSound('buy');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     alert(result.msg);
   }
@@ -3572,6 +3577,7 @@ function doFire(index) {
   if (result.success) {
     playSound('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   }
   render();
 }
@@ -3912,6 +3918,7 @@ function payContactFee(regionId) {
   if (typeof payRegionContactFee !== 'function') return;
   const result = payRegionContactFee(gameState, regionId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success === false ? 'warning' : 'success');
   render();
 }
 
@@ -4445,6 +4452,7 @@ function doPayContact(contactId) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     updateAchievementStats(gameState, 'court_contact', { contactId });
   }
   render();
@@ -4455,8 +4463,12 @@ function doUseFallGuy() {
   const result = useFallGuy(gameState);
   if (result.success) {
     gameState.messageLog.push(`🎭 ${result.msg}`);
+    showNotification('🎭 ' + result.msg, 'success');
     updateAchievementStats(gameState, 'fall_guy', {});
     processNewAchievements();
+    render();
+  } else {
+    showNotification(result.msg || 'No fall guy available.', 'warning');
     render();
   }
 }
@@ -4471,6 +4483,15 @@ function doGoToTrial() {
     if (result.penalties) gameState.courtCase.penalties = result.penalties;
     if (result.gameOver) {
       gameState.gameOver = true;
+    }
+    // Actually serve the time: a guilty verdict with prison days sends you to
+    // prison (tier scales with the case). Release is handled by the daily tick.
+    if (!result.gameOver && (result.prisonDays || 0) > 0 && typeof enterPrison === 'function') {
+      const _ct = gameState.courtCase.caseType || '';
+      const _days = result.prisonDays;
+      const _tier = /RICO|FEDERAL|IRS/i.test(_ct) || _days > 90 ? 'federal_prison'
+        : _days > 21 ? 'state_prison' : 'county_jail';
+      enterPrison(gameState, _tier, _days);
     }
     updateAchievementStats(gameState, 'verdict', { verdict: 'guilty', prisonDays: result.prisonDays || 0 });
   } else {
@@ -4621,7 +4642,10 @@ function renderCrewPanel() {
   const hireRows = HENCHMEN_TYPES.filter(h => !h.ngPlus || (gameState.newGamePlus && gameState.newGamePlus.active)).map(h => {
     const canAfford = gameState.cash >= h.cost;
     const disabled = !canHireHere || crewFull || !canAfford;
-    const reasonText = !canHireHere ? 'No black market here' : crewFull ? 'Crew full' : !canAfford ? 'Not enough cash' : '';
+    // Phones have no hover tooltips — a disabled button must SAY why when tapped
+    const reasonText = !canHireHere ? 'No black market in this district — hire crew where you see the 🏴 Black Market tag (e.g. South Beach)'
+      : crewFull ? 'Crew full (' + gameState.henchmen.length + '/' + maxCrew + ') — fire someone or raise your crew cap'
+      : !canAfford ? 'Not enough cash — ' + h.name + ' costs $' + h.cost.toLocaleString() : '';
     return `
       <tr>
         <td style="font-weight:700">${h.name}</td>
@@ -4632,7 +4656,7 @@ function renderCrewPanel() {
         <td>$${h.dailyPay}/day</td>
         <td>
           ${disabled
-            ? `<button class="btn btn-sm btn-secondary" disabled title="${reasonText}" style="opacity:0.4">HIRE</button>`
+            ? `<button class="btn btn-sm btn-secondary" style="opacity:0.4" onclick="showNotification(${JSON.stringify(reasonText).replace(/"/g, '&quot;')}, 'warning')">HIRE</button>`
             : `<button class="btn btn-sm btn-buy" onclick="doHireFromCrewPanel('${h.id}')">HIRE</button>`}
         </td>
       </tr>
@@ -4729,6 +4753,7 @@ function doFireCrew(index) {
   if (result.success) {
     playSound('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     updateAchievementStats(gameState, 'crew_fired', {});
   }
   render();
@@ -4739,6 +4764,7 @@ function doHealCrew(index) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     updateAchievementStats(gameState, 'crew_healed', {});
   }
   render();
@@ -4750,6 +4776,7 @@ function doPromoteCrew(index) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     if (typeof updateAchievementStats === 'function') updateAchievementStats(gameState, 'crew_promoted', { rank: result.newRank });
     processNewAchievements();
   } else {
@@ -4764,6 +4791,7 @@ function doConfrontCrew(index) {
   if (result.success) {
     playSound('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     alert(result.msg);
   }
@@ -4882,6 +4910,7 @@ function doBuyBusiness(bizId) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     awardXP(gameState, 'buy_drug', 15); // reuse XP action
     processNewAchievements();
   } else {
@@ -5051,6 +5080,7 @@ function doBuyProperty(typeId, tier) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     if (typeof updateAchievementStats === 'function') updateAchievementStats(gameState, 'property_buy', { typeId, tier });
     processNewAchievements();
   } else {
@@ -5065,6 +5095,7 @@ function doInstallPropertyUpgrade(propIdx, upgradeId) {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     alert(result.msg);
   }
@@ -5080,6 +5111,7 @@ function doLaunder() {
   if (result.success) {
     playSound('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     alert(result.msg);
   }
@@ -5296,6 +5328,7 @@ function doSetupDistribution(locId) {
   if (result.success) {
     MusicEngine.playSfx('territory');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     if (typeof updateAchievementStats === 'function') updateAchievementStats(gameState, 'distribution_setup', { locationId: locId });
     processNewAchievements();
   } else {
@@ -5309,6 +5342,7 @@ function doUpgradeDistribution(locId) {
   if (result.success) {
     MusicEngine.playSfx('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     processNewAchievements();
   } else {
     gameState.messageLog.push(result.msg);
@@ -5321,6 +5355,7 @@ function doHireDistributor(locId, roleId) {
   if (result.success) {
     MusicEngine.playSfx('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     gameState.messageLog.push(result.msg);
   }
@@ -5332,6 +5367,7 @@ function doFireDistributor(locId, idx) {
   if (result.success) {
     MusicEngine.playSfx('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   } else {
     gameState.messageLog.push(result.msg);
   }
@@ -5345,6 +5381,7 @@ function doExportDrugs(locId, drugId, amount) {
   if (result.success) {
     MusicEngine.playSfx('cash');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
     if (typeof awardXP === 'function') awardXP(gameState, 'export', 5);
   } else {
     gameState.messageLog.push(result.msg);
@@ -5357,6 +5394,7 @@ function doToggleDistribution(locId) {
   if (result.success) {
     MusicEngine.playSfx('click');
     gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   }
   render();
 }
@@ -5449,6 +5487,7 @@ function doBuySupply(supplyId, amount) {
   const result = buySupply(gameState, supplyId, amount);
   if (result.success) playSound('click');
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   render();
 }
 
@@ -5456,6 +5495,7 @@ function doStartProcessing(recipeId) {
   const result = startProcessing(gameState, recipeId);
   if (result.success) playSound('click');
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   render();
 }
 
@@ -5463,6 +5503,7 @@ function doCollectBatch(idx) {
   const result = collectBatch(gameState, idx);
   if (result.success) playSound('click');
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   render();
 }
 
@@ -5627,6 +5668,7 @@ function doOrderExport() {
   const methodId = document.getElementById('export-method').value;
   const result = exportDrugsInternational(gameState, drugId, amount, exportModalDest, methodId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('cash'); else alert(result.msg);
   closeExportModal();
   render();
@@ -5646,6 +5688,7 @@ function doOrderShipment() {
 
   const result = orderShipment(gameState, importModalSource, drugId, amount, methodId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   closeImportModal();
   render();
@@ -5654,6 +5697,7 @@ function doOrderShipment() {
 function doProgressConnection(sourceId) {
   const result = progressSourceConnection(gameState, sourceId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5661,6 +5705,7 @@ function doProgressConnection(sourceId) {
 function doCollectShipment(shipmentId) {
   const result = collectShipment(gameState, shipmentId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5668,6 +5713,7 @@ function doCollectShipment(shipmentId) {
 function doBribeOfficial(sourceId) {
   const result = bribeCustomsOfficial(gameState, sourceId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5837,6 +5883,7 @@ function renderFactions() {
 function doFormAlliance(factionId, allianceType) {
   const result = formAlliance(gameState, factionId, allianceType);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5845,6 +5892,7 @@ function doBreakAlliance(factionId) {
   if (!confirm('Break alliance? This will damage your standing.')) return;
   const result = breakAlliance(gameState, factionId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success === false ? 'warning' : 'info');
   render();
 }
 
@@ -5868,12 +5916,14 @@ function doDeclareWar(factionId) {
   if (!confirm('Declare war? This will have serious consequences.')) return;
   const result = declareWar(gameState, factionId, true);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success === false ? 'warning' : 'info');
   render();
 }
 
 function doNegotiatePeace(factionId) {
   const result = negotiatePeace(gameState, factionId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5882,6 +5932,7 @@ function doAbsorbFaction(factionId) {
   if (!confirm('Absorb this faction? Other factions will take notice.')) return;
   const result = absorbFaction(gameState, factionId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5962,6 +6013,7 @@ function renderLifestyle() {
 function doSetLifestyle(tierId) {
   const result = setLifestyleTier(gameState, tierId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -5969,6 +6021,7 @@ function doSetLifestyle(tierId) {
 function doStressReliefUI(activityId) {
   const result = doStressRelief(gameState, activityId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -6170,6 +6223,8 @@ function renderPolitics() {
 function doCorruptOfficial(officialId) {
   const result = corruptOfficial(gameState, officialId, selectedCorruptionMethod);
   gameState.messageLog.push(result.msg);
+  // The message log is below the fold on phones — the player must SEE the outcome
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6178,6 +6233,7 @@ function doCorruptOfficial(officialId) {
 function doUseOfficial(officialId, action) {
   const result = useCorruptOfficial(gameState, officialId, action);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6186,6 +6242,7 @@ function doUseOfficial(officialId, action) {
 function doRecruitContact(contactId) {
   const result = recruitContact(gameState, contactId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6194,6 +6251,7 @@ function doRecruitContact(contactId) {
 function doGatherIntel() {
   const result = gatherIntel(gameState);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6460,6 +6518,7 @@ function renderMissions() {
 function doAcceptMission(index) {
   const result = acceptMission(gameState, index);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6475,6 +6534,7 @@ function doAcceptMainMission(milestoneId) {
   }
   gameState.missions.activeMainMission = { milestoneId, dayAccepted: gameState.day };
   gameState.messageLog.push('🌟 Main mission accepted: ' + milestoneId);
+  showNotification('🌟 Main mission accepted!', 'success');
   playSound('click');
   render();
 }
@@ -6487,6 +6547,7 @@ function doCompleteMainMission() {
   // XP bonus for main mission
   gameState.xp = (gameState.xp || 0) + 500;
   gameState.messageLog.push('🏆 Main mission complete! +500 XP. Milestone: ' + milestoneId);
+  showNotification('🏆 Main mission complete! +500 XP', 'success');
   playSound('click');
   render();
 }
@@ -6494,6 +6555,7 @@ function doCompleteMainMission() {
 function doCompleteMission(index) {
   const result = completeMission(gameState, index);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6514,12 +6576,14 @@ function doAbandonMission(index) {
   if (!confirm('Abandon this mission? Trust -3.')) return;
   const result = abandonMission(gameState, index);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, 'info');
   render();
 }
 
 function doResolveDilemma(choiceId) {
   const result = resolveDilemma(gameState, choiceId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -6838,6 +6902,7 @@ function renderFutures() {
 function doOpenFutures() {
   const result = createFuturesContract(gameState, futuresSelectedDrug, futuresSelectedType, futuresSelectedDuration, futuresSelectedQty);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   else playSound('error');
   render();
@@ -6847,6 +6912,7 @@ function doSettleFutures(index) {
   if (!confirm('Settle early? You lose 30% of profits or pay 20% more on losses.')) return;
   const result = settleFuturesContract(gameState, index, true);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -6987,6 +7053,7 @@ function doRaidResponse(responseId) {
 function doBuyCounterMeasure(measureId) {
   const result = buyCounterMeasure(gameState, measureId);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('click');
   render();
 }
@@ -6994,6 +7061,7 @@ function doBuyCounterMeasure(measureId) {
 function doSetVehicle(vehicleId) {
   const result = setActiveChaseVehicle(gameState, vehicleId);
   if (result.msg) gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.message) gameState.messageLog.push(result.message);
   if (result.success) playSound('click');
   render();
@@ -7002,6 +7070,7 @@ function doSetVehicle(vehicleId) {
 function doBuyChaseVehicle(vehicleId) {
   const result = buyChaseVehicle(gameState, vehicleId);
   if (result.msg) gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) playSound('cash');
   else playSound('error');
   render();
@@ -8220,8 +8289,9 @@ function renderPrison() {
   '</div>';
 
   return '<div class="screen-container">' +
-    renderToolbar() + backButton() +
+    renderToolbar() +
     '<h2 class="section-title neon-red">' + tierData.emoji + ' PRISON - ' + tierData.name + '</h2>' +
+    '<p class="text-dim" style="font-size:0.8rem;margin-bottom:0.5rem">You\'re locked up — serve your sentence, build respect, or find a way out. Your empire runs on autopilot while you\'re inside.</p>' +
     '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;">' +
       '<div class="stat"><span class="stat-label">SENTENCE</span> <span class="stat-value neon-yellow">' + ps.daysRemaining + ' days left</span></div>' +
       '<div class="stat"><span class="stat-label">SERVED</span> <span class="stat-value">' + ps.daysServed + '/' + ps.sentenceDays + '</span></div>' +
@@ -8233,6 +8303,7 @@ function renderPrison() {
       '<div class="stat"><span class="stat-label">PRISON $</span> <span class="stat-value neon-green">$' + (ps.prisonCash || 0).toLocaleString() + '</span></div>' +
     '</div>' +
     (ps.solitaryDays > 0 ? '<div class="neon-red" style="padding:8px;border:1px solid var(--neon-red);border-radius:4px;margin-bottom:10px;">🔒 SOLITARY CONFINEMENT - ' + ps.solitaryDays + ' days remaining</div>' : '') +
+    '<button class="btn btn-primary btn-glow" style="width:100%;margin-bottom:12px;font-size:1rem" onclick="doWait(\'wait\')">⏳ SERVE THE DAY (' + ps.daysRemaining + ' left)</button>' +
     '<h3 class="neon-cyan">📋 Daily Activity</h3>' +
     '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">' + activityButtons + '</div>' +
     '<h3 class="neon-yellow">🚪 Escape</h3>' +
@@ -9233,6 +9304,7 @@ function doCeremony(choice) {
   if (typeof resolveCeremony !== 'function') { gameState.pendingCeremony = null; render(); return; }
   var result = resolveCeremony(gameState, choice);
   gameState.messageLog.push(result.msg);
+  showNotification(result.msg, result.success ? 'success' : 'warning');
   if (result.success) { if (typeof playSound === 'function') playSound(choice === 'lavish' ? 'cash' : 'click'); }
   else alert(result.msg);
   render();
