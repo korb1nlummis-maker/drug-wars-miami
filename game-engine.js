@@ -6859,11 +6859,14 @@ function challengeTerritory(state) {
     var daysLeft = 3 - (state.day - state.lastChallengeDay);
     return { success: false, msg: 'Your crew needs to recover. Wait ' + daysLeft + ' more day' + (daysLeft > 1 ? 's' : '') + ' before challenging again.' };
   }
-  state.lastChallengeDay = state.day;
 
   // Need at least 2 crew to challenge
   const activeCrew = state.henchmen.filter(h => !h.injured);
-  if (activeCrew.length < 2) return { success: false, msg: 'You need at least 2 active crew members to challenge a territory.' };
+  if (activeCrew.length < 2) return { success: false, msg: 'You need at least 2 active crew members to challenge a territory. Hire crew first (👥 Crew).' };
+
+  // Cooldown only starts when a challenge actually launches — a rejected
+  // attempt (no crew) must not lock the player out for 3 days.
+  state.lastChallengeDay = state.day;
 
   // Create territory combat event
   const soldierCount = gang.soldiers[0] + Math.floor(Math.random() * (gang.soldiers[1] - gang.soldiers[0] + 1));
