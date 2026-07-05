@@ -1780,6 +1780,7 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   cursor: pointer; box-shadow: 0 2px 12px rgba(0, 240, 255, 0.25);
   max-width: 92vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tutorial-pill-top { top: 8px !important; bottom: auto !important; z-index: 10001; }
 .tutorial-hide-btn {
   background: rgba(0,0,0,0.3); border: 1px solid var(--border-color, #333366);
   color: #aaa; border-radius: 6px; font-size: 0.65rem; padding: 0.25rem 0.55rem;
@@ -2050,7 +2051,7 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   .market-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   input, select, textarea { font-size: 16px !important; }
 
-  .trade-modal, .modal { width: 90vw; max-width: 500px; max-height: 85vh; overflow-y: auto; }
+  .trade-modal, .modal { width: 92vw; max-width: 500px; max-height: 82vh; overflow-y: auto; padding-bottom: 76px; }
   .message-log { max-height: 80px; overflow-y: auto; font-size: 0.8rem; }
   .stats-overview { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
   .stat-card { padding: 0.4rem; }
@@ -2113,6 +2114,12 @@ tr.row-flash-sell { animation: rowFlashSell 0.95s ease-out; }
   }
   .tutorial-card .tutorial-title { font-size: 1.05rem; margin-bottom: 0.4rem; }
   .tutorial-card .btn { min-height: 46px; }
+  /* Tutorial banner is fixed at the bottom — pad scroll areas so no drug-row
+     BUY/SELL button ever hides under it (the reported sell-stuck root cause) */
+  body:has(.tutorial-banner) .game-main,
+  body:has(.tutorial-banner) .screen-container,
+  body:has(.tutorial-banner) .game-layout { padding-bottom: 220px !important; }
+
   .tutorial-banner {
     top: auto; bottom: 64px;
     border: 2px solid var(--neon-cyan, #00f0ff);

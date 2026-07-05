@@ -2572,7 +2572,9 @@ function renderGame() {
   const heatCritical = gameState.heat > 80;
   const raidPending = !!gameState.pendingRaid;
   const investigationDanger = gameState.investigation && gameState.investigation.level >= 3;
-  if ((raidPending || heatCritical || investigationDanger) && alertDismissedDay !== gameState.day) {
+  // The tutorial is a protected space — no alert popups covering the trade buttons
+  const _tutActive = gameState.tutorial && gameState.tutorial.active && !gameState.tutorial.completed;
+  if (!_tutActive && (raidPending || heatCritical || investigationDanger) && alertDismissedDay !== gameState.day) {
     const alerts = [];
     if (raidPending) alerts.push('<div class="security-alert-item"><span class="security-alert-icon">🚨</span><span class="security-alert-text">RAID INCOMING — Law enforcement is preparing to raid your operation!</span></div>');
     if (heatCritical) alerts.push('<div class="security-alert-item"><span class="security-alert-icon">🔥</span><span class="security-alert-text">HEAT CRITICAL (${gameState.heat}%) — You are drawing extreme attention!</span></div>');
