@@ -576,6 +576,8 @@ function isTutorialActive() {
   var t = getTutorial();
   return t && t.active && !t.completed;
 }
+// Exported so game-ui.js can hold unlock cards / alerts while the tutorial runs
+window.isTutorialActive = isTutorialActive;
 
 
 // ---- REWARD GRANTING ----
@@ -734,14 +736,14 @@ window.renderTutorialOverlay = function() {
       gameState.pendingCeremony;
     if (modalOpen) return '';
   }
-  // Trade view open but the current step isn't about trading? Collapse to
-  // the pill so the SELL/CANCEL buttons stay reachable.
+  // Trade view open? The tutorial NEVER sits over the modal's action buttons.
+  // Collapse to a TOP-anchored pill on EVERY step — the modal shows the drug
+  // and its own BUY/SELL/CANCEL; the pill keeps the step number/title in view.
   if (typeof selectedDrug !== 'undefined' && selectedDrug) {
     var tHere = getTutorial();
     var stepHere = tHere && tHere.active ? TUTORIAL_STEPS[tHere.step] : null;
-    var tradeStep = stepHere && (stepHere.id === 'confirm_buy' || stepHere.id === 'sell_drug' || stepHere.id === 'buy_drug');
-    if (stepHere && !tradeStep && !tHere.collapsed) {
-      return '<div class="tutorial-pill" onclick="toggleTutorialCollapse()">' +
+    if (stepHere) {
+      return '<div class="tutorial-pill tutorial-pill-top" onclick="toggleTutorialCollapse()">' +
         '📖 ' + (tHere.step + 1) + '/' + TUTORIAL_STEPS.length + ' · ' + (stepHere.title || '') + ' ▲</div>';
     }
   }
