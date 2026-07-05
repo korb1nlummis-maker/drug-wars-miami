@@ -3790,12 +3790,15 @@ function waitDay(state) {
   // === V5: Massive content expansion daily processors ===
   // Prison intercept — if in prison, skip most daily processing (handled above, but process prison)
   if (typeof processPrisonDaily === 'function' && state.prison && state.prison.inPrison) {
-    const prisonMsgs = processPrisonDaily(state);
-    msgs.push(...prisonMsgs);
-    // Empire autopilot while in prison
-    if (typeof processEmpireAutopilot === 'function') {
-      const autopilotMsgs = processEmpireAutopilot(state);
-      msgs.push(...autopilotMsgs);
+    // processPrisonDaily returns a results OBJECT ({messages, released, ...}), not an array
+    const prisonRes = processPrisonDaily(state);
+    if (prisonRes && Array.isArray(prisonRes.messages)) msgs.push(...prisonRes.messages);
+    if (prisonRes && prisonRes.released) {
+      msgs.push('🔓 RELEASED! You walk out of the gates a free ' + (state.character && state.character.name ? state.character.name : 'hustler') + '. The streets waited.');
+    } else if (typeof processEmpireAutopilot === 'function') {
+      // Empire autopilot while still inside (processPrisonDaily already ran it if wired there)
+      const apRes = processEmpireAutopilot(state);
+      if (apRes && Array.isArray(apRes.messages)) msgs.push(...apRes.messages);
     }
   }
   if (typeof processWeatherDaily === 'function') {
